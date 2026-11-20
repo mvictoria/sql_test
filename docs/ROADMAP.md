@@ -27,6 +27,7 @@ Done:
 - [ENG-1](#eng-1)
 - [ENG-20](#eng-20)
 - [ENG-10](#eng-10), ahead of the plan it belongs in
+- [ENG-23](#eng-23)
 
 Can start now:
 
@@ -36,7 +37,6 @@ Can start now:
 - [ENG-11](#eng-11)
 - [ENG-14](#eng-14)
 - [ENG-21](#eng-21)
-- [ENG-23](#eng-23)
 
 ### Project skeleton
 
@@ -55,7 +55,7 @@ Create the pip-installable `sql_test` package under `src/` with empty `engine/` 
 - **Depends on:** none
 
 <a id="eng-23"></a>
-#### ENG-23 Lay out packages by layer
+#### ENG-23 Lay out packages by layer (done)
 
 Replace ENG-1's layout with one package per layer, so dependencies point one way:
 
@@ -66,7 +66,9 @@ Replace ENG-1's layout with one package per layer, so dependencies point one way
 
 The engine depends on the executor interface, not on an executor. The test layer depends on the engine. Integrations depend on the test layer. Record the layout and the package names in [HELPER.md](HELPER.md).
 
-- **Done when:** the existing code lives in the new layout, the tests pass unchanged, and no engine module imports from the test layer or an executor.
+The engine is handed its executor, for example `Engine(sqls, mapping, executor=DuckDBExecutor)`, instead of creating one.
+
+- **Done when:** the existing code lives in the new layout, the tests pass with only their imports and the engine's construction changed, and no engine module imports from the test layer or an executor.
 - **Depends on:** none
 
 ### Catalog
@@ -681,7 +683,7 @@ Document the minimal footprint of a consuming repository:
 
 ## v0.6 — Spark execution
 
-Swap execution to Spark behind the same execution layer, so the app, pytest plugin, and saved cases do not change.
+Swap execution to a Spark executor behind the same executor interface, so the app, pytest plugin, and saved cases do not change.
 
 <a id="spk-1"></a>
 #### SPK-1 Representative model set

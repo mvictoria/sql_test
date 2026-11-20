@@ -2,10 +2,10 @@ from typing import Any
 
 import duckdb
 
-type Row = dict[str, Any]
+from sql_test.engine.executor import Row
 
 
-class DuckDBBackend:
+class DuckDBExecutor:
     def __init__(self) -> None:
         self._connection = duckdb.connect()
 

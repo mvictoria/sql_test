@@ -1,13 +1,6 @@
 from graphlib import TopologicalSorter
 
-import sqlglot
-from sqlglot import exp
-
-
-def tables_read(sql: str, dialect: str = "duckdb") -> set[str]:
-    return {
-        table.name for table in sqlglot.parse_one(sql, read=dialect).find_all(exp.Table)
-    }
+from sql_test.engine.lineage.references import tables_read
 
 
 def execution_order(table: str, sqls: dict[str, str], given: set[str]) -> list[str]:

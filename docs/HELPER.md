@@ -501,24 +501,39 @@ The case format carries its own format version if compatibility ever requires it
 
 ## Tool repository layout
 
-One repository is enough. The engine, app, pytest plugin, and workflow do not need to be split into separate repositories or products. An illustrative layout:
+One repository is enough. The engine, app, pytest plugin, and workflow do not need to be split into separate repositories or products.
+
+The package has one subpackage per layer:
 
 ```text
 sql-test-tool/
 ├── src/sql_test/
-│   ├── engine/
-│   │   ├── discovery/
-│   │   ├── lineage/
-│   │   ├── execution/
+│   ├── engine/                 relations, operations, rows; no test vocabulary
+│   │   ├── catalog/            what the SQL folder holds: producers, later schemas
+│   │   ├── lineage/            what depends on what
+│   │   ├── planner/            what runs, and in what order
+│   │   └── executor.py         the executor interface
+│   ├── executors/
+│   │   └── duckdb.py           an executor; Spark later
+│   ├── testing/                the test layer
+│   │   ├── cases/
 │   │   ├── comparison/
 │   │   └── validation/
-│   ├── pytest_plugin/
-│   ├── cli/
-│   └── app/
+│   └── integrations/
+│       └── pytest_plugin/      later the CLI and app server
 ├── .github/workflows/data-tests.yml
 ├── tests/
 └── pyproject.toml
 ```
+
+An **executor** runs operations against rows in one SQL engine, such as DuckDB or Spark. The engine defines the executor interface and is handed an executor; it never imports one.
+
+Dependencies point one way:
+
+- the engine imports none of the other layers
+- executors import only the engine's interface
+- the test layer imports the engine
+- integrations import the test layer, the engine, and executors
 
 ## Entry point sequence
 
@@ -855,7 +870,7 @@ Multi-repo support should build on stable single-repo relation identity and line
 
 # Execution Environment / Spark
 
-Execution tentatively runs on DuckDB and is swapped for Spark later. The swap happens inside the engine's execution layer, so the app, pytest plugin, and saved cases do not change.
+Execution tentatively runs on DuckDB and is swapped for Spark later. The swap is a new executor behind the engine's executor interface, so the app, pytest plugin, and saved cases do not change.
 
 Most production SQL is expected to execute under Spark.
 

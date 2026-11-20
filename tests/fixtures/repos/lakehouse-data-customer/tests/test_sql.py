@@ -4,6 +4,7 @@ import duckdb
 import pytest
 
 from sql_test.engine import Engine
+from sql_test.executors.duckdb import DuckDBExecutor
 
 
 @pytest.fixture(scope="function")
@@ -19,6 +20,7 @@ def engine():
     return Engine(
         sqls=admin / "sqls",
         mapping=admin / "config" / "lookup_sql_table_mapping.csv",
+        executor=DuckDBExecutor,
     )
 
 

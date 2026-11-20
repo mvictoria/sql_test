@@ -16,8 +16,9 @@ A library for testing SQL transformations: mock upstream tables, run the real SQ
 ## Conventions
 
 - One story per commit, message prefixed with its ID: `ENG-1: package skeleton`.
-- Engine stages import in one direction: discovery, then lineage, then execution and comparison. Only the case runner wires the stages together. Execution backends know SQL and rows, not lineage or case folders.
-- Engine-specific SQL behaviour stays inside the execution backend. DuckDB is the tentative backend; Spark replaces it later behind the same interface.
+- Layers import in one direction, as laid out in [docs/HELPER.md](docs/HELPER.md): `engine` (catalog, lineage, planner) imports no other layer; `executors` import only the engine's executor interface; `testing` imports the engine; `integrations` wire them together. `tests/test_layers.py` enforces this.
+- The engine is handed an executor and never imports one. Executors know SQL and rows, not lineage or case folders.
+- SQL-engine-specific behaviour stays inside an executor. DuckDB is the tentative executor; Spark replaces it later behind the same interface.
 - The engine is always given a repository path. `lakehouse-data-customer/` is a temporary sample consuming repository; the tool's own tests use the copies under `tests/fixtures/repos/`.
 
 ## Gotchas
