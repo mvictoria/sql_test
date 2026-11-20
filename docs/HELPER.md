@@ -460,6 +460,15 @@ Avoid one implementation per entry point. Separate app, pytest, and CI engines w
 
 **Authoring app.** The local web application QA uses. It contains presentation and interaction logic only and runs against the checked-out repository, for example `sql-test app .`.
 
+`sql-test app <repository-path>` starts a local HTTP server. The browser page talks only to that server. The server is given the repository path at startup and is the only process that reads or writes the repository. The page does not use the browser's folder-access APIs: the app must share discovery and execution with the CLI and pytest through the same engine, and a page that talked to the filesystem directly would re-implement or bypass that. Presentation stays in the page; all repository I/O stays behind the shared core.
+
+Safeguards for that server:
+
+- Bind to localhost only, never to a public interface.
+- Scope every filesystem read and write to the repository path passed on the command line; resolve paths and refuse any that escape the repository root.
+- Do not accept an alternate repository path from the browser after start; the path is fixed when the process starts.
+- No authentication in v0. Localhost-only is the trust boundary.
+
 **pytest.** The package provides a pytest plugin that discovers committed case folders and runs each one through the engine. A case saved by the app is a normal repository test, and it runs through pytest without the app installed or running.
 
 **CLI.** A headless interface over the engine, for example:
