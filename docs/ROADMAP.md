@@ -1,12 +1,12 @@
 # Roadmap
 
-Planned versions, the features in each, and the stories that make up each feature. Design decisions behind these are in [HELPER.md](HELPER.md).
+Planned versions, the features in each, and the stories that make up each feature. Design decisions behind these are in [HELPER.md](HELPER.md). Architectural direction is in [foss-architecture-thoughts.md](foss-architecture-thoughts.md): specific implementation, general architecture.
 
 Most stories can be done independently. When a story needs another one first, it says so under **Depends on** and links to it. A story with no dependencies can start any time, including ahead of its version. The version order is the planned order, not a hard sequence: for example, the CI workflow in v0.5 only needs v0.1.
 
 All engine code lives in the package created by [ENG-1](#eng-1). That dependency is not repeated on every story.
 
-The engine is always pointed at a repository and never assumes where one lives. `lakehouse-data-customer/` is a sample consuming repository kept in this directory for now. The tool's own tests use small fixture repositories of their own and must not depend on the sample being present.
+Nothing assumes where a repository lives. The engine is given a folder of SQL and a mapping, and the test layer is given a repository. `lakehouse-data-customer/` is a sample consuming repository kept in this directory for now. The tool's own tests use small fixture repositories of their own and must not depend on the sample being present.
 
 ---
 
@@ -18,23 +18,30 @@ pytest tests in the sample repository's `tests/test_sql.py` load rows into DuckD
 
 ## v0.1 — Engine core
 
-A headless engine that runs a case folder end to end on DuckDB, and a pytest plugin that runs every case folder. Done when the v0 scenarios run as case folders through pytest with no hand wiring.
+A headless engine, and a test layer over it, that run a case folder end to end on DuckDB, and a pytest plugin that runs every case folder. Done when the v0 scenarios run as case folders through pytest with no hand wiring.
+
+The engine knows relations, operations, and rows. The test layer knows cases, mocks, and expected results, and hands the engine a case's mocks as given rows.
+
+Done:
+
+- [ENG-1](#eng-1)
+- [ENG-20](#eng-20)
+- [ENG-10](#eng-10), ahead of the plan it belongs in
 
 Can start now:
 
-- [ENG-1](#eng-1)
-- [ENG-2](#eng-2)
 - [ENG-3](#eng-3)
 - [ENG-4](#eng-4)
 - [ENG-5](#eng-5)
 - [ENG-11](#eng-11)
 - [ENG-14](#eng-14)
-- [ENG-20](#eng-20)
+- [ENG-21](#eng-21)
+- [ENG-23](#eng-23)
 
 ### Project skeleton
 
 <a id="eng-1"></a>
-#### ENG-1 Package skeleton
+#### ENG-1 Package skeleton (done)
 
 Create the pip-installable `sql_test` package under `src/` with empty `engine/` subpackages for:
 
@@ -47,44 +54,85 @@ Create the pip-installable `sql_test` package under `src/` with empty `engine/` 
 - **Done when:** the package installs in the dev environment and the v0 tests still pass.
 - **Depends on:** none
 
-### Repository discovery
+<a id="eng-23"></a>
+#### ENG-23 Lay out packages by layer
+
+Replace ENG-1's layout with one package per layer, so dependencies point one way:
+
+- the engine: catalog, lineage, planner
+- executors: DuckDB, later Spark
+- the test layer: cases, comparison, validation
+- integrations: the pytest plugin, later the CLI and app server
+
+The engine depends on the executor interface, not on an executor. The test layer depends on the engine. Integrations depend on the test layer. Record the layout and the package names in [HELPER.md](HELPER.md).
+
+- **Done when:** the existing code lives in the new layout, the tests pass unchanged, and no engine module imports from the test layer or an executor.
+- **Depends on:** none
+
+### Catalog
 
 <a id="eng-20"></a>
-#### ENG-20 Point the engine at a repository
+#### ENG-20 Point the engine at a folder of SQL (done)
 
-The engine takes a repository root and reads where that repository keeps its SQL, its schemas, its cases, and its SQL-to-table mapping. Nothing defaults to the tool's own directory.
+The engine is given, in code, a folder of SQL holding DDL and DML, and a SQL-to-table mapping. Nothing defaults to the tool's own directory. `Engine(sqls, mapping).run(table, rows)` loads the given rows, runs the table's SQL, and returns the table's rows. The engine uses no test vocabulary: rows, not mocks. A config file for these paths comes later, in [CFG-1](#cfg-1).
 
-- **Done when:** the same code discovers a fixture repository under the tool's tests and the sample repository at a path passed in.
+- **Done when:** given `members` and `lob` rows, the fixture repository's `medicaid_members` returns only the Medicaid member.
+- **Depends on:** none
+
+<a id="eng-21"></a>
+#### ENG-21 Relation identity
+
+A relation is identified by an optional catalog, database, and schema, and a name, not by a bare table name or a file path. Leave room for a repository later, for multi-repository workspaces. A bare name, as written in SQL, a mapping, or given rows, resolves to a relation when exactly one matches. Define *relation* in [HELPER.md](HELPER.md).
+
+- **Done when:**
+  - `db.members` and `members` in another database are different relations
+  - a bare `members` resolves when only one relation matches
+  - an ambiguous bare name is an error that names the candidates
 - **Depends on:** none
 
 <a id="eng-2"></a>
-#### ENG-2 Discover SQL producers
+#### ENG-2 Discover operations
 
-Map each SQL file to the table it writes:
+An operation is a SQL statement that writes a relation. Lineage runs relation → operation → relation, so one relation can have several producers. Each operation records:
 
-- When the repository has a mapping file, use it. The sample repository's `admin/config/lookup_sql_table_mapping.csv` maps `table_ref` to `sql_ref` and records a `load_type`.
-- Otherwise, a `CREATE TABLE AS`, `INSERT`, or `MERGE` names its own target.
+- its SQL file
+- the relation it writes
+- its kind: a bare `SELECT` is a full load; `CREATE TABLE AS`, `INSERT`, `INSERT OVERWRITE`, and `MERGE` come later
+- its `load_type`, whose values are not yet defined
 
-Keep `load_type` with each producer for later use. What its values mean is not yet decided.
+The relation an operation writes comes from the repository's mapping file when it has one. The sample repository's `admin/config/lookup_sql_table_mapping.csv` maps `table_ref` to `sql_ref`. Otherwise, a `CREATE TABLE AS`, `INSERT`, or `MERGE` names its own target. Define *operation* in [HELPER.md](HELPER.md).
 
-- **Done when:** in the sample repository, `medicaid_members.sql` and `medicaid_members_named_alice.sql` map to `medicaid_members` and `medicaid_members_named_alice` through the mapping, and a table mapped to two files lists both.
-- **Depends on:** none
+- **Done when:** in the sample repository, `medicaid_members.sql` and `medicaid_members_named_alice.sql` are full-load operations writing `medicaid_members` and `medicaid_members_named_alice`, and a relation mapped to two files has two operations.
+- **Depends on:** [ENG-21](#eng-21)
 
 <a id="eng-3"></a>
 #### ENG-3 Discover schemas
 
-Read DDL files from the repository's schema location into each table's columns and types. Read them from the DDL text with sqlglot rather than from DuckDB, because DuckDB drops `varchar` lengths.
+Read every `CREATE TABLE` statement in the SQL folder into its relation's columns and types, whichever file it is in. One file can define several relations, and DDL can sit beside DML. Read the DDL text with sqlglot rather than DuckDB, because DuckDB drops `varchar` lengths. Report, without stopping discovery:
 
-- **Done when:** a DDL file for `members` yields the following, replacing `test_medicaid_members_types`:
+- a statement that cannot be parsed
+- a relation defined more than once
+
+- **Done when:** the sample repository's `members_ddl.sql` yields each of its four relations, with `members` as the following, replacing `test_medicaid_members_types`:
   - `member_id integer`
   - `member_name varchar(30)`
   - `lob varchar(2)`
 - **Depends on:** none
 
+<a id="eng-22"></a>
+#### ENG-22 Catalog from a repository convention
+
+The engine reads a catalog of relations, operations, and schemas, not files. A repository adapter builds the catalog from one repository's conventions. The first adapter is the convention the engine already reads: a folder of SQL plus a mapping CSV. A different repository layout is a new adapter, with no change to lineage, the planner, or the test layer. Define *catalog* and *repository adapter* in [HELPER.md](HELPER.md).
+
+- **Done when:** the engine is built from a catalog that the folder-and-mapping adapter produces, and the engine's tests change only in how the engine is constructed.
+- **Depends on:**
+  - [ENG-2](#eng-2)
+  - [ENG-3](#eng-3)
+
 <a id="eng-4"></a>
 #### ENG-4 Discover case folders
 
-List every `<table under test>/<case name>/` folder under the repository's case location, and its CSV files, without reading their contents.
+Part of the test layer. List every `<table under test>/<case name>/` folder under the repository's case location, and its CSV files, without reading their contents.
 
 - **Done when:** discovery returns, for each case:
   - its target
@@ -98,20 +146,22 @@ List every `<table under test>/<case name>/` folder under the repository's case 
 <a id="eng-5"></a>
 #### ENG-5 Extract table references
 
-For each SQL statement, list the tables it reads, excluding CTE names. Parse with a configurable dialect, defaulting to DuckDB.
+For each SQL statement, list the relations it reads, excluding CTE names. Parse with a configurable dialect, defaulting to DuckDB. Keep sqlglot inside the parsing module; other modules see relations, not sqlglot types.
 
-- **Done when:** `medicaid_members_named_alice.sql` reads `medicaid_members`, and a query with a CTE does not report the CTE as a table.
+- **Done when:** `medicaid_members.sql` reads `members` and `lob`, `medicaid_members_named_alice.sql` reads `medicaid_members`, and a query with a CTE does not report the CTE as a relation.
 - **Depends on:** none
 
 <a id="eng-6"></a>
 #### ENG-6 Build upstream lineage
 
-Build the upstream graph of a target table:
+Build the upstream graph of a target relation as relation → operation → relation:
 
-- A table produced by SQL in the repo is a model, and traversal continues.
-- Any other table is a source, and traversal stops.
+- A relation written by an operation in the catalog is a model, and traversal continues through each of its operations.
+- Any other relation is a source, and traversal stops.
 
-- **Done when:** the lineage of `medicaid_members_named_alice` is `members` (source) → `medicaid_members` (model) → `medicaid_members_named_alice`.
+The graph can be projected to relation → relation for the default lineage view. Lineage says only what depends on what; what runs is the planner's job.
+
+- **Done when:** the lineage of `medicaid_members_named_alice` is `members` and `lob` (sources) → `medicaid_members.sql` → `medicaid_members` (model) → `medicaid_members_named_alice.sql` → `medicaid_members_named_alice`, and its projection drops the operations.
 - **Depends on:**
   - [ENG-2](#eng-2)
   - [ENG-5](#eng-5)
@@ -119,43 +169,43 @@ Build the upstream graph of a target table:
 <a id="eng-7"></a>
 #### ENG-7 Lineage boundaries
 
-A model whose SQL cannot be parsed, or that has no schema, becomes a boundary. Traversal stops there, the table is treated like a source, and the reason is recorded.
+A model whose SQL cannot be parsed, or that has no schema, becomes a boundary. Traversal stops there, the relation is treated like a source, and the reason is recorded.
 
-- **Done when:** a model with unparseable SQL and a model with no schema each appear as a boundary with the right reason, and their upstream tables are not in the graph.
+- **Done when:** a model with unparseable SQL and a model with no schema each appear as a boundary with the right reason, and their upstream relations are not in the graph.
 - **Depends on:**
   - [ENG-6](#eng-6)
   - [ENG-3](#eng-3)
 
-### Execution planning
+### Planning
 
 <a id="eng-8"></a>
-#### ENG-8 Apply mocks and prune
+#### ENG-8 Plan a run
 
-Given a target and a set of mocked tables, mark each table in the lineage as one of:
+Given a target and the relations whose rows are given, return a plan without executing anything. The plan marks each relation in the lineage as one of:
 
-- mocked
+- given
 - executed
 - pruned
 - source
 - boundary
 
-A table upstream of a mock is pruned unless another executed path still needs it.
+A relation upstream of a given relation is pruned unless another executed path still needs it. The plan can be inspected, for example by the app's lineage view, before or instead of running it. Define *plan* in [HELPER.md](HELPER.md).
 
-- **Done when:** mocking `medicaid_members` prunes `members` and leaves only the Alice SQL to execute, and a diamond-shaped lineage keeps a table that one path still needs.
+- **Done when:** giving `medicaid_members` prunes `members` and `lob` and leaves only the Alice operation to execute, and a diamond-shaped lineage keeps a relation that one path still needs.
 - **Depends on:** [ENG-6](#eng-6). Boundary states appear once [ENG-7](#eng-7) lands.
 
 <a id="eng-9"></a>
-#### ENG-9 Report tables that still need data
+#### ENG-9 Report relations that still need rows
 
-List every table that will be read but is not produced by executed SQL and has no rows supplied. A run with any such table fails with a message naming them.
+List every relation the plan will read that no executed operation produces and that has no given rows. Running such a plan fails with a message naming them. The test layer words this as tables that still need mock data.
 
-- **Done when:** running the Alice target with nothing mocked reports that `members` needs data.
+- **Done when:** planning the Alice target with no rows given reports that `members` and `lob` need rows.
 - **Depends on:** [ENG-8](#eng-8)
 
 <a id="eng-10"></a>
-#### ENG-10 Order executed SQL
+#### ENG-10 Order executed operations (done)
 
-Order the executed SQL so each statement runs after the tables it reads have been produced.
+Order the executed operations so each runs after the relations it reads have been produced. Built ahead of ENG-8: the engine currently runs every mapped SQL upstream of the requested table, stopping at tables whose rows are given and at tables with no SQL. The ordering moves into the plan when ENG-8 lands.
 
 - **Done when:** the Alice plan runs `medicaid_members.sql` before `medicaid_members_named_alice.sql`, and a cycle is reported as an error.
 - **Depends on:** [ENG-8](#eng-8)
@@ -163,37 +213,38 @@ Order the executed SQL so each statement runs after the tables it reads have bee
 ### Execution
 
 <a id="eng-11"></a>
-#### ENG-11 Execution layer with a DuckDB backend
+#### ENG-11 Executor interface with a DuckDB executor
 
-An execution interface with a DuckDB implementation that uses a fresh in-memory database per run. The interface can:
+An executor interface with a DuckDB implementation that uses a fresh in-memory database per run. The interface takes relations and operations, not lineage or cases, and is sized by this first implementation rather than designed for every engine up front. Roughly:
 
-- create a table from a schema
-- load rows
-- run SQL
-- read a table
+- set up and tear down a run
+- create a relation from a schema and rows
+- execute an operation
+- read a relation
 
-Spark is added behind the same interface later, in [SPK-2](#spk-2).
+How an operation's kind becomes SQL, for example a full-load `SELECT` becoming a table, is decided per executor. The current `DuckDBBackend` becomes this executor. Spark is added behind the same interface later, in [SPK-2](#spk-2).
 
-- **Done when:** the interface's own tests pass against DuckDB, and two runs do not share tables.
+- **Done when:** the interface's own tests pass against DuckDB, and two runs do not share relations.
 - **Depends on:** none
 
 <a id="eng-12"></a>
-#### ENG-12 Load mocked tables
+#### ENG-12 Load given rows
 
-Create each mocked table from its discovered schema and insert its rows. A boundary table with no schema takes its columns from the rows; how it is typed is an open question in [HELPER.md](HELPER.md).
+Create each relation whose rows are given from its discovered schema, and insert the rows. A boundary relation with no schema takes its columns from the rows; how it is typed is an open question in [HELPER.md](HELPER.md).
 
-- **Done when:** a mocked `members` loads with `member_id` as an integer.
+- **Done when:** given `members` rows with `member_id` as the string `"1"`, `members` loads with `member_id` as the integer `1`.
 - **Depends on:**
   - [ENG-11](#eng-11)
   - [ENG-3](#eng-3)
 
 <a id="eng-13"></a>
-#### ENG-13 Run a plan
+#### ENG-13 Execute a plan
 
-Execute the ordered SQL against the loaded mocks and return the target's rows and the row count of every table in the plan.
+The executor runs a plan's ordered operations against the given rows and returns the target's rows and the row count of every relation in the plan. `Engine.run(table, rows)` becomes planning followed by executing the plan.
 
 - **Done when:** the Alice plan returns `(1, 'Alice')` with row counts for:
   - `members`
+  - `lob`
   - `medicaid_members`
   - the target
 - **Depends on:**
@@ -220,7 +271,7 @@ Record the decisions in [HELPER.md](HELPER.md). These must be settled before cas
 <a id="eng-15"></a>
 #### ENG-15 Compare expected and actual
 
-Compare expected and actual rows using the defaults from ENG-14, and report:
+Part of the test layer. Compare expected and actual rows using the defaults from ENG-14, and report:
 
 - matching rows
 - changed values
@@ -235,9 +286,9 @@ Compare expected and actual rows using the defaults from ENG-14, and report:
 <a id="eng-16"></a>
 #### ENG-16 Read and write case folders
 
-Read a case folder's CSVs into typed rows using the discovered schemas and the NULL convention, and write rows back out in the same format.
+Read a case folder's CSVs into typed rows using the discovered schemas and the NULL convention, and write rows back out in the same format. The case format is a public contract: other tools and people write cases by hand, so it is documented in [HELPER.md](HELPER.md) with a format version, and changes to it are versioned.
 
-- **Done when:** reading a case and writing it back produces identical files.
+- **Done when:** reading a case and writing it back produces identical files, and the format and its version are written in HELPER.md.
 - **Depends on:**
   - [ENG-4](#eng-4)
   - [ENG-3](#eng-3)
@@ -246,7 +297,7 @@ Read a case folder's CSVs into typed rows using the discovered schemas and the N
 <a id="eng-17"></a>
 #### ENG-17 Run a case
 
-The engine's entry point: take a case folder and return the actual rows, the comparison, and pass or fail. The app, pytest, and the CLI all call this.
+The test layer's entry point: take a case folder, give its mocks to the engine as rows, and return the actual rows, the comparison, and pass or fail. The app, pytest, and the CLI all call this.
 
 - **Done when:** a passing and a failing case folder return the right result.
 - **Depends on:**
@@ -268,7 +319,7 @@ Discover every case folder and run each as its own pytest test through ENG-17. A
 <a id="eng-19"></a>
 #### ENG-19 Port the v0 tests
 
-In the sample repository, rewrite the v0 scenarios as case folders, add a schema for `members`, and remove the hand-wired tests from its `tests/test_sql.py`.
+In the sample repository, rewrite the v0 scenarios as case folders and remove the hand-wired tests from its `tests/test_sql.py`. The schemas already exist in `members_ddl.sql`.
 
 - **Done when:** the same scenarios pass through the plugin run against the sample repository, and the hand-wired tests are gone.
 - **Depends on:** [ENG-18](#eng-18)
@@ -278,6 +329,18 @@ In the sample repository, rewrite the v0 scenarios as case folders, add a schema
 ## v0.2 — CLI and static validation
 
 A headless command-line interface over the engine, and checks that run without executing SQL.
+
+### Repository config
+
+<a id="cfg-1"></a>
+#### CFG-1 Define a repository config file
+
+Define a config file in the consuming repository that says where its SQL, schemas, cases, and SQL-to-table mapping live, so the CLI, app, pytest plugin, and CI can find them without code. Decide its name and format, for example TOML, which Python reads without a new dependency, or YAML, which needs PyYAML. Record the decision in [HELPER.md](HELPER.md).
+
+- **Done when:** a repository's paths can be read from its config file, and the decision is written in HELPER.md.
+- **Depends on:**
+  - [ENG-20](#eng-20)
+  - [ENG-22](#eng-22): the config describes the conventions a repository adapter reads
 
 ### CLI
 

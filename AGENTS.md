@@ -11,6 +11,7 @@ A library for testing SQL transformations: mock upstream tables, run the real SQ
 
 - **TDD.** Each story starts with a failing test for its done-when. Write the code that makes it pass, then refactor, one behaviour per red/green cycle.
 - **DDD.** Code uses the domain's words: table under test, case, mock, source, boundary, producer, lineage, plan. Name modules, types, and functions after them. A new term is defined in [docs/HELPER.md](docs/HELPER.md) before it appears in code.
+- **Ship on a PR.** Push the branch and open (or update) a pull request; do not leave finished work only local. The PR body is for humans: succinct — what changed, why, and which roadmap story it serves.
 
 ## Conventions
 
