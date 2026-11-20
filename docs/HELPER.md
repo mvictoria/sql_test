@@ -231,7 +231,9 @@ Producer-level execution semantics will become important for ordered DML, insert
 
 ## Repository discovery
 
-The application is initially launched against a single local repository.
+The application is initially launched against a single local repository. The repository is always passed in, for example `sql-test app <path>`. The tool never assumes where a consuming repository lives or that it is inside the tool's own directory.
+
+`lakehouse-data-customer/` is a sample consuming repository kept in this directory for now. Nothing in the tool or its own tests may depend on it being there.
 
 It discovers:
 
@@ -480,6 +482,8 @@ customer-data/
 ├── data-test.yaml                       only if repo-specific config is needed
 └── .github/workflows/data-tests.yml     calls the reusable workflow
 ```
+
+This layout is illustrative. Where SQL, schemas, and cases live, and how SQL files map to tables, can differ per repository. The sample repository keeps SQL in `admin/sqls/` and maps each table to its SQL file in `admin/config/lookup_sql_table_mapping.csv`, with columns `load_type`, `table_ref`, and `sql_ref`.
 
 ## Versioning
 
