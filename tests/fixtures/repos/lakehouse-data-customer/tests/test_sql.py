@@ -3,12 +3,23 @@ from pathlib import Path
 import duckdb
 import pytest
 
+from sql_test.engine import Engine
+
 
 @pytest.fixture(scope="function")
 def db():
     con = duckdb.connect()
     yield con
     con.close()
+
+
+@pytest.fixture(scope="function")
+def engine():
+    admin = Path(__file__).parent.parent / "admin"
+    return Engine(
+        sqls=admin / "sqls",
+        mapping=admin / "config" / "lookup_sql_table_mapping.csv",
+    )
 
 
 def insert_test_data(rows, table_name, db):
@@ -36,13 +47,8 @@ def insert_test_data(rows, table_name, db):
         }
     ],
 )
-def test_medicaid_members(tables, db):
-    for table_name, rows in tables.items():
-        insert_test_data(rows, table_name, db)
-    sql = (
-        Path(__file__).parent.parent / "admin" / "sqls" / "medicaid_members.sql"
-    ).read_text()
-    selected = db.execute(sql).fetchall()
+def test_medicaid_members(tables, engine):
+    selected = engine.run("medicaid_members", rows=tables)
     assert ("1", "Ada") in selected
     assert ("2", "Bea") not in selected
 
@@ -80,20 +86,8 @@ def test_medicaid_members_types(rows, table_name, db):
         }
     ],
 )
-def test_medicaid_members_named_alice(tables, db):
-    for table_name, rows in tables.items():
-        insert_test_data(rows, table_name, db)
-    medicaid_members = (
-        Path(__file__).parent.parent / "admin" / "sqls" / "medicaid_members.sql"
-    ).read_text()
-    db.execute(f"create table medicaid_members as {medicaid_members}")
-    sql = (
-        Path(__file__).parent.parent
-        / "admin"
-        / "sqls"
-        / "medicaid_members_named_alice.sql"
-    ).read_text()
-    selected = db.execute(sql).fetchall()
+def test_medicaid_members_named_alice(tables, engine):
+    selected = engine.run("medicaid_members_named_alice", rows=tables)
     assert (1, "Alice") in selected
     assert (2, "Alice") not in selected
     assert (3, "Bea") not in selected
