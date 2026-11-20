@@ -22,19 +22,23 @@ def insert_test_data(rows, table_name, db):
 
 
 @pytest.mark.parametrize(
-    ("rows", "table_name"),
+    "tables",
     [
-        (
-            [
+        {
+            "members": [
                 {"member_id": "1", "member_name": "Ada", "lob": "30"},
                 {"member_id": "2", "member_name": "Bea", "lob": "10"},
             ],
-            "members",
-        )
+            "lob": [
+                {"lob": "30", "lob_name": "Medicaid"},
+                {"lob": "10", "lob_name": "Commercial"},
+            ],
+        }
     ],
 )
-def test_medicaid_members(rows, table_name, db):
-    insert_test_data(rows, table_name, db)
+def test_medicaid_members(tables, db):
+    for table_name, rows in tables.items():
+        insert_test_data(rows, table_name, db)
     sql = (
         Path(__file__).parent.parent / "admin" / "sqls" / "medicaid_members.sql"
     ).read_text()
@@ -61,20 +65,24 @@ def test_medicaid_members_types(rows, table_name, db):
 
 
 @pytest.mark.parametrize(
-    ("rows", "table_name"),
+    "tables",
     [
-        (
-            [
+        {
+            "members": [
                 {"member_id": 1, "member_name": "Alice", "lob": "30"},
                 {"member_id": 2, "member_name": "Alice", "lob": "10"},
                 {"member_id": 3, "member_name": "Bea", "lob": "30"},
             ],
-            "members",
-        )
+            "lob": [
+                {"lob": "30", "lob_name": "Medicaid"},
+                {"lob": "10", "lob_name": "Commercial"},
+            ],
+        }
     ],
 )
-def test_medicaid_members_named_alice(rows, table_name, db):
-    insert_test_data(rows, table_name, db)
+def test_medicaid_members_named_alice(tables, db):
+    for table_name, rows in tables.items():
+        insert_test_data(rows, table_name, db)
     medicaid_members = (
         Path(__file__).parent.parent / "admin" / "sqls" / "medicaid_members.sql"
     ).read_text()
