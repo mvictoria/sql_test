@@ -1,0 +1,13 @@
+from typing import Any, Protocol
+
+type Row = dict[str, Any]
+
+
+class Executor(Protocol):
+    def load_rows(self, table: str, rows: list[Row]) -> None: ...
+
+    def create_table_as(self, table: str, sql: str) -> None: ...
+
+    def read_table(self, table: str) -> list[tuple[Any, ...]]: ...
+
+    def close(self) -> None: ...

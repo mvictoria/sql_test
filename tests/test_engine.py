@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 
 from sql_test.engine import Engine
+from sql_test.executors.duckdb import DuckDBExecutor
 
 REPOSITORY = Path(__file__).parent / "fixtures" / "repos" / "lakehouse-data-customer"
 
@@ -18,6 +19,7 @@ def engine():
     return Engine(
         sqls=REPOSITORY / "admin" / "sqls",
         mapping=REPOSITORY / "admin" / "config" / "lookup_sql_table_mapping.csv",
+        executor=DuckDBExecutor,
     )
 
 
@@ -61,4 +63,6 @@ def test_reports_a_cycle(tmp_path):
     )
 
     with pytest.raises(CycleError):
-        Engine(sqls=tmp_path, mapping=mapping).run("a", rows={})
+        Engine(sqls=tmp_path, mapping=mapping, executor=DuckDBExecutor).run(
+            "a", rows={}
+        )
