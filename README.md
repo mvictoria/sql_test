@@ -6,6 +6,16 @@ Tests run the SQL files in `sqls/` on DuckDB. Each test gets its own in-memory d
 
 Chained queries are wired by hand. The Alice test loads `members`, runs `medicaid_members.sql` into a `medicaid_members` table, then runs `medicaid_members_named_alice.sql`.
 
+## Helper
+
+A local GUI for building and running test cases without writing Python. Details are in [docs/HELPER.md](docs/HELPER.md).
+
+- Browse models, tables, and saved cases
+- Coverage per model and per table
+- View lineage of the selected model, see what has been mocked and what still needs test data
+- Edit input data and view output after a run
+- Save, load, and execute test cases
+
 ## Later
 
 No particular order:
