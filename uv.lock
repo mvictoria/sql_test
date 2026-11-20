@@ -81,23 +81,25 @@ wheels = [
 [[package]]
 name = "sql-test"
 version = "0.1.0"
-source = { virtual = "." }
-
-[package.dev-dependencies]
-dev = [
+source = { editable = "." }
+dependencies = [
     { name = "duckdb" },
-    { name = "pytest" },
     { name = "sqlglot" },
 ]
 
-[package.metadata]
-
-[package.metadata.requires-dev]
+[package.dev-dependencies]
 dev = [
+    { name = "pytest" },
+]
+
+[package.metadata]
+requires-dist = [
     { name = "duckdb", specifier = ">=2.0.1" },
-    { name = "pytest", specifier = ">=9.2.0" },
     { name = "sqlglot", specifier = ">=30.33.0" },
 ]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = ">=9.2.0" }]
 
 [[package]]
 name = "sqlglot"
