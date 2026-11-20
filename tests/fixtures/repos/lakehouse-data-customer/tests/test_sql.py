@@ -1,6 +1,7 @@
+from pathlib import Path
+
 import duckdb
 import pytest
-from pathlib import Path
 
 
 @pytest.fixture(scope="function")
@@ -34,7 +35,9 @@ def insert_test_data(rows, table_name, db):
 )
 def test_medicaid_members(rows, table_name, db):
     insert_test_data(rows, table_name, db)
-    sql = (Path(__file__).parent.parent / "admin" / "sqls" / "medicaid_members.sql").read_text()
+    sql = (
+        Path(__file__).parent.parent / "admin" / "sqls" / "medicaid_members.sql"
+    ).read_text()
     selected = db.execute(sql).fetchall()
     assert ("1", "Ada") in selected
     assert ("2", "Bea") not in selected
@@ -77,7 +80,10 @@ def test_medicaid_members_named_alice(rows, table_name, db):
     ).read_text()
     db.execute(f"create table medicaid_members as {medicaid_members}")
     sql = (
-        Path(__file__).parent.parent / "admin" / "sqls" / "medicaid_members_named_alice.sql"
+        Path(__file__).parent.parent
+        / "admin"
+        / "sqls"
+        / "medicaid_members_named_alice.sql"
     ).read_text()
     selected = db.execute(sql).fetchall()
     assert (1, "Alice") in selected
