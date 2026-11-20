@@ -448,7 +448,7 @@ The local web app QA uses to build, run, and save cases. It calls the engine for
 ### App foundation
 
 <a id="app-1"></a>
-#### APP-1 Decide how the page reaches the repository
+#### APP-1 Decide how the page reaches the repository (done)
 
 Decide how the page reads and writes the checked-out repository, and record it in [HELPER.md](HELPER.md). Options include:
 
