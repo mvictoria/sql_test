@@ -29,11 +29,11 @@ The initial implementation will support a single repository. Multi-repository li
 
 SQL, schemas, lineage inputs, and test definitions live in Git. The application should derive information from the checked-out repository rather than maintaining a parallel representation.
 
-## One engine owns test execution semantics
+## One shared engine and test layer own test execution semantics
 
-The UI is not a separate testing framework. A single shared engine owns test semantics, and pytest remains the canonical runner (see Architecture).
+The UI is not a separate testing framework. One shared engine and the test layer over it own test semantics, and pytest remains the canonical runner (see Architecture).
 
-The same engine is used by:
+The same engine and test layer are used by:
 
 - pytest locally
 - CI
@@ -396,7 +396,11 @@ Coverage should always be derived from the tests and lineage at the currently lo
 
 ## One engine, thin entry points
 
-The tool is a single pip-installable Python project with one shared engine and several thin entry points. The engine owns all test semantics. Entry points depend on the engine, and the engine depends on none of them and does not know which one called it.
+The tool is a single pip-installable Python project with one shared engine, a test layer over it, and several thin entry points. Entry points depend on the test layer and the engine. The engine depends on none of them and does not know which one called it.
+
+The engine knows SQL, tables, and rows, not tests. It is given a folder of SQL, holding DDL and DML, and a SQL-to-table mapping. Asked for a table and given rows for some tables, it runs the SQL between them and returns that table's rows. It has no notion of a case, a mock, or an expected result.
+
+The test layer owns test semantics. It reads a case, passes the case's mocked tables to the engine as rows, and compares what the engine returns with the expected rows.
 
 ```text
  Authoring app     pytest       CLI
@@ -410,19 +414,23 @@ CI runs pytest or the CLI. It does not add CI-specific behavior to the engine.
 
 The engine owns:
 
-- repository discovery
 - SQL discovery and parsing
 - schema discovery
 - lineage construction
-- mock-boundary resolution and pruning
+- pruning tables whose rows are given
 - execution planning
-- fixture materialization
+- loading given rows
 - SQL execution (tentatively DuckDB, swapped for Spark later)
 - full-load and incremental semantics
-- expected/actual comparison
-- test-case discovery and loading
-- validation
 - cleanup
+
+The test layer owns:
+
+- repository discovery
+- test-case discovery and loading
+- mock-boundary resolution
+- expected/actual comparison
+- validation
 
 Avoid one implementation per entry point. Separate app, pytest, and CI engines would drift, and a case could pass in the app and fail in CI.
 
