@@ -1,5 +1,6 @@
 select
-    member_id,
-    member_name
+    members.member_id,
+    members.member_name
 from members
-where lob = '30'
+inner join lob on members.lob = lob.lob
+where lob.lob_name = 'Medicaid'
