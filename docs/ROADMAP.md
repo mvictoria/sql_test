@@ -528,7 +528,7 @@ Done so far: the app reads its paths from `RepositoryConfig`, and the `SQLS` and
 
 The app imports engine, executor, and test-layer names from `sql_test.engine`, `sql_test.executors`, and `sql_test.testing`, not from their modules, and drops the `app` exemption from `tests/test_layers.py`. The grid and the compare view type rows with `Column.cast` instead of loading them into a `DuckDBExecutor` and reading them back; the engine then removes `DuckDBExecutor.read_relation`. Also:
 
-- `frontier_mocks` reads `Plan.unused` from [ENG-25](#eng-25) instead of walking the lineage itself. Today it drops a mock upstream of another mock even when another path still reads it.
+- [x] `frontier_mocks` reads `Plan.unused` from [ENG-25](#eng-25) instead of walking the lineage itself, so a mock another path still reads is kept. The SQL view reads `catalog.operations` instead of re-reading the mapping.
 - The compare view passes `ordered=result.ordered`, so an ORDER BY target compares in order in the app as it does in pytest.
 - A request builds the catalog once instead of once per helper.
 

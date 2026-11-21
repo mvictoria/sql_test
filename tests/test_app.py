@@ -199,6 +199,36 @@ def test_demo_tree_hides_pruned_and_keeps_frontier_mocks():
     assert "raw_members" in body
 
 
+def test_a_mock_another_path_still_reads_is_kept(tmp_path):
+    (tmp_path / "pyproject.toml").write_text(
+        "[tool.sql-test]\n"
+        'sqls = "sql"\n'
+        'mapping = "mapping.csv"\n'
+        'schemas = "sql"\n'
+        'cases = "cases"\n'
+    )
+    sql = tmp_path / "sql"
+    sql.mkdir()
+    (sql / "ddl.sql").write_text(
+        "".join(
+            f"create table {name} (id int);\n" for name in ("base", "middle", "top")
+        )
+    )
+    (sql / "middle.sql").write_text("select * from base")
+    (sql / "top.sql").write_text("select middle.id from middle, base")
+    (tmp_path / "mapping.csv").write_text(
+        "table_ref,sql_ref\nmiddle,middle.sql\ntop,top.sql\n"
+    )
+    server = _with_server(tmp_path)
+    try:
+        body = _get(server, "/workbench?target=top&mock=middle&mock=base")
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert body.count("node mocked") == 2
+
+
 def test_covering_needs_rows_marks_ready_to_run():
     server = _with_server(DEMO)
     try:
