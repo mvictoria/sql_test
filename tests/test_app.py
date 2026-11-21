@@ -69,6 +69,21 @@ async def test_app_page_lists_models_and_sources(user: User):
     await user.should_not_see("Boundaries")
 
 
+async def test_home_lists_cases_with_their_table(user: User):
+    """APP-26: Alice's cases sit with that table, not only a global Cases list."""
+    _register(FIXTURE)
+    await user.open("/")
+
+    await user.should_see(marker=f"table-{ALICE}")
+    alice_case = f"{ALICE}/only_medicaid_alices"
+    await user.should_see(marker=f"table-case-{alice_case}")
+    assert (
+        _count_within(user, f"table-case-{alice_case}", within=f"table-cases-{ALICE}")
+        == 1
+    )
+    await user.should_see(marker=f"table-case-{ALICE}/from_mocked_medicaid_members")
+
+
 async def test_untested_table_with_pipeline_case_opens_from_the_browser(
     user: User, tmp_path: Path
 ):
@@ -107,6 +122,24 @@ async def test_selecting_a_model_opens_the_workbench(user: User):
     await user.should_see("from medicaid_members")
     await user.should_see(marker="sql-file", content=f"{ALICE}.sql")
     await user.should_see("Alice")
+
+
+async def test_opening_a_table_lists_its_cases_and_loads_one(user: User):
+    """APP-26: workbench for a target lists that table's cases; choosing one loads it."""
+    _register(FIXTURE)
+    await user.open(f"/workbench?target={ALICE}")
+
+    await user.should_see(marker="target", content=ALICE)
+    alice_case = f"{ALICE}/only_medicaid_alices"
+    await user.should_see(marker=f"target-case-{alice_case}")
+    await user.should_see(marker=f"target-case-{ALICE}/from_mocked_medicaid_members")
+    await user.should_not_see(marker="case-label")
+
+    user.find(marker=f"target-case-{alice_case}").click()
+
+    await user.should_see(marker="case-label", content="only_medicaid_alices")
+    await user.should_see(marker="grid-members")
+    await user.should_see(marker="grid-lob")
 
 
 async def test_the_app_reads_paths_from_the_repository_config(
@@ -171,7 +204,7 @@ async def test_changing_cases_in_the_app_updates_pyproject_and_lists_the_new_fol
     assert without_cases(before) == without_cases(after)
 
     await user.open("/")
-    await user.should_see(marker=f"case-{ALICE}/only_medicaid_alices")
+    await user.should_see(marker=f"table-case-{ALICE}/only_medicaid_alices")
 
 
 async def test_a_repository_without_config_opens_settings(user: User, tmp_path: Path):
@@ -879,7 +912,7 @@ async def test_selecting_a_case_opens_the_workbench(user: User, tmp_path: Path):
 
     _register(tmp_path)
     await user.open("/")
-    user.find(marker="case-medicaid_members/alice").click()
+    user.find(marker="table-case-medicaid_members/alice").click()
 
     await user.should_see("Workbench")
     await user.should_see(marker="target", content="medicaid_members")

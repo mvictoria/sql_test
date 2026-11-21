@@ -1,4 +1,5 @@
 from pathlib import Path
+from urllib.parse import quote
 
 from nicegui import ui
 
@@ -63,11 +64,13 @@ def open_workbench(
     else:
         requested = mock_params
     mocks = frontier_mocks(repo_catalog, target, requested)
+    target_cases = tuple(case.name for case in result.cases if case.target == target)
     return WorkbenchState(
         repository=repository,
         catalog=repo_catalog,
         target=target,
         case_name=case_name,
+        target_cases=target_cases,
         mocks=mocks,
         grid_rows=apply_grid_action("", mocks, grid_rows),
         view=view if view in VIEWS else DEFAULT_VIEW,
@@ -124,6 +127,15 @@ class Workbench:
                     ui.label(state.case_name).classes("text-weight-bold").mark(
                         "case-label"
                     )
+            if state.target_cases:
+                with ui.row().classes("gap-2 items-baseline").mark("target-cases"):
+                    ui.label("Cases:")
+                    for name in state.target_cases:
+                        href = (
+                            f"/workbench?case="
+                            f"{quote(f'{state.target}/{name}', safe='')}"
+                        )
+                        ui.link(name, href).mark(f"target-case-{state.target}/{name}")
             if state.mocks:
                 with ui.row().classes("gap-1 items-center").mark("mocks"):
                     ui.label("Mocks:")

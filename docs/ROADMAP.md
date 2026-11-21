@@ -60,9 +60,9 @@ Done:
 
 Per-case performance is done: after [ENG-31](#eng-31), [ENG-34](#eng-34), and [ENG-35](#eng-35) a case costs about 15–25 ms, spread across reading CSVs, DuckDB, and fixed overhead. The remaining performance stories are tabled because each saves little at expected scale: [ENG-30](#eng-30), [ENG-32](#eng-32), [ENG-37](#eng-37), [COV-5](#cov-5) (measured by [TEST-2](#test-2)).
 
-v0.5 CI is done: [CI-1](#ci-1), [CI-2](#ci-2), [CI-3](#ci-3), [CI-4](#ci-4), [CI-5](#ci-5), [CI-6](#ci-6). Authoring app v0.3 is done ([APP-8](#app-8), [APP-17](#app-17), [APP-19](#app-19), and the earlier APP stories). [APP-25](#app-25) is done. [APP-30](#app-30) is done. [APP-27](#app-27) is done. [CFG-1](#cfg-1) is done.
+v0.5 CI is done: [CI-1](#ci-1), [CI-2](#ci-2), [CI-3](#ci-3), [CI-4](#ci-4), [CI-5](#ci-5), [CI-6](#ci-6). Authoring app v0.3 is done ([APP-8](#app-8), [APP-17](#app-17), [APP-19](#app-19), and the earlier APP stories). [APP-25](#app-25) is done. [APP-30](#app-30) is done. [APP-27](#app-27) is done. [APP-26](#app-26) is done. [CFG-1](#cfg-1) is done.
 
-**Before the next release** (from [UAT.md](UAT.md)): adoption first — [DOC-1](#doc-1), [CLI-7](#cli-7), [ENG-36](#eng-36), [APP-20](#app-20), [APP-21](#app-21). Massive-repo performance is done ([ENG-31](#eng-31), [ENG-33](#eng-33)–[ENG-35](#eng-35)); the rest is tabled. Workbench navigation track in parallel: [APP-30](#app-30) (done), [APP-27](#app-27) (done), then [APP-26](#app-26), [APP-28](#app-28), [APP-29](#app-29). Keep [APP-18](#app-18) parked until UAT and front-end design say synthetic fill is next. Do not open Spark, incremental, or richer lineage until after the release. Further CLI commands ([CLI-2](#cli-2)–[CLI-6](#cli-6)) stay parked; the CLI's job today is `sql-test app` (plus [CLI-7](#cli-7) when built).
+**Before the next release** (from [UAT.md](UAT.md)): adoption first — [DOC-1](#doc-1), [CLI-7](#cli-7), [ENG-36](#eng-36), [APP-20](#app-20), [APP-21](#app-21). Massive-repo performance is done ([ENG-31](#eng-31), [ENG-33](#eng-33)–[ENG-35](#eng-35)); the rest is tabled. Workbench navigation track in parallel: [APP-30](#app-30) (done), [APP-27](#app-27) (done), [APP-26](#app-26) (done), then [APP-28](#app-28), [APP-29](#app-29). Keep [APP-18](#app-18) parked until UAT and front-end design say synthetic fill is next. Do not open Spark, incremental, or richer lineage until after the release. Further CLI commands ([CLI-2](#cli-2)–[CLI-6](#cli-6)) stay parked; the CLI's job today is `sql-test app` (plus [CLI-7](#cli-7) when built).
 
 ### Project skeleton
 
@@ -795,10 +795,10 @@ Faker is an optional dependency of the authoring app only. It does not write `ex
 
 ### Navigation and focus (workbench UX)
 
-Fewer hops between “pick a table,” “open a case,” “fill mocks,” “read SQL,” and “run / fix expected.” IDs start at APP-26 so they do not collide with UAT adoption stories APP-20–APP-21. [APP-25](#app-25) (fold Apply into Run) is done. Build order: [APP-30](#app-30) → [APP-27](#app-27) → [APP-26](#app-26) → [APP-28](#app-28) / [APP-29](#app-29). [APP-30](#app-30) and [APP-27](#app-27) are done.
+Fewer hops between “pick a table,” “open a case,” “fill mocks,” “read SQL,” and “run / fix expected.” IDs start at APP-26 so they do not collide with UAT adoption stories APP-20–APP-21. [APP-25](#app-25) (fold Apply into Run) is done. Build order: [APP-30](#app-30) → [APP-27](#app-27) → [APP-26](#app-26) → [APP-28](#app-28) / [APP-29](#app-29). [APP-30](#app-30), [APP-27](#app-27), and [APP-26](#app-26) are done.
 
 <a id="app-26"></a>
-#### APP-26 Cases belong to their table
+#### APP-26 Cases belong to their table (done)
 
 A case is always for one table under test. Home should not make QA hunt a flat Cases list separately from the table it belongs to. Opening a table for a new case must still show that table's existing cases so opening one is one click from the same place — not back through home.
 
