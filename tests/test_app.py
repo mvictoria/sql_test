@@ -55,6 +55,9 @@ def test_selecting_a_model_opens_the_workbench():
     assert "Workbench" in body
     assert "medicaid_members_named_alice" in body
     assert "table under test" in body.lower()
+    assert "from medicaid_members" in body
+    assert "medicaid_members_named_alice.sql" in body
+    assert "Alice" in body
 
 
 def test_selecting_a_case_opens_the_workbench(tmp_path):
