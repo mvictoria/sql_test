@@ -8,7 +8,11 @@ from sql_test.integrations.app.compare_view import compare_section
 from sql_test.integrations.app.engine_access import catalog
 from sql_test.integrations.app.engine_access import run as run_case
 from sql_test.integrations.app.grid import apply_grid_action, type_grid_rows
-from sql_test.integrations.app.grid_view import EditorActions, editor_view
+from sql_test.integrations.app.grid_view import (
+    EditorActions,
+    editor_view,
+    run_focus_view,
+)
 from sql_test.integrations.app.lineage_view import lineage_css, lineage_view
 from sql_test.integrations.app.mocks import frontier_mocks, toggled_mocks
 from sql_test.integrations.app.result_view import result_view
@@ -96,16 +100,16 @@ class Workbench:
         self.summary = ui.column().classes("gap-0")
         self.body = ui.column().classes("w-full")
         self.status = ui.column().classes("gap-0")
-        self.result = ui.column().classes("w-full")
         self.editor = ui.column().classes("w-full")
+        self.run_focus = ui.column().classes("w-full").mark("run-focus")
         self.refresh()
 
     def refresh(self) -> None:
         self.refresh_summary()
         self.refresh_body()
         self.refresh_status()
-        self.refresh_result()
         self.refresh_editor()
+        self.refresh_run_focus()
 
     def refresh_summary(self) -> None:
         state = self.state
@@ -167,10 +171,11 @@ class Workbench:
                     "status-detail"
                 )
 
-    def refresh_result(self) -> None:
-        self.result.clear()
-        with self.result:
+    def refresh_run_focus(self) -> None:
+        self.run_focus.clear()
+        with self.run_focus:
             result_view(self.state, self.show_result_view, self.accept_expected)
+            run_focus_view(self.state, self.actions)
 
     def refresh_editor(self) -> None:
         self.editor.clear()
@@ -197,7 +202,7 @@ class Workbench:
 
     def show_result_view(self, name: str) -> None:
         self.state.result_view = name
-        self.refresh_result()
+        self.refresh_run_focus()
 
     def toggle_mock(self, name: str) -> None:
         state = self.state
@@ -286,8 +291,7 @@ class Workbench:
                 ordered=state.run_result.ordered,
             )
         state.message = Message("Accepted actual as expected", ok=True)
-        self.refresh_editor()
-        self.refresh_result()
+        self.refresh_run_focus()
         self.refresh_status()
 
     def save(self) -> None:

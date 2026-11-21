@@ -41,16 +41,18 @@ class EditorActions:
 
 
 def editor_view(state: WorkbenchState, actions: EditorActions) -> None:
+    """Mock grids and case name — Expected and Run/Save live in run_focus_view."""
     expected_schema = target_schema(state.catalog, state.target)
     if not state.mocks and expected_schema is None:
         return
     _case_name(state)
+    if not state.mocks:
+        return
     repo_catalog = state.catalog
-    if state.mocks:
-        ui.label("Mock editor").classes("text-subtitle1")
-        ui.label(_SYNTHETIC_REMINDER).classes("text-caption text-grey-8").mark(
-            "synthetic-data-reminder"
-        )
+    ui.label("Mock editor").classes("text-subtitle1")
+    ui.label(_SYNTHETIC_REMINDER).classes("text-caption text-grey-8").mark(
+        "synthetic-data-reminder"
+    )
     for name in state.mocks:
         schema = repo_catalog.schema(repo_catalog.resolve(name))
         if schema is None:
@@ -62,6 +64,13 @@ def editor_view(state: WorkbenchState, actions: EditorActions) -> None:
                 "scrollIntoView", {"block": "center", "inline": "nearest"}
             )
         grid_view(name, schema, state, actions)
+
+
+def run_focus_view(state: WorkbenchState, actions: EditorActions) -> None:
+    """Expected grid and primary actions for the fail → fix → re-run loop."""
+    expected_schema = target_schema(state.catalog, state.target)
+    if not state.mocks and expected_schema is None:
+        return
     ui.label("Expected").classes("text-subtitle1").mark("grid-expected")
     if expected_schema is None:
         ui.label("No schema for the table under test").classes("text-grey-7")
@@ -71,7 +80,9 @@ def editor_view(state: WorkbenchState, actions: EditorActions) -> None:
                 "expected-no-rows"
             )
         grid_view("expected", expected_schema, state, actions)
-    with ui.row():
+    with ui.row().classes(
+        "sticky bottom-0 z-10 w-full bg-white py-2 gap-2 items-center border-t"
+    ):
         ui.button("Run", on_click=actions.on_run).mark("run")
         ui.button("Save case", on_click=actions.on_save).mark("save")
 
