@@ -1,7 +1,18 @@
 import csv
 from pathlib import Path
 
+from sql_test.engine.operation import Kind, Operation
+from sql_test.engine.relation import Relation
 
-def read_producers(mapping: Path, sqls: Path) -> dict[str, Path]:
+
+def read_operations(mapping: Path, sqls: Path) -> list[Operation]:
     with mapping.open(newline="") as file:
-        return {row["table_ref"]: sqls / row["sql_ref"] for row in csv.DictReader(file)}
+        return [
+            Operation(
+                sql_file=sqls / row["sql_ref"],
+                writes=Relation.parse(row["table_ref"]),
+                kind=Kind.FULL_LOAD,
+                load_type=row.get("load_type") or None,
+            )
+            for row in csv.DictReader(file)
+        ]

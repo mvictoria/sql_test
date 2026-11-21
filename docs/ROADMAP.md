@@ -29,10 +29,10 @@ Done:
 - [ENG-10](#eng-10), ahead of the plan it belongs in
 - [ENG-23](#eng-23)
 - [ENG-21](#eng-21)
+- [ENG-2](#eng-2)
 
 Can start now:
 
-- [ENG-2](#eng-2)
 - [ENG-3](#eng-3)
 - [ENG-4](#eng-4)
 - [ENG-5](#eng-5)
@@ -95,7 +95,7 @@ A relation is identified by an optional catalog, an optional schema, and a name,
 - **Depends on:** none
 
 <a id="eng-2"></a>
-#### ENG-2 Discover operations
+#### ENG-2 Discover operations (done)
 
 An operation is a SQL statement that writes a relation. Lineage runs relation → operation → relation, so one relation can have several producers. Each operation records:
 
