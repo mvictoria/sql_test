@@ -320,17 +320,17 @@ It does not manage branch lifecycle or discover tests from other branches.
 
 QA can search or browse tables/models.
 
-For each target, the application shows the number of discovered tests, and separately the number of other tests whose pipeline runs it (see Coverage).
+For each target, the application shows the number of discovered tests, and separately the number of other tests whose pipeline runs it (see Coverage). Discovered cases for that target appear beside the table on home (not only in a separate global list). Opening a table in the workbench lists those same cases so choosing one loads it without going back through home ([APP-26](ROADMAP.md#app-26)).
 
 Example:
 
 ```text
-TABLE                         TESTS    IN PIPELINES
+TABLE                         TESTS    IN PIPELINES    CASES
 
-customer_summary                8           0
-customer_demographics           4           8
-member_attribution              0           3
-customer_claim_history         12           0
+customer_summary                8           0          happy_path, empty_input
+customer_demographics           4           8          …
+member_attribution              0           3          —
+customer_claim_history         12           0          …
 ```
 
 ## Lineage

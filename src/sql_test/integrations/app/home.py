@@ -6,7 +6,7 @@ from nicegui import ui
 from sql_test.engine import Catalog
 from sql_test.integrations.config import RepositoryConfig
 from sql_test.integrations.discover import Discovery, discover
-from sql_test.testing import coverage_report, pipeline_cases
+from sql_test.testing import CaseSummary, coverage_report, pipeline_cases
 
 
 def home_page(repository: Path, pipelines: str | None = None) -> None:
@@ -19,19 +19,21 @@ def home_page(repository: Path, pipelines: str | None = None) -> None:
         ui.label("sql-test").classes("text-h5")
         ui.link("Settings", "/settings").mark("settings-link")
     _tables(result, catalog)
-    _cases(result)
 
 
 def _tables(result: Discovery, catalog: Catalog) -> None:
     tables = (*result.models, *result.sources)
     report = coverage_report(tables, result.cases, catalog)
     models = set(result.models)
+    cases_by_target = _cases_by_target(result)
     ui.label("Tables").classes("text-subtitle1")
     if not report:
         ui.label("None").classes("text-grey-7")
         return
-    with ui.grid(columns="minmax(16rem, auto) 6rem 9rem").classes("items-center"):
-        for heading in ("Table", "Tests", "In pipelines"):
+    with ui.grid(columns="minmax(16rem, auto) 6rem 9rem minmax(12rem, 1fr)").classes(
+        "items-center"
+    ):
+        for heading in ("Table", "Tests", "In pipelines", "Cases"):
             ui.label(heading).classes("text-caption text-weight-bold")
         for row in report:
             with ui.row().classes("items-baseline gap-2"):
@@ -48,17 +50,20 @@ def _tables(result: Discovery, catalog: Catalog) -> None:
                 ).mark(f"pipelines-{row.table}")
             else:
                 ui.label("0").mark(f"pipelines-{row.table}")
+            with ui.column().classes("gap-0").mark(f"table-cases-{row.table}"):
+                for case in cases_by_target.get(row.table, ()):
+                    ui.link(case.name, _case_href(case.target, case.name)).mark(
+                        f"table-case-{case.target}/{case.name}"
+                    )
+                if not cases_by_target.get(row.table):
+                    ui.label("—").classes("text-grey-7")
 
 
-def _cases(result: Discovery) -> None:
-    ui.label("Cases").classes("text-subtitle1")
-    if not result.cases:
-        ui.label("None").classes("text-grey-7")
-        return
+def _cases_by_target(result: Discovery) -> dict[str, tuple[CaseSummary, ...]]:
+    grouped: dict[str, list[CaseSummary]] = {}
     for case in result.cases:
-        ui.link(
-            f"{case.target} / {case.name}", _case_href(case.target, case.name)
-        ).mark(f"case-{case.target}/{case.name}")
+        grouped.setdefault(case.target, []).append(case)
+    return {target: tuple(cases) for target, cases in grouped.items()}
 
 
 def _pipelines_page(result: Discovery, catalog: Catalog, table: str) -> None:
