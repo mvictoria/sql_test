@@ -39,10 +39,11 @@ Done:
 - [ENG-9](#eng-9)
 - [ENG-7](#eng-7)
 - [ENG-11](#eng-11)
+- [ENG-12](#eng-12)
 
 Can start now:
 
-- [ENG-12](#eng-12)
+- [ENG-13](#eng-13)
 - [ENG-14](#eng-14)
 
 ### Project skeleton
@@ -242,7 +243,7 @@ How an operation's kind becomes SQL, for example a full-load `SELECT` becoming a
 - **Depends on:** none
 
 <a id="eng-12"></a>
-#### ENG-12 Load given rows
+#### ENG-12 Load given rows (done)
 
 Create each relation whose rows are given from its discovered schema, and insert the rows. A source relation with no schema takes its columns from the rows; how it is typed is an open question in [HELPER.md](HELPER.md).
 

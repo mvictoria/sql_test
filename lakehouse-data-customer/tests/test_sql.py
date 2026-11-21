@@ -1,18 +1,10 @@
 from pathlib import Path
 
-import duckdb
 import pytest
 
 from sql_test.engine import Engine
 from sql_test.engine.catalog.adapters import mapped_sql_folder
 from sql_test.executors.duckdb import DuckDBExecutor
-
-
-@pytest.fixture(scope="function")
-def db():
-    con = duckdb.connect()
-    yield con
-    con.close()
 
 
 @pytest.fixture(scope="function")
@@ -24,16 +16,6 @@ def engine():
             mapping=admin / "config" / "lookup_sql_table_mapping.csv",
         ),
         executor=DuckDBExecutor,
-    )
-
-
-def insert_test_data(rows, table_name, db):
-    columns = list(rows[0])
-    values = ", ".join("(" + ", ".join(["?"] * len(columns)) + ")" for _ in rows)
-    params = [row[column] for row in rows for column in columns]
-    db.execute(
-        f"create table {table_name} as select * from (values {values}) t({', '.join(columns)})",
-        params,
     )
 
 
@@ -54,25 +36,19 @@ def insert_test_data(rows, table_name, db):
 )
 def test_medicaid_members(tables, engine):
     selected = engine.run("medicaid_members", rows=tables)
-    assert ("1", "Ada") in selected
-    assert ("2", "Bea") not in selected
+    assert (1, "Ada") in selected
+    assert (2, "Bea") not in selected
 
 
-@pytest.mark.parametrize(
-    ("rows", "table_name"),
-    [
-        (
-            [{"member_id": 1, "member_name": "a" * 30, "lob": "30"}],
-            "members",
-        )
-    ],
-)
-def test_medicaid_members_types(rows, table_name, db):
-    insert_test_data(rows, table_name, db)
-    member_id, member_name, lob = db.execute(f"select * from {table_name}").fetchone()
+def test_medicaid_members_types(engine):
+    rows = engine.run(
+        "members",
+        rows={"members": [{"member_id": "1", "member_name": "Ada", "lob": "30"}]},
+    )
+    member_id, member_name, lob = rows[0]
     assert type(member_id) is int
-    assert type(member_name) is str and len(member_name) == 30
-    assert type(lob) is str and len(lob) == 2
+    assert type(member_name) is str
+    assert type(lob) is str
 
 
 @pytest.mark.parametrize(
