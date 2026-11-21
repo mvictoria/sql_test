@@ -668,6 +668,27 @@ Paste tabular data copied from Excel or Sheets into the grid, with a reminder th
 - **Done when:** pasting several rows and columns fills the grid.
 - **Depends on:** [APP-6](#app-6)
 
+<a id="app-18"></a>
+#### APP-18 Seeded Faker fill on the mock grid (parked)
+
+Speed up mock authoring so QA can generate a case quickly without inventing every cell or pasting real data:
+
+1. Mock the frontier as today.
+2. On a mocked table's grid, generate N synthetic rows from the schema (column types and light name hints such as `*_name` or `*_id`), with a visible seed so the same seed reproduces the same rows.
+3. Edit any cells by hand if needed.
+4. Run the pipeline, review output, accept or adjust expected ([APP-11](#app-11)).
+5. Save the case ([APP-12](#app-12)). Pytest runs the saved CSVs and does not depend on Faker.
+
+Faker is an optional dependency of the authoring app only. It does not write `expected.csv` by itself (run + accept keeps expected intentional). It does not invent join keys across tables; related multi-table generate is out of scope until QA outgrows single-table fill. Same synthetic-data reminder as paste ([APP-8](#app-8)). Separate from [TEST-1](#test-1) (Hypothesis tests the engine; Faker helps QA fill grids).
+
+- **Done when:** from an empty `members` grid, generating 5 rows fills schema-typed synthetic values; regenerating with the same seed yields the same rows; QA can edit, run, accept expected, and save; a case saved that way passes under pytest without importing Faker.
+- **Depends on:**
+  - [APP-6](#app-6)
+  - [APP-9](#app-9)
+  - [APP-11](#app-11)
+  - [APP-12](#app-12)
+- **Parked until:** QA asks for faster mock entry (hand entry and paste are enough until then).
+
 ### Run and compare
 
 <a id="app-9"></a>
@@ -1018,4 +1039,3 @@ Do not use Hypothesis for DuckDB execution, the app UI, or N-table scale shapes.
 - **pytest plugin.** Collect case folders without a test file in the repository. Deferred until the parametrized style has been used for a while, so the behaviour (how case folders are found, how the engine is built, opt-in or automatic) is chosen from experience. Depends on [CFG-1](#cfg-1).
 - **Undefined-relation checks.** Flag inferred relations with no schema, naming the SQL that reads them, with a did-you-mean against declared relations, and a strict mode with an allowlist of external sources. Mostly the repository's own linting's job; add only if users ask. Depends on [ENG-22](#eng-22).
 - **Browser E2E for the app.** Click-through coverage (for example Playwright) once the workbench is interactive enough that the NiceGUI `User` tests in `tests/test_app.py`, which simulate the browser without rendering, are not enough.
-- **Faker for authoring.** Optional seeded fake rows in the mock grid; separate from [TEST-1](#test-1). Add only if QA asks for generated sample data in the app.
