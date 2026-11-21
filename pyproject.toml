@@ -12,6 +12,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "hypothesis>=6.170.17",
     "prek>=0.5.11",
     "pyrefly>=1.5.0",
     "pytest>=9.2.0",

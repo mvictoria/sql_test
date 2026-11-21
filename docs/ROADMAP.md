@@ -1008,7 +1008,7 @@ After a run, open any executed table's rows and see at which table an input row 
 Work that hardens how *this* repository tests the engine and test layer. It is not a feature QA sees in the app. Example-based tests stay; these add property-based coverage where the input space is large.
 
 <a id="test-1"></a>
-#### TEST-1 Property-based tests with Hypothesis
+#### TEST-1 Property-based tests with Hypothesis (done)
 
 Add Hypothesis as a **dev** dependency and use it only in this repository's tests — not in the authoring app, and not to generate checked-in case folders (those stay hand-written or Faker-once-then-commit).
 
