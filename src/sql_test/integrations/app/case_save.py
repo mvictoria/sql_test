@@ -1,9 +1,8 @@
 from pathlib import Path
 
-from sql_test.engine.relation import Relation
-from sql_test.engine.schema import Schema
+from sql_test.engine import Catalog, Relation, Schema
 from sql_test.integrations.config import RepositoryConfig
-from sql_test.testing.cases import Case, CaseTable, write_case
+from sql_test.testing import Case, CaseTable, write_case
 
 
 class SaveError(Exception):
@@ -16,11 +15,11 @@ def save_case(
     name: str,
     mocks: tuple[str, ...],
     grid_rows: dict[str, list[dict[str, str | None]]],
+    repo_catalog: Catalog,
 ) -> Path:
     if not name or "/" in name or name in {".", ".."}:
         raise SaveError("case name is required and must not contain '/'")
-    config = RepositoryConfig.load(repository)
-    repo_catalog = config.catalog()
+    cases = RepositoryConfig.load(repository).cases
     target_relation = repo_catalog.resolve(target)
     mock_tables: dict[Relation, CaseTable] = {}
     for mock_name in mocks:
@@ -37,7 +36,7 @@ def save_case(
             any(str(value).strip() for value in row.values()) for row in expected_rows
         ):
             expected = _table_from_grid(expected_schema, expected_rows)
-    folder = config.cases / str(target_relation) / name
+    folder = cases / str(target_relation) / name
     folder.mkdir(parents=True, exist_ok=True)
     for path in folder.glob("*.csv"):
         path.unlink()

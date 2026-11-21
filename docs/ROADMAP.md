@@ -278,8 +278,8 @@ Behaviour-preserving cleanup of the engine, one commit per item:
 
 - [x] One run path: `run`, `run_rows`, and `run_result` share a single load-and-execute step.
 - [x] One run method: `Engine.run` returns a `RunResult` with the target's rows, row counts, and whether the target's SQL orders its rows. `run_rows` and `run_result` are gone, and `run_case` no longer parses SQL.
-- [x] Front doors: `sql_test.engine`, `sql_test.executors`, and `sql_test.testing` export what other layers use; `tests/test_layers.py` checks that the test layer and integrations import through them, with the app exempt until [APP-15](#app-15). `discover()` reads models and sources from the catalog instead of parsing SQL itself.
-- [x] Front doors export only names used outside their layer: 11 from `sql_test.engine` and 11 from `sql_test.testing`. Executors import only `sql_test.engine.executor`.
+- [x] Front doors: `sql_test.engine`, `sql_test.executors`, and `sql_test.testing` export what other layers use; `tests/test_layers.py` checks that the test layer and integrations import through them ([APP-15](#app-15) dropped the app exemption). `discover()` reads models and sources from the catalog instead of parsing SQL itself.
+- [x] Front doors export only names used outside their layer: `sql_test.engine` (including `Executor`) and `sql_test.testing`. Executors import only `sql_test.engine.executor`.
 - [x] The executor interface reads rows one way: `read_rows`.
 - [x] The executor interface is one call, `run(given, operations)`, which owns the whole lifecycle and returns the rows of every given and written relation. `Engine` takes an executor instance; `setup`, `create_relation`, `execute`, `read_rows`, `teardown`, and `read_relation` are gone.
 - [x] The catalog answers lookups itself: `resolve(name)`, `schema(relation)`, and `producers(relation)` replace the `Relation.parse(...).resolve(catalog.relations().keys())` and `catalog.schemas.get(...)` pairs in the engine, the test layer, and the app. `relations()` is a set; `Evidence` is gone. `read_case` takes the catalog. `Engine.plan` resolves given names the same way `run` does.
@@ -563,13 +563,14 @@ Done so far: the app reads its paths from `RepositoryConfig`, and the `SQLS` and
   - [APP-2](#app-2)
 
 <a id="app-15"></a>
-#### APP-15 Use the layers' front doors
+#### APP-15 Use the layers' front doors (done)
 
 The app imports engine, executor, and test-layer names from `sql_test.engine`, `sql_test.executors`, and `sql_test.testing`, not from their modules, and drops the `app` exemption from `tests/test_layers.py`. The grid and the compare view type rows with `Column.cast` instead of loading them through `DuckDBExecutor().run`. Also:
 
 - [x] `frontier_mocks` reads `Plan.unused` from [ENG-25](#eng-25) instead of walking the lineage itself, so a mock another path still reads is kept. The SQL view reads `catalog.operations` instead of re-reading the mapping.
-- The compare view passes `ordered=result.ordered`, so an ORDER BY target compares in order in the app as it does in pytest.
-- A request builds the catalog once instead of once per helper.
+- [x] The compare view passes `ordered=result.ordered`, so an ORDER BY target compares in order in the app as it does in pytest.
+- [x] A request builds the catalog once instead of once per helper.
+- [x] The CLI (or test) hands the app one executor via `register_app` / `serve`; app modules do not construct `DuckDBExecutor`, so [ENG-27](#eng-27)'s shared DuckDB instance is reused across plan and run.
 
 - **Done when:** `tests/test_layers.py` checks the app with no exemption, and no app module creates an executor.
 - **Depends on:** [ENG-24](#eng-24)

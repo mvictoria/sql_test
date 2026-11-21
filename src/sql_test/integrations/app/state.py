@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from sql_test.engine import RunResult
+from sql_test.engine import Catalog, RunResult
 from sql_test.integrations.app.compare_view import DiffPanel
 
 VIEWS = ("lineage", "sql")
@@ -23,6 +23,7 @@ class WorkbenchState:
     """Everything the workbench page remembers between clicks."""
 
     repository: Path
+    catalog: Catalog
     target: str
     case_name: str | None = None
     case_draft: str = ""

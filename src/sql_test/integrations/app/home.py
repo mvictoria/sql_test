@@ -10,8 +10,8 @@ from sql_test.testing import case_counts, pipeline_cases, pipeline_counts
 
 
 def home_page(repository: Path, pipelines: str | None = None) -> None:
-    result = discover(repository)
     catalog = RepositoryConfig.load(repository).catalog()
+    result = discover(repository, catalog)
     if pipelines:
         _pipelines_page(result, catalog, pipelines)
         return

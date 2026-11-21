@@ -5,6 +5,7 @@ from nicegui import ui
 from sql_test.integrations.app.case_load import case_grid_rows, load_case
 from sql_test.integrations.app.case_save import SaveError, save_case
 from sql_test.integrations.app.compare_view import compare_section
+from sql_test.integrations.app.engine_access import catalog
 from sql_test.integrations.app.engine_access import run as run_case
 from sql_test.integrations.app.grid import apply_grid_action, type_grid_rows
 from sql_test.integrations.app.grid_view import EditorActions, editor_view
@@ -27,7 +28,8 @@ def open_workbench(
     repository: Path, query: dict[str, list[str]]
 ) -> WorkbenchState | None:
     """The workbench a deep link asks for, or None when the link names nothing."""
-    result = discover(repository)
+    repo_catalog = catalog(repository)
+    result = discover(repository, repo_catalog)
     case_name: str | None = None
     if query.get("case"):
         raw = query["case"][0]
@@ -43,7 +45,11 @@ def open_workbench(
     else:
         return None
     view = query.get("view", [DEFAULT_VIEW])[0]
-    saved = load_case(repository, target, case_name) if case_name is not None else None
+    saved = (
+        load_case(repository, target, case_name, repo_catalog)
+        if case_name is not None
+        else None
+    )
     grid_rows: dict[str, list[dict[str, str | None]]] = {}
     mock_params = tuple(sorted({name for name in query.get("mock", []) if name}))
     if saved is not None:
@@ -52,9 +58,10 @@ def open_workbench(
         requested = tuple(sorted(str(relation) for relation in saved.mocks))
     else:
         requested = mock_params
-    mocks = frontier_mocks(repository, target, requested)
+    mocks = frontier_mocks(repo_catalog, target, requested)
     return WorkbenchState(
         repository=repository,
+        catalog=repo_catalog,
         target=target,
         case_name=case_name,
         mocks=mocks,
@@ -129,7 +136,7 @@ class Workbench:
             if self.state.view == "lineage":
                 lineage_view(self.state, self.toggle_mock)
             else:
-                sql_view(self.state.repository, self.state.target)
+                sql_view(self.state.catalog, self.state.target)
 
     def refresh_lineage(self) -> None:
         """Cheap refresh for typing: Ready / Blocked follows the filled rows."""
@@ -172,7 +179,7 @@ class Workbench:
     def toggle_mock(self, name: str) -> None:
         state = self.state
         requested = toggled_mocks(state.mocks, name)
-        state.mocks = frontier_mocks(state.repository, state.target, requested)
+        state.mocks = frontier_mocks(state.catalog, state.target, requested)
         state.grid_rows = apply_grid_action("", state.mocks, state.grid_rows)
         self._reset_results()
         self.refresh()
@@ -202,12 +209,10 @@ class Workbench:
         self._reset_results()
         mocked = {name: state.grid_rows.get(name, []) for name in state.mocks}
         try:
-            typed, state.engine_types = type_grid_rows(state.repository, mocked)
+            typed, state.engine_types = type_grid_rows(state.catalog, mocked)
             state.grid_rows.update(typed)
-            state.message = Message(
-                "Reached engine — mock rows loaded with schema types", ok=True
-            )
-        except Exception as error:  # noqa: BLE001 — show engine failures in the page
+            state.message = Message("Mock rows typed with schema types", ok=True)
+        except Exception as error:  # noqa: BLE001 — show failures in the page
             state.message = Message(f"Could not load mocks: {error}", ok=False)
         self.refresh()
 
@@ -215,14 +220,13 @@ class Workbench:
         state = self.state
         self._reset_results()
         try:
-            result = run_case(
-                state.repository, state.target, state.mocks, state.grid_rows
-            )
+            result = run_case(state.catalog, state.target, state.mocks, state.grid_rows)
             panel = compare_section(
-                state.repository,
+                state.catalog,
                 state.target,
                 state.grid_rows.get("expected", [{}]),
                 result.rows,
+                ordered=result.ordered,
             )
             state.run_result, state.panel = result, panel
             if not panel.passed:
@@ -230,7 +234,7 @@ class Workbench:
             elif state.result_view not in RESULT_VIEWS:
                 state.result_view = DEFAULT_RESULT_VIEW
             state.message = Message("Run complete", ok=True)
-        except Exception as error:  # noqa: BLE001 — show engine failures in the page
+        except Exception as error:  # noqa: BLE001 — show failures in the page
             state.message = Message(f"Could not run: {error}", ok=False)
         self.refresh()
 
@@ -239,7 +243,12 @@ class Workbench:
         name = state.case_name or state.case_draft.strip()
         try:
             folder = save_case(
-                state.repository, state.target, name, state.mocks, state.grid_rows
+                state.repository,
+                state.target,
+                name,
+                state.mocks,
+                state.grid_rows,
+                state.catalog,
             )
             state.case_name = name
             state.message = Message(
@@ -250,6 +259,6 @@ class Workbench:
             )
         except SaveError as error:
             state.message = Message(f"Could not save: {error}", ok=False)
-        except Exception as error:  # noqa: BLE001 — show engine failures in the page
+        except Exception as error:  # noqa: BLE001 — show failures in the page
             state.message = Message(f"Could not save: {error}", ok=False)
         self.refresh()

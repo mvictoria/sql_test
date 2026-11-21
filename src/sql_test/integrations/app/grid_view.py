@@ -3,9 +3,8 @@ from dataclasses import dataclass
 
 from nicegui import ui
 
-from sql_test.engine.schema import Column, Schema
+from sql_test.engine import Column, Schema
 from sql_test.integrations.app.compare_view import target_schema
-from sql_test.integrations.app.engine_access import catalog
 from sql_test.integrations.app.grid import Cell, cell_error
 from sql_test.integrations.app.state import WorkbenchState
 
@@ -23,11 +22,11 @@ class EditorActions:
 
 
 def editor_view(state: WorkbenchState, actions: EditorActions) -> None:
-    expected_schema = target_schema(state.repository, state.target)
+    expected_schema = target_schema(state.catalog, state.target)
     if not state.mocks and expected_schema is None:
         return
     _case_name(state)
-    repo_catalog = catalog(state.repository)
+    repo_catalog = state.catalog
     if state.mocks:
         ui.label("Mock editor").classes("text-subtitle1")
     for name in state.mocks:

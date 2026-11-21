@@ -2,8 +2,7 @@ from collections.abc import Callable
 
 from nicegui import ui
 
-from sql_test.engine.planner.plan import Plan, State
-from sql_test.engine.relation import Relation
+from sql_test.engine import Plan, Relation, State
 from sql_test.integrations.app.engine_access import plan as build_plan
 from sql_test.integrations.app.state import WorkbenchState
 
@@ -122,7 +121,7 @@ def lineage_css() -> str:
 
 
 def lineage_view(state: WorkbenchState, on_toggle: Callable[[str], None]) -> None:
-    plan = build_plan(state.repository, state.target, state.mocks, state.grid_rows)
+    plan = build_plan(state.catalog, state.target, state.mocks, state.grid_rows)
     counts = None if state.run_result is None else state.run_result.counts
     visible = _visible(plan)
     with ui.element("div").classes("lineage-panel w-full"):

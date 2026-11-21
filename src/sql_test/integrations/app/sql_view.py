@@ -1,12 +1,9 @@
-from pathlib import Path
-
 from nicegui import ui
 
-from sql_test.integrations.app.engine_access import catalog
+from sql_test.engine import Catalog
 
 
-def sql_view(repository: Path, target: str) -> None:
-    repo_catalog = catalog(repository)
+def sql_view(repo_catalog: Catalog, target: str) -> None:
     operations = repo_catalog.producers(repo_catalog.resolve(target))
     if not operations:
         ui.label("No producer SQL").classes("text-grey-7").mark("sql-empty")

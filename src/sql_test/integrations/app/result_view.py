@@ -2,8 +2,7 @@ from collections.abc import Callable
 
 from nicegui import ui
 
-from sql_test.engine import RunResult
-from sql_test.engine.executor import Row
+from sql_test.engine import Row, RunResult
 from sql_test.integrations.app.compare_view import DiffPanel
 from sql_test.integrations.app.state import RESULT_VIEWS, WorkbenchState
 

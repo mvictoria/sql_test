@@ -4,15 +4,18 @@ from pathlib import Path
 from nicegui import ui
 from starlette.requests import Request
 
+from sql_test.engine import Executor
+from sql_test.integrations.app.engine_access import bind_executor
 from sql_test.integrations.app.home import home_page
 from sql_test.integrations.app.workbench import Workbench, open_workbench
 
 LOCAL_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
 
 
-def register_app(repository: Path) -> None:
+def register_app(repository: Path, executor: Executor) -> None:
     """Register the authoring pages; each closes over the one repository."""
     repository = repository.resolve()
+    bind_executor(executor)
 
     @ui.page("/", title="sql-test")
     def home(pipelines: str | None = None) -> None:
@@ -24,11 +27,16 @@ def register_app(repository: Path) -> None:
         _guarded(lambda: _workbench_page(repository, query))
 
 
-def serve(repository: Path, host: str = "127.0.0.1", port: int = 8765) -> None:
+def serve(
+    repository: Path,
+    executor: Executor,
+    host: str = "127.0.0.1",
+    port: int = 8765,
+) -> None:
     if host not in LOCAL_HOSTS:
         raise ValueError("app server must bind to localhost only")
     repository = repository.resolve()
-    register_app(repository)
+    register_app(repository, executor)
     print(f"sql-test app serving {repository} at http://{host}:{port}/")
     ui.run(host=host, port=port, reload=False, show=False, title="sql-test")
 

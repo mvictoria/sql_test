@@ -1,18 +1,16 @@
-from pathlib import Path
-
-from sql_test.engine.relation import Relation
+from sql_test.engine import Catalog, Relation
 from sql_test.integrations.app.engine_access import plan as build_plan
 
 
 def frontier_mocks(
-    repository: Path, target: str, requested: tuple[str, ...]
+    repo_catalog: Catalog, target: str, requested: tuple[str, ...]
 ) -> tuple[str, ...]:
     """Keep only a mock frontier: drop any mock the run would never read."""
     if not requested:
         return ()
     unused = {
         str(relation)
-        for relation in build_plan(repository, target, requested, {}).unused
+        for relation in build_plan(repo_catalog, target, requested, {}).unused
     }
     return tuple(
         sorted(name for name in requested if str(Relation.parse(name)) not in unused)

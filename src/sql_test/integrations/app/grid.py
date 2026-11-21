@@ -1,9 +1,4 @@
-from pathlib import Path
-
-from sql_test.engine.executor import Given
-from sql_test.engine.schema import Column, Schema
-from sql_test.executors.duckdb import DuckDBExecutor
-from sql_test.integrations.app.engine_access import catalog
+from sql_test.engine import Catalog, Column, Schema
 
 type Cell = str | None
 type GridRows = dict[str, list[dict[str, Cell]]]
@@ -68,9 +63,8 @@ def apply_grid_action(
 
 
 def type_grid_rows(
-    repository: Path, rows: GridRows
+    repo_catalog: Catalog, rows: GridRows
 ) -> tuple[GridRows, dict[str, dict[str, str]]]:
-    repo_catalog = catalog(repository)
     typed_rows: GridRows = {}
     engine_types: dict[str, dict[str, str]] = {}
     for name, table_rows in rows.items():
@@ -87,31 +81,19 @@ def type_grid_rows(
         if not non_empty:
             typed_rows[name] = table_rows or [{}]
             continue
-        # DuckDB Given expects strings for casting through its loader; map NULL → None.
-        as_text = [
-            {
-                column.name: (
-                    None if row[column.name] is None else str(row[column.name])
-                )
-                for column in schema
-            }
-            for row in non_empty
-        ]
-        written = DuckDBExecutor().run({relation: Given(schema, as_text)}, [])
-        loaded = [
-            tuple(row[column.name] for column in schema) for row in written[relation]
-        ]
         display: list[dict[str, Cell]] = []
         types: dict[str, str] = {}
-        for values in loaded:
-            display.append(
-                {
-                    column.name: None if value is None else str(value)
-                    for column, value in zip(schema, values, strict=True)
-                }
-            )
-            for column, value in zip(schema, values, strict=True):
+        for row in non_empty:
+            typed: dict[str, Cell] = {}
+            for column in schema:
+                raw = row[column.name]
+                if raw is None or raw == "":
+                    typed[column.name] = None
+                    continue
+                value = column.cast(raw)
+                typed[column.name] = str(value)
                 types[column.name] = type(value).__name__
+            display.append(typed)
         typed_rows[name] = display or [{}]
         engine_types[name] = types
     return typed_rows, engine_types
