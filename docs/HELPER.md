@@ -229,7 +229,7 @@ Each relation in the catalog records how it is known:
 
 A reference resolves to a declared relation when it matches one; otherwise it is inferred as written. Inferred relations keep lineage complete, including sources owned elsewhere, but a typo such as `memebrs` is also inferred. The tool does not validate that a repository's SQL reads real tables; that belongs to the repository's own linting. It should show inferred relations distinctly, so a typo is not mocked into a case by accident; nothing does yet. A relation is declared when `Catalog.producers` or `Catalog.schema` finds it, so the distinction needs no separate tag. Callers find relations through the catalog: `resolve(name)`, `schema(relation)`, and `producers(relation)`.
 
-A catalog is a **snapshot**: frozen once built, it works out its relations once. A long-running caller, such as the app, sees edited files by building a new catalog. Building one is cheap because parsing is memoized on the text of each SQL and DDL file: an unchanged file is parsed once per process, and an edited file is a new text, so it is parsed again. Nothing has to notice the edit or invalidate a cache.
+A catalog is a **snapshot**: frozen once built, it works out its relations once. A long-running caller, such as the app, sees edited files by building a new catalog. Building one is cheap because parsing is memoized on the text of each SQL and DDL file: an unchanged file is parsed once per process, and an edited file is a new text, so it is parsed again. Nothing has to notice the edit or invalidate a cache. Lookups are indexed once per catalog: `resolve` compares a name only with relations of that name, and `producers` reads an index of operations by the relation they write.
 
 ## Schemas
 
