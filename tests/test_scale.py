@@ -1,4 +1,4 @@
-"""Scale shapes: chain, fan-out, funnel, and wide joins — not critical-path only."""
+"""Scale shapes: chain, fan-out, funnel, bush, and staged reduction — not critical-path only."""
 
 from pathlib import Path
 
@@ -12,6 +12,12 @@ from sql_test.testing.run import run_case
 SIZES = (10, 100, 1000)
 # Real SQL rarely joins more than ~20 tables; 50 is a stretch ceiling.
 JOIN_SIZES = (10, 20, 50)
+# Staged funnels: layer widths from leaves to tip (last must be 1).
+REDUCTION_WIDTHS = (
+    (3, 2, 1),
+    (8, 4, 2, 1),
+    (16, 8, 4, 2, 1),
+)
 
 
 def _engine(sqls: Path, mapping: Path) -> Engine:
@@ -132,6 +138,51 @@ def _bush(root: Path, n: int) -> tuple[Path, Path, str]:
     return sqls, mapping, tip
 
 
+def _reduction(root: Path, widths: tuple[int, ...]) -> tuple[Path, Path, str]:
+    """Staged funnel: widths[0] leaves from raw, then pairwise joins down to one tip.
+
+    Odd nodes at a layer pass through. Example widths (3, 2, 1):
+    raw → n0_0, n0_1, n0_2 → n1_0=n0_0⋈n0_1, n1_1=n0_2 → n2_0=n1_0⋈n1_1.
+    """
+    if not widths or widths[-1] != 1:
+        raise ValueError(f"widths must end in 1, got {widths}")
+    sqls = root / "sqls"
+    sqls.mkdir()
+    ddl = ["create table raw (id int, name varchar);\n"]
+    models: list[str] = []
+    bottom = [f"n0_{i}" for i in range(widths[0])]
+    for name in bottom:
+        ddl.append(f"create table {name} (id int, name varchar);\n")
+        models.append(name)
+        (sqls / f"{name}.sql").write_text("select id, name from raw")
+    prev = bottom
+    for level, width in enumerate(widths[1:], start=1):
+        expected = (len(prev) + 1) // 2
+        if width != expected:
+            raise ValueError(
+                f"level {level}: width {width} != pairwise shrink of {len(prev)} ({expected})"
+            )
+        layer = [f"n{level}_{i}" for i in range(width)]
+        for i, name in enumerate(layer):
+            ddl.append(f"create table {name} (id int, name varchar);\n")
+            models.append(name)
+            left = prev[2 * i]
+            if 2 * i + 1 < len(prev):
+                right = prev[2 * i + 1]
+                (sqls / f"{name}.sql").write_text(
+                    f"select {left}.id, {left}.name from {left} "
+                    f"inner join {right} on {left}.id = {right}.id"
+                )
+            else:
+                (sqls / f"{name}.sql").write_text(f"select id, name from {left}")
+        prev = layer
+    (sqls / "ddl.sql").write_text("".join(ddl))
+    tip = prev[0]
+    mapping = root / "mapping.csv"
+    _write_mapping(mapping, models)
+    return sqls, mapping, tip
+
+
 @pytest.mark.parametrize("n", SIZES, ids=lambda n: f"{n}_tables")
 def test_chain_runs_end_to_end(tmp_path: Path, n: int):
     sqls, mapping, tip = _chain(tmp_path, n)
@@ -211,6 +262,32 @@ def test_bush_fans_out_then_funnels_with_n_way_join(tmp_path: Path, n: int):
 
     plan = engine.plan(tip, {"raw": [{"id": 1, "name": "Ada"}]})
     assert len(plan.operations) == n + 1  # every leaf + tip
+
+    result = run_case(folder, engine)
+    assert result.passed, result.report()
+    assert result.actual == [{"id": 1, "name": "Ada"}]
+
+
+@pytest.mark.parametrize(
+    "widths",
+    REDUCTION_WIDTHS,
+    ids=lambda w: ">".join(map(str, w)),
+)
+def test_staged_reduction_funnels_pairwise_to_the_tip(
+    tmp_path: Path, widths: tuple[int, ...]
+):
+    sqls, mapping, tip = _reduction(tmp_path, widths)
+    engine = _engine(sqls, mapping)
+    folder = _case(
+        tmp_path,
+        tip,
+        "through_reduction",
+        mocks={"raw.csv": "id,name\n1,Ada\n"},
+        expected="id,name\n1,Ada\n",
+    )
+
+    plan = engine.plan(tip, {"raw": [{"id": 1, "name": "Ada"}]})
+    assert len(plan.operations) == sum(widths)
 
     result = run_case(folder, engine)
     assert result.passed, result.report()
