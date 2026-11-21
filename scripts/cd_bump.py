@@ -1,7 +1,7 @@
 """Compute the next release tag from a PR title and the latest git version tag.
 
-PR titles opt into a release with exactly one of: (major), (minor), (patch).
-The tag is always applied to main's tip after the PR lands (linear history).
+The PR title's first word must be exactly (major), (minor), or (patch) to release.
+Anything later in the title is ignored. The tag is applied to main's tip after land.
 """
 
 from __future__ import annotations
@@ -10,16 +10,15 @@ import argparse
 import re
 import sys
 
-BUMP_TOKEN = re.compile(r"\((major|minor|patch)\)")
+FIRST_WORD_BUMP = re.compile(r"^\((major|minor|patch)\)$")
 
 
 def bump_from_title(title: str) -> str | None:
-    found = BUMP_TOKEN.findall(title)
-    if not found:
+    parts = title.split(None, 1)
+    if not parts:
         return None
-    if len(set(found)) > 1:
-        raise ValueError(f"PR title has conflicting bump tokens: {found}")
-    return found[0]
+    match = FIRST_WORD_BUMP.fullmatch(parts[0])
+    return match.group(1) if match else None
 
 
 def next_tag(latest: str | None, bump: str) -> str:

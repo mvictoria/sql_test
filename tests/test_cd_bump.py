@@ -21,20 +21,17 @@ cd_bump = _load()
 @pytest.mark.parametrize(
     ("title", "expected"),
     [
-        ("CI-2: versioned releases (patch)", "patch"),
-        ("break the API (major)", "major"),
-        ("add coverage report (minor)", "minor"),
+        ("(patch) CI-2: versioned releases", "patch"),
+        ("(major) break the API", "major"),
+        ("(minor) add coverage report", "minor"),
         ("ENG-1: package skeleton", None),
-        ("fix typo (patch) in docs", "patch"),
+        ("CI-2: versioned releases (patch)", None),
+        ("(patch) notes about major and minor", "patch"),
+        ("(minor) (major) ship both", "minor"),
     ],
 )
 def test_bump_from_title(title, expected):
     assert cd_bump.bump_from_title(title) == expected
-
-
-def test_bump_from_title_rejects_conflicting_tokens():
-    with pytest.raises(ValueError, match="conflicting"):
-        cd_bump.bump_from_title("ship it (minor) (major)")
 
 
 @pytest.mark.parametrize(

@@ -39,7 +39,7 @@ jobs:
           echo "PR title: $title"
           bump="$(python3 scripts/cd_bump.py from-title "$title")"
           if [[ -z "$bump" ]]; then
-            echo "No (major)|(minor)|(patch) in PR title; skip tag."
+            echo "PR title does not start with (major)|(minor)|(patch); skip tag."
             exit 0
           fi
           latest="$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' | sort -V | tail -1 || true)"
