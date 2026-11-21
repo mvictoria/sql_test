@@ -55,7 +55,7 @@ Done:
 - [ENG-29](#eng-29)
 
 
-v0.5 CI is done: [CI-1](#ci-1), [CI-2](#ci-2), [CI-3](#ci-3). [APP-17](#app-17) and [APP-19](#app-19) are done. [CFG-1](#cfg-1) is done. Further CLI commands ([CLI-2](#cli-2)–[CLI-6](#cli-6)) are parked until a demonstrated need; the CLI's job today is `sql-test app`.
+v0.5 CI is done: [CI-1](#ci-1), [CI-2](#ci-2), [CI-3](#ci-3). [APP-17](#app-17), [APP-19](#app-19), and [APP-8](#app-8) are done. [CFG-1](#cfg-1) is done. Further CLI commands ([CLI-2](#cli-2)–[CLI-6](#cli-6)) are parked until a demonstrated need; the CLI's job today is `sql-test app`.
 
 ### Project skeleton
 
@@ -663,7 +663,7 @@ In the grid:
 - **Depends on:** [APP-6](#app-6)
 
 <a id="app-8"></a>
-#### APP-8 Paste from a spreadsheet
+#### APP-8 Paste from a spreadsheet (done)
 
 Paste tabular data copied from Excel or Sheets into the grid, with a reminder that fixtures must be synthetic and must not contain real member data.
 

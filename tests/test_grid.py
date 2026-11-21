@@ -3,6 +3,7 @@ from sql_test.integrations.app.grid import (
     apply_grid_action,
     cell_error,
     next_grid_cell,
+    paste_into_grid,
     previous_grid_cell,
     validate_grid,
 )
@@ -51,3 +52,19 @@ def test_previous_grid_cell_wraps_to_the_prior_row_then_ends():
 
     assert previous_grid_cell(columns, 1, "member_id") == (0, "lob")
     assert previous_grid_cell(columns, 0, "member_id") is None
+
+
+def test_paste_tsv_fills_several_rows_and_columns_from_the_start_cell():
+    """Excel/Sheets clipboard is TSV; paste starts at the target cell; blanks → NULL."""
+    columns = ("member_id", "member_name", "lob")
+    rows: list[dict[str, str | None]] = [{}]
+    clipboard = "1\tAda\t30\n2\t\t10\n"
+
+    filled = paste_into_grid(
+        rows, columns, start_row=0, start_column="member_id", clipboard=clipboard
+    )
+
+    assert filled == [
+        {"member_id": "1", "member_name": "Ada", "lob": "30"},
+        {"member_id": "2", "member_name": None, "lob": "10"},
+    ]

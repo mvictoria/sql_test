@@ -9,9 +9,24 @@ from sql_test.integrations.app.grid import (
     Cell,
     cell_error,
     next_grid_cell,
+    paste_into_grid,
     previous_grid_cell,
 )
 from sql_test.integrations.app.state import WorkbenchState
+
+_SYNTHETIC_REMINDER = (
+    "Fixtures must be synthetic and must not contain real member data."
+)
+_PASTE_JS = """
+(e) => {
+    const data = e.clipboardData;
+    const text = data?.getData('text/plain') || data?.getData('text') || '';
+    if (text.includes('\\t') || text.includes('\\n') || text.includes('\\r')) {
+        e.preventDefault();
+        emit({text});
+    }
+}
+"""
 
 
 @dataclass(frozen=True)
@@ -34,6 +49,9 @@ def editor_view(state: WorkbenchState, actions: EditorActions) -> None:
     repo_catalog = state.catalog
     if state.mocks:
         ui.label("Mock editor").classes("text-subtitle1")
+        ui.label(_SYNTHETIC_REMINDER).classes("text-caption text-grey-8").mark(
+            "synthetic-data-reminder"
+        )
     for name in state.mocks:
         schema = repo_catalog.schema(repo_catalog.resolve(name))
         if schema is None:
@@ -161,6 +179,13 @@ def _cell(
                     reverse=True,
                 ),
             )
+            field.on(
+                "paste",
+                lambda event, index=index, key=key: _paste(
+                    table, state, actions, columns, index, key, event.args
+                ),
+                js_handler=_PASTE_JS,
+            )
             if is_null:
                 field.props("readonly")
             toggle = (
@@ -213,6 +238,36 @@ def _focus_cell(fields: dict[tuple[int, str], ui.input], row: int, column: str) 
         return
     field.classes(add="grid-focus")
     field.run_method("focus")
+
+
+def _paste(
+    table: str,
+    state: WorkbenchState,
+    actions: EditorActions,
+    columns: list[str],
+    row: int,
+    column: str,
+    args: object,
+) -> None:
+    text = _paste_text(args)
+    if text is None or not _tabular_clipboard(text):
+        return
+    rows = state.grid_rows.setdefault(table, [{}])
+    state.grid_rows[table] = paste_into_grid(
+        rows, columns, start_row=row, start_column=column, clipboard=text
+    )
+    actions.on_rebuild()
+
+
+def _paste_text(args: object) -> str | None:
+    if isinstance(args, dict):
+        value = args.get("text")
+        return value if isinstance(value, str) else None
+    return None
+
+
+def _tabular_clipboard(text: str) -> bool:
+    return "\t" in text or "\n" in text or "\r" in text
 
 
 def _edit(

@@ -60,6 +60,57 @@ def validate_grid(schemas: dict[str, Schema], rows: GridRows) -> dict[str, str]:
     return errors
 
 
+def paste_into_grid(
+    rows: list[dict[str, Cell]],
+    columns: Sequence[str],
+    *,
+    start_row: int,
+    start_column: str,
+    clipboard: str,
+) -> list[dict[str, Cell]]:
+    """Fill cells from spreadsheet TSV starting at ``(start_row, start_column)``.
+
+    Empty clipboard cells become NULL (``None``). Extra paste rows extend the grid.
+    """
+    try:
+        start_col = list(columns).index(start_column)
+    except ValueError:
+        return [dict(row) for row in rows]
+    parsed = _parse_tsv(clipboard)
+    if not parsed:
+        return [dict(row) for row in rows]
+    updated = [dict(row) for row in rows]
+    while len(updated) < start_row + len(parsed):
+        updated.append({})
+    for row_offset, cells in enumerate(parsed):
+        row = updated[start_row + row_offset]
+        for col_offset, value in enumerate(cells):
+            index = start_col + col_offset
+            if index >= len(columns):
+                break
+            row[columns[index]] = value
+    return updated
+
+
+def _parse_tsv(clipboard: str) -> list[list[Cell]]:
+    text = clipboard.replace("\r\n", "\n").replace("\r", "\n")
+    text = text.removesuffix("\n")
+    if not text:
+        return []
+    rows: list[list[Cell]] = []
+    for line in text.split("\n"):
+        cells: list[Cell] = []
+        for cell in line.split("\t"):
+            if cell == "":
+                cells.append(None)
+            elif cell == '""':
+                cells.append("")
+            else:
+                cells.append(cell)
+        rows.append(cells)
+    return rows
+
+
 def apply_grid_action(
     action: str,
     mocks: tuple[str, ...],

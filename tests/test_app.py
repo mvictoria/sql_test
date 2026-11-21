@@ -376,6 +376,27 @@ async def test_shift_tab_walks_cells_in_reverse_without_row_actions(user: User):
     await user.should_see(marker="cell-members.1.member_id")
 
 
+async def test_pasting_tsv_into_a_cell_fills_several_rows_and_columns(user: User):
+    """Paste starts at the focused cell; blanks become NULL; synthetic reminder shows."""
+    _register(FIXTURE)
+    await user.open(f"/workbench?target={ALICE}&view=lineage&mock=members")
+    await user.should_see(marker="cell-members.0.member_id")
+    await user.should_see(marker="synthetic-data-reminder")
+
+    user.find(marker="cell-members.0.member_id").trigger(
+        "paste",
+        args={"text": "1\tAda\t30\n2\t\t10\n"},
+    )
+
+    await user.should_see(marker="cell-members.1.member_id")
+    assert _value(user, "cell-members.0.member_id") == "1"
+    assert _value(user, "cell-members.0.member_name") == "Ada"
+    assert _value(user, "cell-members.0.lob") == "30"
+    assert _value(user, "cell-members.1.member_id") == "2"
+    await user.should_see(marker="null-members.1.member_name")
+    assert _value(user, "cell-members.1.lob") == "10"
+
+
 async def test_a_non_integer_member_id_is_flagged_before_running(user: User):
     _register(FIXTURE)
     await user.open(f"/workbench?target={ALICE}&view=lineage&mock=members")
