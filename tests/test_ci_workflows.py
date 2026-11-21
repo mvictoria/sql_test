@@ -54,3 +54,18 @@ def test_tool_ci_calls_reusable_workflow_for_sample():
     job = ci["jobs"]["sample-data-tests"]
     assert job["uses"] == "./.github/workflows/data-tests.yml"
     assert job["with"]["working-directory"] == "lakehouse-data-customer"
+
+
+def test_release_moves_major_tag_and_creates_github_release():
+    workflow = _load(WORKFLOWS / "release.yml")
+    triggers = _on(workflow)["push"]["tags"]
+    assert "v[0-9]+.[0-9]+.[0-9]+" in triggers
+
+    job = workflow["jobs"]["release"]
+    assert job["permissions"]["contents"] == "write"
+    step_names = [s.get("name") for s in job["steps"]]
+    assert "Create GitHub Release" in step_names
+    assert "Move major version tag" in step_names
+    move = next(s for s in job["steps"] if s.get("name") == "Move major version tag")
+    assert "git tag -f" in move["run"]
+    assert "git push" in move["run"] and "--force" in move["run"]
