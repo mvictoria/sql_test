@@ -16,7 +16,7 @@ pytest tests in the sample repository's `tests/test_sql.py` load rows into DuckD
 
 ---
 
-## v0.1 — Engine core
+## v0.1 — Engine core (done)
 
 A headless engine, and a test layer over it, that run a case folder end to end on DuckDB, and a pytest plugin that runs every case folder. Done when the v0 scenarios run as case folders through pytest with no hand wiring.
 
@@ -46,10 +46,9 @@ Done:
 - [ENG-15](#eng-15)
 - [ENG-17](#eng-17)
 - [ENG-18](#eng-18)
-
-Can start now:
-
 - [ENG-19](#eng-19)
+
+Next, now unblocked: [CLI-2](#cli-2), [CLI-3](#cli-3), [CLI-4](#cli-4), [CLI-5](#cli-5), [CFG-1](#cfg-1), and [CI-1](#ci-1).
 
 ### Project skeleton
 
@@ -333,7 +332,7 @@ Discover every case folder and run each as its own pytest test through ENG-17. A
   - [ENG-20](#eng-20)
 
 <a id="eng-19"></a>
-#### ENG-19 Port the v0 tests
+#### ENG-19 Port the v0 tests (done)
 
 In the sample repository, rewrite the v0 scenarios as case folders and remove the hand-wired tests from its `tests/test_sql.py`. The schemas already exist in `members_ddl.sql`.
 
