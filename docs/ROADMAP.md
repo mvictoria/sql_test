@@ -42,11 +42,11 @@ Done:
 - [ENG-12](#eng-12)
 - [ENG-13](#eng-13)
 - [ENG-14](#eng-14)
+- [ENG-16](#eng-16)
 
 Can start now:
 
 - [ENG-15](#eng-15)
-- [ENG-16](#eng-16)
 
 ### Project skeleton
 
@@ -297,7 +297,7 @@ Part of the test layer. Compare expected and actual rows using the defaults from
 ### Case format and pytest
 
 <a id="eng-16"></a>
-#### ENG-16 Read and write case folders
+#### ENG-16 Read and write case folders (done)
 
 Read a case folder's CSVs into typed rows using the discovered schemas and the NULL convention, and write rows back out in the same format. The case format is a public contract: other tools and people write cases by hand, so it is documented in [HELPER.md](HELPER.md) with a format version, and changes to it are versioned.
 

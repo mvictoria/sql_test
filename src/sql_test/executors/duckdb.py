@@ -28,7 +28,7 @@ class DuckDBExecutor:
         placeholders = ", ".join("?" for _ in schema)
         connection.executemany(
             f"insert into {relation} values ({placeholders})",
-            [[row[column.name] for column in schema] for row in rows],
+            [[row.get(column.name) for column in schema] for row in rows],
         )
 
     def execute(self, operation: Operation) -> None:
