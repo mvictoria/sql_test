@@ -21,6 +21,9 @@ dev = [
 [project.scripts]
 sql-test = "sql_test.integrations.cli:main"
 
+[project.entry-points.pytest11]
+sql_test = "sql_test.integrations.pytest_plugin"
+
 [build-system]
 requires = ["uv_build>=0.12.2,<0.13"]
 build-backend = "uv_build"
