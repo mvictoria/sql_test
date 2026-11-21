@@ -56,12 +56,13 @@ Done:
 - [ENG-33](#eng-33)
 - [ENG-31](#eng-31)
 - [ENG-34](#eng-34)
+- [ENG-35](#eng-35)
 
-Planning performance still open: [ENG-30](#eng-30), [ENG-32](#eng-32), [ENG-36](#eng-36), [COV-5](#cov-5) (measured by [TEST-2](#test-2)).
+Per-case performance is done: after [ENG-31](#eng-31), [ENG-34](#eng-34), and [ENG-35](#eng-35) a case costs about 15–25 ms, spread across reading CSVs, DuckDB, and fixed overhead. The remaining performance stories are tabled because each saves little at expected scale: [ENG-30](#eng-30), [ENG-32](#eng-32), [ENG-37](#eng-37), [COV-5](#cov-5) (measured by [TEST-2](#test-2)).
 
 v0.5 CI is done: [CI-1](#ci-1), [CI-2](#ci-2), [CI-3](#ci-3), [CI-4](#ci-4), [CI-5](#ci-5). Authoring app v0.3 is done ([APP-8](#app-8), [APP-17](#app-17), [APP-19](#app-19), and the earlier APP stories). [APP-25](#app-25) is done. [APP-30](#app-30) is done. [CFG-1](#cfg-1) is done.
 
-**Before the next release** (from [UAT.md](UAT.md)): adoption first — [CI-6](#ci-6), [DOC-1](#doc-1), [CLI-7](#cli-7), [ENG-36](#eng-36), [APP-20](#app-20), [APP-21](#app-21) — then or beside massive-repo perf [ENG-31](#eng-31) and [ENG-32](#eng-32). Workbench navigation track in parallel: [APP-30](#app-30) (done), then [APP-27](#app-27), [APP-26](#app-26), [APP-28](#app-28), [APP-29](#app-29). Keep [APP-18](#app-18) parked until UAT and front-end design say synthetic fill is next. Do not open Spark, incremental, or richer lineage until after the release. Further CLI commands ([CLI-2](#cli-2)–[CLI-6](#cli-6)) stay parked; the CLI's job today is `sql-test app` (plus [CLI-7](#cli-7) when built).
+**Before the next release** (from [UAT.md](UAT.md)): adoption first — [CI-6](#ci-6), [DOC-1](#doc-1), [CLI-7](#cli-7), [ENG-36](#eng-36), [APP-20](#app-20), [APP-21](#app-21). Massive-repo performance is done ([ENG-31](#eng-31), [ENG-33](#eng-33)–[ENG-35](#eng-35)); the rest is tabled. Workbench navigation track in parallel: [APP-30](#app-30) (done), then [APP-27](#app-27), [APP-26](#app-26), [APP-28](#app-28), [APP-29](#app-29). Keep [APP-18](#app-18) parked until UAT and front-end design say synthetic fill is next. Do not open Spark, incremental, or richer lineage until after the release. Further CLI commands ([CLI-2](#cli-2)–[CLI-6](#cli-6)) stay parked; the CLI's job today is `sql-test app` (plus [CLI-7](#cli-7) when built).
 
 ### Project skeleton
 
@@ -354,12 +355,13 @@ Resolving a name compared it with every relation in the catalog, and finding a r
 - **Depends on:** [ENG-26](#eng-26)
 
 <a id="eng-30"></a>
-#### ENG-30 Memoize upstream lineage by target
+#### ENG-30 Memoize upstream lineage by target (tabled)
 
 `plan_run` rebuilds the target's full upstream lineage on every call, even when `given` is ignored by the walk and many cases share a target. On [TEST-2](#test-2)'s 1000 models × 100 cases, almost all of the ~8s is 100k identical-shaped `plan_run`s. While the walk still ignores givens ([ENG-31](#eng-31)), cache `upstream_lineage` per catalog by target so a second plan for the same target reuses the lineage. A new catalog ([APP-17](#app-17)) starts empty. After [ENG-31](#eng-31), revisit the cache key — truncated walks depend on the given frontier.
 
 - **Done when:** two `plan_run`s for the same target on one catalog walk lineage once; [TEST-2](#test-2)'s `pipeline_counts` phase drops by roughly the cases-per-model factor when targets repeat; and a second catalog over edited SQL sees the new lineage.
 - **Depends on:** [ENG-6](#eng-6), [ENG-29](#eng-29)
+- **Tabled:** written before [ENG-31](#eng-31). The walk now stops at the givens, so a case's walk is usually one or two relations and the lineage depends on the givens, not only the target. Planning is about 1.5 ms of a case. Reopen if a profile shows the lineage walk is a large share of a run again.
 
 <a id="eng-31"></a>
 #### ENG-31 Stop the plan's lineage walk at given relations (done)
@@ -372,12 +374,13 @@ Measured on the same 1,000-table chain with 2,000 case folders, this PC (4 cores
 - **Depends on:** [ENG-10](#eng-10), [ENG-29](#eng-29)
 
 <a id="eng-32"></a>
-#### ENG-32 Read each SQL file once per catalog
+#### ENG-32 Read each SQL file once per catalog (tabled)
 
 `Operation.sql` reads its file from disk every time it is asked, so planning the 1,000 cases in the [ENG-31](#eng-31) measurement read about 950 files per case. A catalog is a frozen snapshot, so it reads each mapped SQL file once and keeps the text. A long-running caller still sees edits, because it builds a new catalog ([APP-17](#app-17)).
 
 - **Done when:** planning several runs from one catalog reads each SQL file once; and a catalog built after a SQL file is edited sees the new text.
 - **Depends on:** [ENG-26](#eng-26), [APP-17](#app-17)
+- **Tabled:** since [ENG-31](#eng-31), a case reads only the SQL files it executes, usually one, so the saving is a fraction of a millisecond per case. Reopen if a profile shows SQL file reads are a large share of a run.
 
 <a id="eng-34"></a>
 #### ENG-34 Parse each column type once when typing cells (done)
@@ -411,13 +414,14 @@ Per case, on the [ENG-34](#eng-34) case, with two mocks and an expected file of 
 - **Done when:** loading a mock of many rows runs one insert; and a 100-row mock of 10 columns loads at least twice as fast as with `executemany`.
 - **Depends on:** [ENG-27](#eng-27)
 
-<a id="eng-36"></a>
-#### ENG-36 Reuse a plan for the same target and givens
+<a id="eng-37"></a>
+#### ENG-37 Reuse a plan for the same target and givens (tabled)
 
 Callers that plan many cases (coverage, batch runs) repeat `plan_run` for the same target and given frontier. Cache the plan per catalog keyed by target, which relations are given, and which of those have zero rows (`needs_rows` / empty mocks). Distinct from [ENG-30](#eng-30) (lineage only) and from [COV-5](#cov-5) (coverage-only dedupe): this helps every `plan_run` caller. Invalidate with the catalog.
 
 - **Done when:** two `plan_run`s with the same target and given row-count map return the same plan without walking lineage again; a given with zero rows still appears in `needs_rows`; and [TEST-2](#test-2) stays under a tighter budget once this lands (record the new numbers in the story or the test).
 - **Depends on:** [ENG-8](#eng-8), [ENG-30](#eng-30)
+- **Tabled:** a plan costs about 0.1–1.5 ms against a 15–25 ms case, so reusing it barely changes a run. Coverage is the caller that plans without executing; [COV-5](#cov-5) covers that more cheaply. Reopen with [COV-5](#cov-5) if batch runs need it.
 
 ### Comparison
 
@@ -972,12 +976,13 @@ Show TESTS and IN PIPELINES next to each table. Selecting the in-pipeline count 
   - [APP-13](#app-13)
 
 <a id="cov-5"></a>
-#### COV-5 Deduplicate coverage planning by case shape
+#### COV-5 Deduplicate coverage planning by case shape (tabled)
 
-`pipeline_counts` and `pipeline_cases` call `plan_run` once per case. Many cases share a target and the same mock set, so the plan is identical. Group by `(target, frozenset(mocks))` before planning, and reuse that plan for every case in the group. Cheap coverage-only win; [ENG-36](#eng-36) is the engine-wide form. Enough alone to collapse [TEST-2](#test-2)'s 100k plans to 1,000 on independent models.
+`pipeline_counts` and `pipeline_cases` call `plan_run` once per case. Many cases share a target and the same mock set, so the plan is identical. Group by `(target, frozenset(mocks))` before planning, and reuse that plan for every case in the group. Cheap coverage-only win; [ENG-37](#eng-37) is the engine-wide form. Enough alone to collapse [TEST-2](#test-2)'s 100k plans to 1,000 on independent models.
 
 - **Done when:** `pipeline_counts` over 100 identical cases for one target plans once; [TEST-2](#test-2)'s `pipeline_counts` phase scales with distinct `(target, mocks)` pairs, not with case count; and in-pipeline counts match the pre-dedupe behaviour.
 - **Depends on:** [COV-2](#cov-2)
+- **Tabled:** after [ENG-31](#eng-31), [TEST-2](#test-2)'s 100,000 cases take 10.3 s in `pipeline_counts`, about 0.1 ms per case. At about 10 cases per table, a 1,000-table repository's coverage takes about 1 s. Reopen if the app's home page is slow at a real repository's case count.
 
 ---
 
@@ -1278,7 +1283,7 @@ Do not use Hypothesis for DuckDB execution, the app UI, or N-table scale shapes.
 <a id="test-2"></a>
 #### TEST-2 Engine-only case volume (done)
 
-A regression guard for catalog + coverage planning at repository scale, without DuckDB. 1000 independent models × 100 in-memory cases each (100k `plan_run`s via `pipeline_counts`). Complements `tests/test_scale.py`, which exercises lineage shapes through the executor. Follow-on speedups: [ENG-30](#eng-30), [ENG-32](#eng-32), [ENG-36](#eng-36), [COV-5](#cov-5).
+A regression guard for catalog + coverage planning at repository scale, without DuckDB. 1000 independent models × 100 in-memory cases each (100k `plan_run`s via `pipeline_counts`). Complements `tests/test_scale.py`, which exercises lineage shapes through the executor. Follow-on speedups, all tabled: [ENG-30](#eng-30), [ENG-32](#eng-32), [ENG-37](#eng-37), [COV-5](#cov-5).
 
 - **Done when:** `tests/test_engine_perf.py` builds a 1000-model catalog, runs `case_counts` and `pipeline_counts` over 100k cases, and fails if catalog or pipeline phases blow a fixed wall-clock budget.
 - **Depends on:**
@@ -1289,7 +1294,7 @@ A regression guard for catalog + coverage planning at repository scale, without 
 
 ## Later — not yet planned
 
-- **Plan micro-opts.** Skip `TopologicalSorter` on trivial graphs, or build a states-only plan for coverage, only if [ENG-30](#eng-30), [ENG-32](#eng-32), [ENG-36](#eng-36), and [COV-5](#cov-5) leave a measured gap on [TEST-2](#test-2).
+- **Plan micro-opts.** Skip `TopologicalSorter` on trivial graphs, or build a states-only plan for coverage, only if [ENG-30](#eng-30), [ENG-32](#eng-32), [ENG-37](#eng-37), and [COV-5](#cov-5) leave a measured gap on [TEST-2](#test-2).
 - **Pre-commit validation.** A hook running `sql-test validate`. Depends on [CLI-6](#cli-6).
 - **Multi-repository workspaces.** Lineage across repositories, where the repository that owns the table under test owns the case. Depends on stable single-repository lineage from v0.1 and v0.8.
 - **CDC and change propagation.** What changes downstream when an upstream row is inserted, updated, or deleted. Depends on v0.7.
