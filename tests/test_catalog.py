@@ -5,7 +5,7 @@ import sqlglot
 
 from sql_test.engine import Engine
 from sql_test.engine.catalog.adapters import mapped_sql_folder
-from sql_test.engine.catalog.mapping import read_operations
+from sql_test.engine.catalog.mapping import MappingProblem, read_operations
 from sql_test.engine.operation import Kind, Operation
 from sql_test.engine.relation import AmbiguousRelation, Relation
 from sql_test.executors import DuckDBExecutor
@@ -54,6 +54,22 @@ def test_a_relation_mapped_to_two_files_has_two_operations(tmp_path):
     assert {operation.writes for operation in operations} == {
         Relation(schema="claims", name="ids")
     }
+
+
+def test_a_mapped_sql_file_that_is_missing_is_a_problem_not_an_operation(tmp_path):
+    (tmp_path / "kept.sql").write_text("select id from raw")
+    mapping = tmp_path / "mapping.csv"
+    mapping.write_text(
+        "load_type,table_ref,sql_ref\nhistoric,kept,kept.sql\nhistoric,gone,gone.sql\n"
+    )
+
+    catalog = mapped_sql_folder(sqls=tmp_path, mapping=mapping)
+
+    assert [operation.sql_file.name for operation in catalog.operations] == ["kept.sql"]
+    assert Relation(name="gone") not in catalog.relations()
+    assert catalog.problems == (
+        MappingProblem(file=mapping, reason="gone.sql does not exist"),
+    )
 
 
 def test_every_relation_in_the_sample_repository_is_declared():
@@ -192,6 +208,30 @@ def test_a_new_catalog_over_unchanged_files_parses_nothing(tmp_path, monkeypatch
     parsed = _counting_parses(monkeypatch, tmp_path.name)
 
     build().resolve("members")
+
+    assert parsed == []
+
+
+def test_a_new_catalog_over_thousands_of_unchanged_files_parses_nothing(
+    tmp_path, monkeypatch
+):
+    marker = tmp_path.name
+    count = 2500
+    for i in range(count):
+        (tmp_path / f"t_{i}.sql").write_text(f"-- {marker}\nselect id from t_{i + 1}")
+    (tmp_path / "ddl.sql").write_text(f"-- {marker}\ncreate table t_0 (id integer)")
+    mapping = tmp_path / "mapping.csv"
+    mapping.write_text(
+        "table_ref,sql_ref\n" + "".join(f"t_{i},t_{i}.sql\n" for i in range(count))
+    )
+
+    def rebuild() -> None:
+        mapped_sql_folder(sqls=tmp_path, mapping=mapping).resolve("t_0")
+
+    rebuild()
+    parsed = _counting_parses(monkeypatch, marker)
+
+    rebuild()
 
     assert parsed == []
 

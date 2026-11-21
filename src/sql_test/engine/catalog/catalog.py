@@ -2,6 +2,7 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from functools import cached_property
 
+from sql_test.engine.catalog.mapping import MappingProblem
 from sql_test.engine.lineage.references import UnparseableSql, tables_read
 from sql_test.engine.operation import Operation
 from sql_test.engine.relation import Relation
@@ -12,7 +13,7 @@ from sql_test.engine.schema import Schema, SchemaProblem
 class Catalog:
     operations: tuple[Operation, ...] = ()
     schemas: Mapping[Relation, Schema] = field(default_factory=dict)
-    problems: tuple[SchemaProblem, ...] = ()
+    problems: tuple[SchemaProblem | MappingProblem, ...] = ()
 
     def relations(self) -> frozenset[Relation]:
         """Every relation written by an operation, given a schema, or read by SQL."""

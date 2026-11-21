@@ -55,7 +55,7 @@ Done:
 - [ENG-29](#eng-29)
 
 
-v0.5 CI is done: [CI-1](#ci-1), [CI-2](#ci-2), [CI-3](#ci-3). Next: app stories that are not done, including [APP-17](#app-17) (rebuild catalog when SQL files change) and [APP-19](#app-19) (Tab order in the mock grid). [CFG-1](#cfg-1) is done. Further CLI commands ([CLI-2](#cli-2)–[CLI-6](#cli-6)) are parked until a demonstrated need; the CLI's job today is `sql-test app`.
+v0.5 CI is done: [CI-1](#ci-1), [CI-2](#ci-2), [CI-3](#ci-3). Next: app stories that are not done, including [APP-19](#app-19) (Tab order in the mock grid). [CFG-1](#cfg-1) is done. Further CLI commands ([CLI-2](#cli-2)–[CLI-6](#cli-6)) are parked until a demonstrated need; the CLI's job today is `sql-test app`.
 
 ### Project skeleton
 
@@ -586,11 +586,13 @@ The authoring app is built with [NiceGUI](https://nicegui.io) instead of a stdli
   - the shipped APP stories: [APP-3](#app-3), [APP-4](#app-4), [APP-5](#app-5), [APP-6](#app-6), [APP-9](#app-9), [APP-10](#app-10), [APP-12](#app-12), [APP-13](#app-13)
 
 <a id="app-17"></a>
-#### APP-17 Rebuild the catalog when SQL files change
+#### APP-17 Rebuild the catalog when SQL files change (done)
 
 While `sql-test app` is running, a SQL file under the repository's configured paths may be added, modified, or deleted outside the app. The next request discards the old catalog and builds a new immutable one from the checkout, so home, lineage, and SQL views match. The mapping file is watched the same way. Catalogs stay snapshots ([ENG-26](#eng-26)); there is no in-place patch of operations or indexes.
 
 Do not assume the rebuild is free. Pressure-test a representative repository (on the order of hundreds of SQL files): after one file changes, rebuilding the catalog with memoized parse must stay fast enough for interactive use. If it is not, revisit incremental update then — not before.
+
+Measured on generated repositories with one DDL file per table: one workbench action builds the catalog, discovers, and plans lineage. After a one-file edit this takes 112 ms for 300 models (601 files), 264 ms for 1,000 models (2,001 files), and 965 ms for 3,000 models (6,001 files). That's acceptable, so the story stays closed. Before the fix, the DDL cache's 1,024-entry limit meant 1,000 models took 2.7 s even with no file changed.
 
 - **Done when:** editing a mapped SQL's upstream tables updates lineage on the next request; adding a mapped SQL shows the new model; deleting a mapped SQL removes it; and a rebuild after a one-file change on a large fixture repo is timed and recorded as acceptable for the app, or the story is reopened for incremental update.
 - **Depends on:**

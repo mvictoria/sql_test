@@ -29,7 +29,9 @@ def read_ddl_schemas(folder: Path, dialect: str | None = None) -> DiscoveredSche
     return discovered
 
 
-@lru_cache(maxsize=1024)
+# Must exceed the files in a repository: a rebuild reads them in order, so a
+# smaller LRU evicts each entry before it is needed again and never hits.
+@lru_cache(maxsize=65536)
 def _definitions(
     text: str, dialect: str | None
 ) -> tuple[tuple[Relation, Schema] | str, ...]:
