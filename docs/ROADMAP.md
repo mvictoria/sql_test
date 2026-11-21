@@ -49,8 +49,10 @@ Done:
 - [ENG-19](#eng-19)
 - [ENG-25](#eng-25)
 - [ENG-26](#eng-26)
+- [ENG-24](#eng-24)
+- [ENG-27](#eng-27)
+- [ENG-28](#eng-28)
 
-In progress: [ENG-24](#eng-24) engine cleanup.
 
 Next, now unblocked: [CI-1](#ci-1), and app stories that are not done. [CFG-1](#cfg-1) is done. Further CLI commands ([CLI-2](#cli-2)–[CLI-6](#cli-6)) are parked until a demonstrated need; the CLI's job today is `sql-test app`.
 
@@ -269,7 +271,7 @@ The executor runs a plan's ordered operations against the given rows and returns
   - [ENG-12](#eng-12)
 
 <a id="eng-24"></a>
-#### ENG-24 Engine cleanup
+#### ENG-24 Engine cleanup (done)
 
 Behaviour-preserving cleanup of the engine, one commit per item:
 
