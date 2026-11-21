@@ -90,22 +90,24 @@ For an incremental model:
 ```text
 Test Case
 ├── table under test
-├── target before → rows
-├── mocked tables
+├── mocked tables: the history
 │   ├── table A → rows
 │   └── table B → rows
+├── deltas: this batch's changes
+│   └── table A → rows
+├── parameters → values
 └── expected target after → rows
 ```
 
-Incremental self-reference should conceptually be represented as:
+Nobody writes a before state by hand. A historical run builds every table's before from the history, and a CDC run applies the deltas; see [incremental semantics](#incremental-semantics). Incremental self-reference is conceptually:
 
 ```text
 target(before) ──┐
                  ├── incremental SQL ──→ target(after)
-mock inputs ─────┘
+inputs' deltas ──┘
 ```
 
-rather than exposing the self-reference as a cycle to QA.
+rather than a cycle shown to QA.
 
 ## Saved format
 
@@ -115,8 +117,9 @@ A test case is a folder of CSVs:
 cases/
 └── <table under test>/
     └── <case name>/
-        ├── <mocked table>.csv    one per mocked table
-        ├── before.csv            incremental models only: the target before
+        ├── <mocked table>.csv    one per mocked table: the history
+        ├── delta/
+        │   └── <table>.csv       incremental cases only: this batch's change to a table
         ├── parameters.csv        templated SQL only: the run's parameter values
         └── expected.csv
 ```
@@ -140,9 +143,10 @@ A repository's own pytest test runs its case folders, one parametrized test per 
 
 ### Case format, version 2
 
-Version 2 adds two optional files to version 1. `before.csv`, `parameters.csv`, and `expected.csv` are reserved names: none of them is a mock.
+Version 2 adds an optional `delta/` folder and an optional `parameters.csv` to version 1. `delta`, `parameters.csv`, and `expected.csv` are reserved names: none of them is a mock.
 
-- `before.csv` is the target before, for a case whose table under test is incremental. It is a case table typed by the target's schema, like `expected.csv`, and lists only some columns if it likes; unlisted columns are NULL. A missing `before.csv` means the target starts empty, as on a first load. `expected.csv` is then the target after. A case whose table under test is not incremental and has a `before.csv` fails, naming it.
+- A case with a `delta/` folder is an **incremental case**. Its mock files are the **history**: each mocked table's rows before the batch. Each file in `delta/` is a **delta**: one table's change in this batch, named like a mock file and typed by that table's schema. A delta can be on any table, mocked or not, the same as a mock. Delta rows carry the batch columns the SQL filters on, as the orchestrator would have stamped them.
+- `expected.csv` is the table under test after the batch: the whole table, history included. The mocker controls its size by controlling the history.
 - `parameters.csv` holds the values for the run's [SQL parameters](#sql-parameters). It has the header `name,value` and one row per value; a name on several rows is a list. Values are SQL text, written as they should appear in the SQL: `42`, or `'abc'` with its quotes.
 
 ```text
@@ -305,14 +309,15 @@ schemas = "admin/sqls"
 cases = "tests/cases"
 ```
 
-Two optional settings describe incremental models and templated SQL:
+Three optional settings describe incremental models and templated SQL:
 
 ```toml
 merge_key = "di_audit_pk_hash_key"
 parameter_style = "@@{name}@@"
+audit_columns = ["di_audit_*"]
 ```
 
-`merge_key` is the column a [merge](#incremental-semantics) matches rows on, the same in every table; a merge in a repository without one fails, naming the table. `parameter_style` is how the repository's SQL writes a [parameter](#sql-parameters), with `{name}` standing for its name.
+`merge_key` is the column a [merge](#incremental-semantics) matches rows on, the same in every table; a merge in a repository without one fails, naming the table. `audit_columns` lists column-name patterns the [history check](#incremental-semantics) ignores, such as `["di_audit_*"]`: columns an incremental run stamps differently from a historical one, such as batch numbers. `parameter_style` is how the repository's SQL writes a [parameter](#sql-parameters), with `{name}` standing for its name.
 
 Every other setting is required. A repository with no `pyproject.toml`, no `[tool.sql-test]` table, or a missing setting is an error that names what is missing; the tool assumes no layout. The CLI and the app read the config; a repository's own pytest tests may read it too, or pass paths directly.
 
@@ -1131,13 +1136,20 @@ The POC should establish sensible defaults without exposing unnecessary configur
 
 ## Incremental semantics
 
-An incremental model's operation runs against its target before, from the case's `before.csv`, and its kind says how the rows its SQL returns become the target after:
+An incremental table usually has two kinds of producer: **historical** producers, full loads that rebuild it from everything upstream, and **incremental** producers, whose load type is `append`, `merge`, or `incremental` and which apply one batch. A table may have several incremental producers; they run in mapping order. An incremental case runs in two phases:
 
-- **append**: the target after is the target before plus the returned rows.
-- **merge**: the returned rows are a delta. A returned row whose `merge_key` matches a row in the target before replaces that row; any other returned row is inserted. Nothing is deleted. A soft delete is a column the SQL sets, such as `delete_flg`, so it needs nothing from the tool.
+1. **Historical run.** The history is given, and every table the case executes is built by its historical producers. This is each table's **before**. Nobody writes a before by hand, so befores are consistent with each other by construction.
+2. **CDC run.** Each delta is applied to its table's before, by that table's kind. Then every table downstream of a delta runs its incremental producers in order: each reads its upstream tables, which now hold the batch, filters them to the batch through its [parameters](#sql-parameters), and applies what it returns to its own before. A table with no incremental producer runs its historical producers again. The table under test after this run is compared with `expected.csv`.
+
+A kind says how the rows a producer returns, or a delta's rows, become the table after:
+
+- **append**: the table after is the before plus the rows.
+- **merge**: the rows are a delta. A row whose `merge_key` matches a row in the before replaces it; any other row is inserted. Nothing is deleted. A soft delete is a column the SQL sets, such as `delete_flg`, so it needs nothing from the tool.
 - **incremental**, dbt's word: a merge when the repository has a `merge_key`, otherwise an append.
 
-SQL that reads its own target reads the target before, whatever its kind.
+A delta on a table with no incremental producer, such as a source, is a merge when the repository has a `merge_key`, otherwise an append. SQL that reads its own target reads its before.
+
+**History check.** A CDC run must end where history ends: after a batch, a table looks exactly as if it had been rebuilt historically from history and delta together. So every incremental case also runs the historical producers over the history with each delta applied, and compares each table the CDC run wrote with what that historical run built, ignoring the config's `audit_columns`. A difference fails the case, naming the table and the rows. Two SQLs per table can drift apart, for example an incremental SQL whose key changes while the historical SQL does not; the history check catches that without anyone writing an expectation for it.
 
 ## SQL parameters
 
