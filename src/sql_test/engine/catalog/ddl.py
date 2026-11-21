@@ -35,9 +35,11 @@ def read_ddl_schemas(folder: Path, dialect: str | None = None) -> DiscoveredSche
 def _definitions(
     text: str, dialect: str | None
 ) -> tuple[tuple[Relation, Schema] | str, ...]:
-    """The tables `text` creates, and why any statement does not parse."""
+    """The tables `text` creates, and why any CREATE statement does not parse."""
+    if "create" not in text.lower():
+        return ()
     try:
-        statements = list(_statements(text, dialect))
+        statements = list(_creates(text, dialect))
     except SqlglotError as error:
         return (str(error),)
     definitions: list[tuple[Relation, Schema] | str] = []
@@ -65,12 +67,15 @@ def _definitions(
     return tuple(definitions)
 
 
-def _statements(text: str, dialect: str | None) -> Iterator[str]:
-    start = 0
+def _creates(text: str, dialect: str | None) -> Iterator[str]:
+    """The statements in `text` that begin with CREATE."""
+    start, first = 0, None
     for token in Dialect.get_or_raise(dialect).tokenize(text):
         if token.token_type == TokenType.SEMICOLON:
-            if text[start : token.start].strip():
+            if first == TokenType.CREATE:
                 yield text[start : token.start]
-            start = token.end + 1
-    if text[start:].strip():
+            start, first = token.end + 1, None
+        elif first is None:
+            first = token.token_type
+    if first == TokenType.CREATE:
         yield text[start:]

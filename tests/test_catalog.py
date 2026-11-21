@@ -202,6 +202,23 @@ def test_resolving_several_names_parses_each_sql_once(tmp_path, monkeypatch):
     assert len(parsed) == 3
 
 
+def test_a_first_catalog_parses_each_model_sql_once(tmp_path, monkeypatch):
+    marker = tmp_path.name
+    _models(tmp_path, marker)
+    sqls = tmp_path / "sqls"
+    (tmp_path / "ddl" / "members.sql").rename(sqls / "members_ddl.sql")
+    parsed = _counting_parses(monkeypatch, marker)
+    catalog = mapped_sql_folder(sqls=sqls, mapping=tmp_path / "mapping.csv")
+
+    catalog.relations()
+
+    assert sorted(sql.split("\n")[1] for sql in parsed if "select" in sql) == [
+        "select * from a join lob using (id)",
+        "select * from members",
+        "select from (",
+    ]
+
+
 def test_a_new_catalog_over_unchanged_files_parses_nothing(tmp_path, monkeypatch):
     build = _models(tmp_path, tmp_path.name)
     build().resolve("members")

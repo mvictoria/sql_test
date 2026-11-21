@@ -237,7 +237,7 @@ A relation's **schema** is its ordered columns, each a name and a type. Reposito
 
 Types are parsed and normalized by sqlglot, so `integer` and `INT` are the same type whatever format they were written in. Schemas are read in the dialect they were written in, defaulting to sqlglot's generic dialect, never DuckDB's: sqlglot's DuckDB dialect drops `varchar` lengths, as DuckDB does.
 
-The DDL reader reads every `CREATE TABLE` with a column list, in any file under the SQL folder; one file may define several relations. Other statements, including `CREATE TABLE AS`, are skipped. A statement that cannot be parsed, or a relation defined twice, is reported as a problem and discovery continues. sqlglot is lenient, so some malformed DDL parses without a problem.
+The DDL reader reads every `CREATE TABLE` with a column list, in any file under the SQL folder; one file may define several relations. Other statements, including `CREATE TABLE AS`, are skipped. Only statements that begin with `CREATE` are parsed, and a file that never mentions `create` is not split at all, so model SQL kept in the same folder is parsed once, by lineage ([ENG-33](ROADMAP.md#eng-33)). A `CREATE` statement that cannot be parsed, or a relation defined twice, is reported as a problem and discovery continues. SQL that is not `CREATE` and does not parse shows up in lineage as an unparseable source instead. sqlglot is lenient, so some malformed DDL parses without a problem.
 
 ## Operations and producers
 
