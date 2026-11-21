@@ -411,7 +411,7 @@ def test_running_alice_shows_one_row_and_counts_on_the_graph():
     assert 'data-row-count="1" data-relation="medicaid_members_named_alice"' in body
 
 
-def test_expected_vs_actual_shows_matching_changed_missing_and_unexpected():
+def test_diff_shows_changed_missing_and_added_like_git():
     server = _with_server(FIXTURE)
     try:
         body = _post(
@@ -448,16 +448,19 @@ def test_expected_vs_actual_shows_matching_changed_missing_and_unexpected():
         server.server_close()
 
     assert 'data-result-view="diff"' in body
-    assert 'data-panel="output"' in body
-    assert 'data-panel="diff"' in body
-    assert "<h2>Output</h2>" in body
-    assert "Expected vs actual" in body
-    assert 'data-outcome="matching"' in body
+    assert "<h2>Diff</h2>" in body
+    assert 'data-outcome="matching"' not in body
     assert 'data-outcome="changed"' in body
     assert 'data-outcome="missing"' in body
-    assert 'data-outcome="unexpected"' in body
+    assert 'data-outcome="added"' in body
+    assert "@@ changed @@" in body
+    assert 'class="diff-removed"' in body
+    assert 'class="diff-added"' in body
+    assert "Beatrice" in body
+    assert "Bea" in body
+    assert "Dia" in body
+    assert "Cia" in body
     assert 'name="expected.0.member_name"' in body
-    assert "readonly" in body or 'data-side="actual"' in body
 
 
 def test_selecting_a_case_opens_the_workbench(tmp_path):

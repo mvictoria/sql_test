@@ -69,7 +69,7 @@ def compare_section(
     typed_rows = _load_typed_rows(repository, target, schema, filled)
     expected = CaseTable(columns=columns, rows=typed_rows)
     comparison = compare(expected, actual)
-    return _render_comparison(comparison, columns)
+    return _render_diff(comparison, columns)
 
 
 def _load_typed_rows(
@@ -80,7 +80,8 @@ def _load_typed_rows(
 ) -> list[Row]:
     if not rows:
         return []
-    relation = catalog(repository).resolve(target)
+    repo_catalog = catalog(repository)
+    relation = repo_catalog.resolve(target)
     return DuckDBExecutor().run({relation: Given(schema, rows)}, [])[relation]
 
 
@@ -89,123 +90,67 @@ def _target_schema(repository: Path, target: str) -> Schema | None:
     return repo_catalog.schema(repo_catalog.resolve(target))
 
 
-def _render_comparison(comparison: Comparison, columns: tuple[str, ...]) -> str:
-    parts = [
-        "<h2>Expected vs actual</h2>",
-        (
-            '<p class="legend">'
-            "<span>matching</span> <span>changed</span> "
-            "<span>missing</span> <span>unexpected</span>"
-            " — expected is editable in the Expected grid; actual is read-only"
-            "</p>"
-        ),
-        _outcome_table(
-            "matching",
-            columns,
-            [
-                (_cells(row, columns), _cells(row, columns, actual=True))
-                for row in comparison.matched
-            ],
-        ),
-        _outcome_table(
-            "changed",
-            columns,
-            [
-                (
-                    _cells(
-                        change.expected, columns, differing=change.differing_columns
-                    ),
-                    _cells(
-                        change.actual,
-                        columns,
-                        differing=change.differing_columns,
-                        actual=True,
-                    ),
-                )
-                for change in comparison.changed
-            ],
-        ),
-        _outcome_table(
-            "missing",
-            columns,
-            [
-                (_cells(row, columns), _empty_cells(columns, actual=True))
-                for row in comparison.missing
-            ],
-        ),
-        _outcome_table(
-            "unexpected",
-            columns,
-            [
-                (_empty_cells(columns), _cells(row, columns, actual=True))
-                for row in comparison.unexpected
-            ],
-        ),
-    ]
-    return "".join(parts)
-
-
-def _outcome_table(
-    outcome: str,
-    columns: tuple[str, ...],
-    pairs: list[tuple[str, str]],
-) -> str:
-    if not pairs:
+def _render_diff(comparison: Comparison, columns: tuple[str, ...]) -> str:
+    if not (comparison.changed or comparison.missing or comparison.unexpected):
         return (
-            f'<section class="compare-outcome" data-outcome="{html.escape(outcome)}">'
-            f"<h3>{html.escape(outcome)}</h3>"
-            '<p class="empty">None</p>'
-            "</section>"
+            '<div class="diff" data-diff="clean">'
+            "<h2>Diff</h2>"
+            '<p class="empty">No differences</p>'
+            "</div>"
         )
     header = (
-        "<tr><th></th>"
+        '<tr class="diff-header"><th class="diff-marker"></th>'
         + "".join(f"<th>{html.escape(name)}</th>" for name in columns)
         + "</tr>"
     )
-    rows = []
-    for expected_cells, actual_cells in pairs:
+    rows: list[str] = []
+    for change in comparison.changed:
         rows.append(
-            f'<tr class="expected"><th scope="row">expected</th>{expected_cells}</tr>'
+            f'<tr class="diff-hunk" data-outcome="changed">'
+            f'<td class="diff-marker" colspan="{len(columns) + 1}">'
+            f"@@ changed @@</td></tr>"
         )
         rows.append(
-            f'<tr class="actual" data-side="actual">'
-            f'<th scope="row">actual</th>{actual_cells}</tr>'
+            _diff_row(
+                "-", change.expected, columns, change.differing_columns, "changed"
+            )
         )
+        rows.append(
+            _diff_row("+", change.actual, columns, change.differing_columns, "changed")
+        )
+    for row in comparison.missing:
+        rows.append(_diff_row("-", row, columns, (), "missing"))
+    for row in comparison.unexpected:
+        rows.append(_diff_row("+", row, columns, (), "added"))
     return (
-        f'<section class="compare-outcome" data-outcome="{html.escape(outcome)}">'
-        f"<h3>{html.escape(outcome)}</h3>"
-        f'<table class="compare">{header}{"".join(rows)}</table>'
-        "</section>"
+        '<div class="diff" data-diff="dirty">'
+        "<h2>Diff</h2>"
+        '<p class="legend">'
+        '<span class="diff-removed">− missing / old</span> '
+        '<span class="diff-added">+ added / new</span>'
+        " — expected is editable in the Expected grid"
+        "</p>"
+        f'<table class="diff-table">{header}{"".join(rows)}</table>'
+        "</div>"
     )
 
 
-def _cells(
+def _diff_row(
+    marker: str,
     row: Row,
     columns: tuple[str, ...],
-    *,
-    differing: tuple[str, ...] = (),
-    actual: bool = False,
+    differing: tuple[str, ...],
+    outcome: str,
 ) -> str:
-    cells = []
+    side = "removed" if marker == "-" else "added"
+    cells = [f'<th class="diff-marker" scope="row">{html.escape(marker)}</th>']
     for name in columns:
         value = row.get(name)
         text = html.escape("" if value is None else str(value))
-        classes = []
-        if name in differing:
-            classes.append("differing")
-        if actual:
-            classes.append("readonly")
-        cls = f' class="{" ".join(classes)}"' if classes else ""
-        if actual:
-            cells.append(
-                f'<td{cls} data-side="actual"><input readonly value="{text}"></td>'
-            )
-        else:
-            cells.append(f"<td{cls}>{text}</td>")
-    return "".join(cells)
-
-
-def _empty_cells(columns: tuple[str, ...], *, actual: bool = False) -> str:
-    side = ' data-side="actual"' if actual else ""
-    cls = ' class="empty readonly"' if actual else ' class="empty"'
-    return "".join(f"<td{cls}{side}>—</td>" for _ in columns)
+        cls = ' class="differing"' if name in differing else ""
+        cells.append(f"<td{cls}>{text}</td>")
+    return (
+        f'<tr class="diff-{side}" data-outcome="{html.escape(outcome)}" '
+        f'data-side="{"expected" if marker == "-" else "actual"}">'
+        f"{''.join(cells)}</tr>"
+    )
