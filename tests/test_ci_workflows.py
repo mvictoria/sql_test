@@ -31,6 +31,7 @@ def test_data_tests_is_reusable_and_installs_from_git_workflow_sha():
     install = next(
         s for s in steps if s.get("name") == "Install sql-test from workflow ref"
     )
+    assert install.get("working-directory") == "${{ inputs.working-directory }}"
     assert "github.workflow_sha" in install["run"]
     assert "git+https://github.com/mvictoria/sql_test.git@" in install["run"]
     assert "uv pip install" in install["run"]
