@@ -15,7 +15,9 @@ def home_page(repository: Path, pipelines: str | None = None) -> None:
     if pipelines:
         _pipelines_page(result, catalog, pipelines)
         return
-    ui.label("sql-test").classes("text-h5")
+    with ui.row().classes("items-baseline gap-4"):
+        ui.label("sql-test").classes("text-h5")
+        ui.link("Settings", "/settings").mark("settings-link")
     _tables(result, catalog)
     _cases(result)
 

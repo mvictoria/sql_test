@@ -43,6 +43,12 @@ def main(argv: list[str] | None = None) -> int:
     if not repository.is_dir():
         print(f"repository not found: {repository}", file=sys.stderr)
         return 1
+
+    if args.command == "app":
+        # Missing config opens the settings page in the app instead of exiting.
+        serve(repository, executor=DuckDBExecutor(), port=args.port)
+        return 0
+
     try:
         config = RepositoryConfig.load(repository)
     except ConfigError as error:
@@ -69,10 +75,6 @@ def main(argv: list[str] | None = None) -> int:
         print("table\ttests\tin pipelines")
         for row in report:
             print(f"{row.table}\t{row.tests}\t{row.pipelines}")
-        return 0
-
-    if args.command == "app":
-        serve(repository, executor=DuckDBExecutor(), port=args.port)
         return 0
 
     return 1
