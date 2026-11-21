@@ -48,8 +48,9 @@ Done:
 - [ENG-18](#eng-18)
 - [ENG-19](#eng-19)
 - [ENG-25](#eng-25)
+- [ENG-26](#eng-26)
 
-In progress: [ENG-24](#eng-24) engine cleanup, [ENG-26](#eng-26) parse each SQL once.
+In progress: [ENG-24](#eng-24) engine cleanup.
 
 Next, now unblocked: [CI-1](#ci-1), and app stories that are not done. [CFG-1](#cfg-1) is done. Further CLI commands ([CLI-2](#cli-2)–[CLI-6](#cli-6)) are parked until a demonstrated need; the CLI's job today is `sql-test app`.
 
@@ -294,7 +295,7 @@ The plan lists the given relations the run never reads, as `Plan.unused`: a mock
 - **Depends on:** [ENG-10](#eng-10)
 
 <a id="eng-26"></a>
-#### ENG-26 Parse each SQL once
+#### ENG-26 Parse each SQL once (done)
 
 Planning a run parsed every SQL file in the repository once per name it resolved, so a plan at 200 files took most of a second. Parsing is memoized on the SQL text, so an unchanged file is parsed once per process and an edited file is parsed again the next time it is read, with no invalidation step. DDL files are memoized the same way. A catalog is a frozen snapshot that works out its relations once; a long-running caller such as the app sees edits by building a new catalog.
 
