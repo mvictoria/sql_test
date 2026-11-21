@@ -1,4 +1,4 @@
-name: Release
+name: CD
 
 "on":
   push:
@@ -18,14 +18,26 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+          python-version: "3.14"
+
+      - name: Build
+        run: uv build
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" --generate-notes --verify-tag
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" dist/* --generate-notes --verify-tag
+          fi
 
       - name: Move major version tag
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           version="${GITHUB_REF_NAME#v}"
           major="${version%%.*}"

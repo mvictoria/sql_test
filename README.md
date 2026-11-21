@@ -63,7 +63,7 @@ jobs:
 
 Copy [lakehouse-data-customer/.github/workflows/data-tests.yml](lakehouse-data-customer/.github/workflows/data-tests.yml). The workflow installs `sql-test` from the same git commit as that pin and runs pytest in the calling repository.
 
-**Releases** of the tool are `vX.Y.Z` tags. Pushing one creates a GitHub Release and moves `vX` (for example `v0`) to that commit.
+**Releases** — the git tag is the version. Push `vX.Y.Z`; CD builds the package from that tag, attaches artifacts to a GitHub Release, and moves `vX` (for example `v0`).
 
 ## CLI
 

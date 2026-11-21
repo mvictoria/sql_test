@@ -57,16 +57,29 @@ def test_tool_ci_calls_reusable_workflow_for_sample():
     assert job["with"]["working-directory"] == "lakehouse-data-customer"
 
 
-def test_release_moves_major_tag_and_creates_github_release():
-    workflow = _load(WORKFLOWS / "release.yml")
+def test_cd_builds_from_tag_then_releases_then_moves_major():
+    workflow = _load(WORKFLOWS / "cd.yml")
     triggers = _on(workflow)["push"]["tags"]
     assert "v[0-9]+.[0-9]+.[0-9]+" in triggers
 
     job = workflow["jobs"]["release"]
     assert job["permissions"]["contents"] == "write"
     step_names = [s.get("name") for s in job["steps"]]
-    assert "Create GitHub Release" in step_names
-    assert "Move major version tag" in step_names
+    assert step_names.index("Build") < step_names.index("Create GitHub Release")
+    assert step_names.index("Create GitHub Release") < step_names.index(
+        "Move major version tag"
+    )
+    build = next(s for s in job["steps"] if s.get("name") == "Build")
+    assert "uv build" in build["run"]
+    release = next(s for s in job["steps"] if s.get("name") == "Create GitHub Release")
+    assert "dist/" in release["run"]
     move = next(s for s in job["steps"] if s.get("name") == "Move major version tag")
     assert "git tag -f" in move["run"]
     assert "git push" in move["run"] and "--force" in move["run"]
+
+
+def test_package_version_is_dynamic_from_git():
+    pyproject = (ROOT / "pyproject.toml").read_text()
+    assert 'dynamic = ["version"]' in pyproject
+    assert 'source = "uv-dynamic-versioning"' in pyproject
+    assert "version = " not in pyproject.split("[project]")[1].split("[")[0]
