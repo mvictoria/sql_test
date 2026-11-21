@@ -55,7 +55,7 @@ Done:
 - [ENG-29](#eng-29)
 
 
-v0.5 CI is done: [CI-1](#ci-1), [CI-2](#ci-2), [CI-3](#ci-3). Next: app stories that are not done, including [APP-17](#app-17) (incremental catalog update when SQL files change). [CFG-1](#cfg-1) is done. Further CLI commands ([CLI-2](#cli-2)–[CLI-6](#cli-6)) are parked until a demonstrated need; the CLI's job today is `sql-test app`.
+v0.5 CI is done: [CI-1](#ci-1), [CI-2](#ci-2), [CI-3](#ci-3). Next: app stories that are not done, including [APP-17](#app-17) (rebuild catalog when SQL files change). [CFG-1](#cfg-1) is done. Further CLI commands ([CLI-2](#cli-2)–[CLI-6](#cli-6)) are parked until a demonstrated need; the CLI's job today is `sql-test app`.
 
 ### Project skeleton
 
@@ -586,13 +586,13 @@ The authoring app is built with [NiceGUI](https://nicegui.io) instead of a stdli
   - the shipped APP stories: [APP-3](#app-3), [APP-4](#app-4), [APP-5](#app-5), [APP-6](#app-6), [APP-9](#app-9), [APP-10](#app-10), [APP-12](#app-12), [APP-13](#app-13)
 
 <a id="app-17"></a>
-#### APP-17 Update the catalog when SQL files change
+#### APP-17 Rebuild the catalog when SQL files change
 
-While `sql-test app` is running, a SQL file under the repository's configured paths may be added, modified, or deleted outside the app. The catalog is updated in place for that delta: parse only the added or modified file, and drop or replace only the operations and schemas that file contributed. Unchanged files are not re-read or re-parsed, and the rest of the catalog is not rebuilt. The mapping file is updated the same way when a model is registered or removed. Home, lineage, and SQL views then match the checkout.
+While `sql-test app` is running, a SQL file under the repository's configured paths may be added, modified, or deleted outside the app. The next request discards the old catalog and builds a new immutable one from the checkout, so home, lineage, and SQL views match. The mapping file is watched the same way. Catalogs stay snapshots ([ENG-26](#eng-26)); there is no in-place patch of operations or indexes.
 
-This is stronger than [ENG-26](#eng-26)'s memoized full rebuild: a full rebuild walks every file even when parse hits the cache; an incremental update touches only the changed path.
+Do not assume the rebuild is free. Pressure-test a representative repository (on the order of hundreds of SQL files): after one file changes, rebuilding the catalog with memoized parse must stay fast enough for interactive use. If it is not, revisit incremental update then — not before.
 
-- **Done when:** editing a mapped SQL's upstream tables updates lineage without re-parsing other files; adding a mapped SQL shows the new model; deleting a mapped SQL removes it; and a catalog of many unchanged files does not re-read those files when one file changes.
+- **Done when:** editing a mapped SQL's upstream tables updates lineage on the next request; adding a mapped SQL shows the new model; deleting a mapped SQL removes it; and a rebuild after a one-file change on a large fixture repo is timed and recorded as acceptable for the app, or the story is reopened for incremental update.
 - **Depends on:**
   - [APP-16](#app-16)
   - [ENG-26](#eng-26)
