@@ -3,8 +3,9 @@ from pathlib import Path
 
 from sqlglot.errors import ParseError
 
-from sql_test.engine.catalog.mapping import read_producers
+from sql_test.engine.catalog.mapping import read_operations
 from sql_test.engine.lineage.references import tables_read
+from sql_test.engine.relation import Relation
 from sql_test.testing.cases import CaseSummary, discover_cases
 
 # Sample-repo convention until CFG-1.
@@ -22,17 +23,18 @@ class Discovery:
 
 def discover(repository: Path) -> Discovery:
     repository = repository.resolve()
-    producers = read_producers(repository / MAPPING, repository / SQLS)
-    referenced: set[str] = set()
-    sources: set[str] = set()
-    for table, path in producers.items():
+    operations = read_operations(repository / MAPPING, repository / SQLS)
+    produced = {operation.writes for operation in operations}
+    referenced: set[Relation] = set()
+    sources: set[Relation] = set()
+    for operation in operations:
         try:
-            referenced |= tables_read(path.read_text())
+            referenced |= tables_read(operation.sql)
         except ParseError:
-            sources.add(table)
-    sources |= referenced - set(producers)
+            sources.add(operation.writes)
+    sources |= {relation for relation in referenced if relation not in produced}
     return Discovery(
-        models=tuple(sorted(producers)),
-        sources=tuple(sorted(sources)),
+        models=tuple(sorted(str(relation) for relation in produced)),
+        sources=tuple(sorted(str(relation) for relation in sources)),
         cases=tuple(discover_cases(repository / CASES)),
     )
