@@ -64,6 +64,39 @@ def test_runs_upstream_sql_before_the_table():
     assert rows == [(1, "Alice")]
 
 
+def test_run_result_includes_row_counts_for_each_relation():
+    engine = Engine(
+        catalog=mapped_sql_folder(
+            sqls=REPOSITORY / "admin" / "sqls",
+            mapping=REPOSITORY / "admin" / "config" / "lookup_sql_table_mapping.csv",
+        ),
+        executor=DuckDBExecutor,
+    )
+
+    result = engine.run_result(
+        "medicaid_members_named_alice",
+        rows={
+            "members": [
+                {"member_id": 1, "member_name": "Alice", "lob": "30"},
+                {"member_id": 2, "member_name": "Alice", "lob": "10"},
+                {"member_id": 3, "member_name": "Bea", "lob": "30"},
+            ],
+            "lob": [
+                {"lob": "30", "lob_name": "Medicaid"},
+                {"lob": "10", "lob_name": "Commercial"},
+            ],
+        },
+    )
+
+    assert result.rows == [{"member_id": 1, "member_name": "Alice"}]
+    assert {str(relation): count for relation, count in result.counts.items()} == {
+        "members": 3,
+        "lob": 2,
+        "medicaid_members": 2,
+        "medicaid_members_named_alice": 1,
+    }
+
+
 def test_reports_a_cycle(tmp_path):
     (tmp_path / "ddl.sql").write_text(
         "create table a (id int);\ncreate table b (id int);\n"

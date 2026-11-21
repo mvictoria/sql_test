@@ -561,7 +561,7 @@ Paste tabular data copied from Excel or Sheets into the grid, with a reminder th
 ### Run and compare
 
 <a id="app-9"></a>
-#### APP-9 Run and show the output
+#### APP-9 Run and show the output (done)
 
 Run the case from the page and show the target's rows, with row counts on each table in the graph. The engine returns the row count of every relation in the plan alongside the target's rows, so an empty result shows where the rows were lost.
 

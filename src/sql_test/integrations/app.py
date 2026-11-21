@@ -4,9 +4,10 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, quote, urlencode, urlparse
 
-from sql_test.engine import Engine
+from sql_test.engine import Engine, RunResult
 from sql_test.engine.catalog.adapters import mapped_sql_folder
 from sql_test.engine.catalog.mapping import read_operations
+from sql_test.engine.executor import Row
 from sql_test.engine.lineage.graph import upstream_lineage
 from sql_test.engine.planner.plan import Plan, State
 from sql_test.engine.relation import Relation
@@ -148,10 +149,12 @@ def _workbench(
     requested_mocks = tuple(sorted({name for name in query.get("mock", []) if name}))
     mocks = _frontier_mocks(repository, target, requested_mocks)
     grid_rows = _parse_grid_rows(query)
-    grid_rows = _apply_grid_action(query.get("action", [""])[0], mocks, grid_rows)
+    action = query.get("action", [""])[0]
+    grid_rows = _apply_grid_action(action, mocks, grid_rows)
     engine_types: dict[str, dict[str, str]] = {}
     reached = ""
-    if query.get("action", [""])[0] == "apply":
+    run_result: RunResult | None = None
+    if action == "apply":
         mocked_rows = {name: grid_rows.get(name, []) for name in mocks}
         try:
             grid_rows, engine_types = _type_grid_rows(repository, mocked_rows)
@@ -161,7 +164,14 @@ def _workbench(
                 '<p class="blocked">Could not load mocks: '
                 f"{html.escape(str(error))}</p>"
             )
+    elif action == "run":
+        try:
+            run_result = _run(repository, target, mocks, grid_rows)
+            reached = '<p class="ready">Run complete</p>'
+        except Exception as error:  # noqa: BLE001 — show engine failures in the page
+            reached = f'<p class="blocked">Could not run: {html.escape(str(error))}</p>'
 
+    counts = run_result.counts if run_result is not None else None
     case_line = (
         f"<p>Case: <strong>{html.escape(case_name)}</strong></p>" if case_name else ""
     )
@@ -173,10 +183,11 @@ def _workbench(
         else ""
     )
     body = (
-        _lineage_section(repository, target, mocks, base_query, grid_rows)
+        _lineage_section(repository, target, mocks, base_query, grid_rows, counts)
         if view == "lineage"
         else _sql_section(repository, target)
     )
+    output = _output_section(run_result) if run_result is not None else ""
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -212,6 +223,9 @@ def _workbench(
     .grid input {{ width: 8rem; font: inherit; }}
     .grid-actions {{ margin: 0 0 1rem; }}
     .grid-actions button {{ margin-right: 0.5rem; }}
+    .output {{ border-collapse: collapse; margin: 0.5rem 0 1rem; }}
+    .output th, .output td {{ border: 1px solid #ccc; padding: 0.25rem 0.5rem; }}
+    .output th {{ background: #f4f4f4; font-size: 0.85rem; }}
   </style>
 </head>
 <body>
@@ -223,6 +237,7 @@ def _workbench(
   {_view_nav(base_query, view, mocks)}
   {body}
   {reached}
+  {output}
   {_mock_editor(repository, mocks, base_query, view, grid_rows, engine_types)}
 </body>
 </html>
@@ -288,6 +303,7 @@ def _mock_editor(
         f"{hidden}{''.join(sections)}"
         '<p class="grid-actions">'
         '<button type="submit" name="action" value="apply">Apply to engine</button>'
+        '<button type="submit" name="action" value="run">Run</button>'
         "</p>"
         "</form>"
     )
@@ -444,6 +460,7 @@ def _lineage_section(
     mocks: tuple[str, ...],
     base_query: dict[str, str],
     grid_rows: dict[str, list[dict[str, str]]],
+    counts: dict[Relation, int] | None = None,
 ) -> str:
     plan = _plan(repository, target, mocks, grid_rows)
     ready = not plan.needs_rows
@@ -469,11 +486,54 @@ def _lineage_section(
         " — pruned hidden; click a node to mock/unmock"
         "</p>"
     )
-    return f"<h2>Lineage</h2>{status}{legend}{_lineage_graph(plan, mocks, base_query)}"
+    return (
+        f"<h2>Lineage</h2>{status}{legend}"
+        f"{_lineage_graph(plan, mocks, base_query, counts)}"
+    )
+
+
+def _output_section(result: RunResult) -> str:
+    rows = result.rows
+    if not rows:
+        return '<h2>Output</h2><p class="empty" data-output-rows="0">No rows</p>'
+    columns = list(rows[0].keys())
+    headers = "".join(f"<th>{html.escape(name)}</th>" for name in columns)
+    body = "".join(
+        "<tr>"
+        + "".join(
+            f"<td>{html.escape('' if row.get(name) is None else str(row.get(name)))}</td>"
+            for name in columns
+        )
+        + "</tr>"
+        for row in rows
+    )
+    return (
+        "<h2>Output</h2>"
+        f'<table class="output" data-output-rows="{len(rows)}">'
+        f"<thead><tr>{headers}</tr></thead>"
+        f"<tbody>{body}</tbody>"
+        "</table>"
+    )
 
 
 def _catalog(repository: Path):
     return mapped_sql_folder(repository / SQLS, repository / MAPPING)
+
+
+def _filled_rows(
+    mocks: tuple[str, ...],
+    grid_rows: dict[str, list[dict[str, str]]],
+) -> dict[str, list[Row]]:
+    rows: dict[str, list[Row]] = {}
+    for name in mocks:
+        table_rows = grid_rows.get(name, [])
+        filled = [
+            row
+            for row in table_rows
+            if any(str(value).strip() for value in row.values())
+        ]
+        rows[name] = filled
+    return rows
 
 
 def _plan(
@@ -483,16 +543,17 @@ def _plan(
     grid_rows: dict[str, list[dict[str, str]]],
 ) -> Plan:
     engine = Engine(catalog=_catalog(repository), executor=DuckDBExecutor)
-    rows: dict[str, list[dict[str, str]]] = {}
-    for name in mocks:
-        table_rows = grid_rows.get(name, [])
-        filled = [
-            row
-            for row in table_rows
-            if any(str(value).strip() for value in row.values())
-        ]
-        rows[name] = filled
-    return engine.plan(target, rows=rows)
+    return engine.plan(target, rows=_filled_rows(mocks, grid_rows))
+
+
+def _run(
+    repository: Path,
+    target: str,
+    mocks: tuple[str, ...],
+    grid_rows: dict[str, list[dict[str, str]]],
+) -> RunResult:
+    engine = Engine(catalog=_catalog(repository), executor=DuckDBExecutor)
+    return engine.run_result(target, rows=_filled_rows(mocks, grid_rows))
 
 
 def _frontier_mocks(
@@ -536,7 +597,10 @@ def _upstream_closure(
 
 
 def _lineage_graph(
-    plan: Plan, mocks: tuple[str, ...], base_query: dict[str, str]
+    plan: Plan,
+    mocks: tuple[str, ...],
+    base_query: dict[str, str],
+    counts: dict[Relation, int] | None = None,
 ) -> str:
     projection = plan.lineage.projection()
     visible = {
@@ -614,11 +678,19 @@ def _lineage_graph(
             classes.append("needs-rows")
         reason = plan.lineage.source_reasons.get(relation)
         subtitle = reason.value if reason else ("needs rows" if needs else label)
+        count = None if counts is None else counts.get(relation)
+        if count is not None:
+            subtitle = f"{count} rows"
+        count_attrs = (
+            ""
+            if count is None
+            else (f' data-row-count="{count}" data-relation="{html.escape(name)}"')
+        )
         x = cx - node_w / 2
         y = cy - node_h / 2
         if name == target_name:
             nodes.append(
-                f'<g class="{" ".join(classes)}">'
+                f'<g class="{" ".join(classes)}"{count_attrs}>'
                 f'<rect x="{x:.1f}" y="{y:.1f}" width="{node_w}" height="{node_h}" rx="6" />'
                 f'<text class="label" x="{cx:.1f}" y="{cy - 4:.1f}" text-anchor="middle">'
                 f"{html.escape(name)}</text>"
@@ -634,7 +706,7 @@ def _lineage_graph(
         )
         href = _workbench_query(base_query, view="lineage", mocks=next_mocks)
         nodes.append(
-            f'<g class="{" ".join(classes)}">'
+            f'<g class="{" ".join(classes)}"{count_attrs}>'
             f'<a href="{html.escape(href)}">'
             f'<rect x="{x:.1f}" y="{y:.1f}" width="{node_w}" height="{node_h}" rx="6" />'
             f'<text class="label" x="{cx:.1f}" y="{cy - 4:.1f}" text-anchor="middle">'
