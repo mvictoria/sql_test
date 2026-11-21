@@ -6,7 +6,13 @@ import pytest
 from sql_test.engine.catalog.adapters import mapped_sql_folder
 from sql_test.engine.relation import Relation
 from sql_test.engine.schema import Column
-from sql_test.testing.cases import UncastableCell, read_case, write_case
+from sql_test.testing.cases import (
+    UncastableCell,
+    case_folders,
+    case_id,
+    read_case,
+    write_case,
+)
 
 REPOSITORY = Path(__file__).parent / "fixtures" / "repos" / "lakehouse-data-customer"
 
@@ -95,3 +101,20 @@ def test_writing_a_case_back_reproduces_its_files(tmp_path: Path):
 )
 def test_a_column_casts_text_to_its_type(type: str, text: str | None, value):
     assert Column(name="c", type=type).cast(text) == value
+
+
+def test_case_folders_are_found_under_any_root_and_named_target_slash_case(
+    tmp_path: Path,
+):
+    root = tmp_path / "anywhere" / "my_cases"
+    for folder in ("medicaid_members/b", "medicaid_members/a", "lob/only"):
+        (root / folder).mkdir(parents=True)
+    (root / "README.md").write_text("not a case")
+
+    folders = case_folders(root)
+
+    assert [case_id(folder) for folder in folders] == [
+        "lob/only",
+        "medicaid_members/a",
+        "medicaid_members/b",
+    ]

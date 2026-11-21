@@ -132,7 +132,7 @@ The case format is a public contract: people and other tools write cases by hand
 - Integers and decimals are written as digits, booleans as `true` or `false`, dates and timestamps in ISO 8601.
 - A mock file may list only some of its relation's columns; unlisted columns are NULL. `expected.csv` lists only the columns the case checks, and may be absent while a case is being written.
 
-pytest discovers the case folders and runs one parametrized test per case, so a saved case needs no Python.
+A repository's own pytest test runs its case folders, one parametrized test per case, so a saved case needs no new Python. The repository passes the folder that holds its cases; the library assumes no location.
 
 How target-before state is stored for incremental models is decided with incremental support.
 
@@ -510,7 +510,7 @@ Safeguards for that server:
 - Do not accept an alternate repository path from the browser after start; the path is fixed when the process starts.
 - No authentication in v0. Localhost-only is the trust boundary.
 
-**pytest.** The package provides a pytest plugin that discovers committed case folders and runs each one through the engine. A case saved by the app is a normal repository test, and it runs through pytest without the app installed or running.
+**pytest.** A repository's own pytest tests import the package. A test can call the engine with rows written in Python, or run the repository's case folders as one parametrized test per case, passing the folder that holds them. A case saved by the app is a normal repository test, and it runs through pytest without the app installed or running. A plugin that collects case folders with no test file is deferred until the parametrized style has been used for a while.
 
 **CLI.** A headless interface over the engine, for example:
 
@@ -945,7 +945,7 @@ Multi-repo support should build on stable single-repo relation identity and line
 
 # Execution Environment / Spark
 
-Execution tentatively runs on DuckDB and is swapped for Spark later. The swap is a new executor behind the engine's executor interface, so the app, pytest plugin, and saved cases do not change.
+Execution tentatively runs on DuckDB and is swapped for Spark later. The swap is a new executor behind the engine's executor interface, so the app, pytest tests, and saved cases do not change.
 
 Most production SQL is expected to execute under Spark.
 
