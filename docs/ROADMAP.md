@@ -18,7 +18,7 @@ pytest tests in the sample repository's `tests/test_sql.py` load rows into DuckD
 
 ## v0.1 — Engine core (done)
 
-A headless engine, and a test layer over it, that run a case folder end to end on DuckDB, and a pytest plugin that runs every case folder. Done when the v0 scenarios run as case folders through pytest with no hand wiring.
+A headless engine, and a test layer over it, that run a case folder end to end on DuckDB, and that a repository's own pytest tests call to run its case folders. Done when the v0 scenarios run as case folders through the sample repository's pytest tests.
 
 The engine knows relations, operations, and rows. The test layer knows cases, mocks, and expected results, and hands the engine a case's mocks as given rows.
 
@@ -321,11 +321,18 @@ The test layer's entry point: take a case folder, give its mocks to the engine a
   - [ENG-16](#eng-16)
 
 <a id="eng-18"></a>
-#### ENG-18 pytest plugin (done)
+#### ENG-18 Run case folders from a repository's pytest tests (done)
 
-Discover every case folder and run each as its own pytest test through ENG-17. A failure shows the comparison or the tables that still need data.
+A repository's own pytest tests import the test layer and run its case folders, one parametrized test per case. The repository says where its case folders live; the library takes a path. A failure shows the comparison or the tables that still need data.
 
-- **Done when:** `pytest` runs one test per case folder, named `<table under test>/<case name>`.
+```python
+@pytest.mark.parametrize("case", case_folders(CASES), ids=case_id)
+def test_case(case, engine):
+    result = run_case(case, engine)
+    assert result.passed, result.report()
+```
+
+- **Done when:** a parametrized test over `case_folders(root)` runs one test per case folder, named `<table under test>/<case name>`, for any `root`.
 - **Depends on:**
   - [ENG-17](#eng-17)
   - [ENG-9](#eng-9)
@@ -334,9 +341,12 @@ Discover every case folder and run each as its own pytest test through ENG-17. A
 <a id="eng-19"></a>
 #### ENG-19 Port the v0 tests (done)
 
-In the sample repository, rewrite the v0 scenarios as case folders and remove the hand-wired tests from its `tests/test_sql.py`. The schemas already exist in `members_ddl.sql`.
+In the sample repository, show both ways a repository's pytest tests use the library:
 
-- **Done when:** the same scenarios pass through the plugin run against the sample repository, and the hand-wired tests are gone.
+- `tests/test_sql.py` imports the engine and passes rows inline in Python.
+- `tests/test_cases.py` runs one parametrized test per case folder under `tests/cases/`.
+
+- **Done when:** the v0 scenarios pass both ways in the sample repository.
 - **Depends on:** [ENG-18](#eng-18)
 
 ---
@@ -350,7 +360,7 @@ A headless command-line interface over the engine, and checks that run without e
 <a id="cfg-1"></a>
 #### CFG-1 Define a repository config file
 
-Define a config file in the consuming repository that says where its SQL, schemas, cases, and SQL-to-table mapping live, so the CLI, app, pytest plugin, and CI can find them without code. Decide its name and format, for example TOML, which Python reads without a new dependency, or YAML, which needs PyYAML. Record the decision in [HELPER.md](HELPER.md).
+Define a config file in the consuming repository that says where its SQL, schemas, cases, and SQL-to-table mapping live, so the CLI, app, and CI can find them without code. Until then the app and CLI look for cases in `<repository>/cases`. Decide its name and format, for example TOML, which Python reads without a new dependency, or YAML, which needs PyYAML. Record the decision in [HELPER.md](HELPER.md).
 
 - **Done when:** a repository's paths can be read from its config file, and the decision is written in HELPER.md.
 - **Depends on:**
@@ -706,7 +716,7 @@ Document the minimal footprint of a consuming repository:
 
 ## v0.6 — Spark execution
 
-Swap execution to a Spark executor behind the same executor interface, so the app, pytest plugin, and saved cases do not change.
+Swap execution to a Spark executor behind the same executor interface, so the app, pytest tests, and saved cases do not change.
 
 <a id="spk-1"></a>
 #### SPK-1 Representative model set
@@ -860,5 +870,6 @@ After a run, open any executed table's rows and see at which table an input row 
 - **Multi-repository workspaces.** Lineage across repositories, where the repository that owns the table under test owns the case. Depends on stable single-repository lineage from v0.1 and v0.8.
 - **CDC and change propagation.** What changes downstream when an upstream row is inserted, updated, or deleted. Depends on v0.7.
 - **Other consumers** such as IDE integrations or change-impact tooling, when there is a demonstrated use case.
+- **pytest plugin.** Collect case folders without a test file in the repository. Deferred until the parametrized style has been used for a while, so the behaviour (how case folders are found, how the engine is built, opt-in or automatic) is chosen from experience. Depends on [CFG-1](#cfg-1).
 - **Undefined-relation checks.** Flag inferred relations with no schema, naming the SQL that reads them, with a did-you-mean against declared relations, and a strict mode with an allowlist of external sources. Mostly the repository's own linting's job; add only if users ask. Depends on [ENG-22](#eng-22).
 - **Browser E2E for the app.** Click-through coverage (for example Playwright) once the workbench is interactive enough that HTTP HTML assertions in `tests/test_app.py` are not enough. Not needed while the page is mostly server-rendered.
