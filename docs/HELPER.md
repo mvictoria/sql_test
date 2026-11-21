@@ -203,7 +203,11 @@ sqlglot parses names and normalizes their case for the configured dialect. The e
 
 A name written with fewer levels, such as a bare `members`, resolves to the one known relation whose trailing parts match. If several match, the name is ambiguous, and resolving it is an error that lists the candidates. If none match, the name stays as written, for example a source the repository does not produce.
 
-## Producers
+## Operations and producers
+
+An **operation** is a SQL statement that writes one relation. It records its SQL file, the relation it writes, its kind, and its `load_type`. The relations it reads come from parsing its SQL. A bare `SELECT` is a full load: its result becomes the relation. `CREATE TABLE AS`, `INSERT`, `INSERT OVERWRITE`, and `MERGE` come later.
+
+SQL has a relation, not the other way round. A relation exists without any SQL; a source has none. The operations that write a relation are its **producers**, and a relation may have several.
 
 Some physical tables may be produced by multiple SQL statements.
 
