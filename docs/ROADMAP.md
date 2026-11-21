@@ -75,7 +75,7 @@ Replace ENG-1's layout with one package per layer, so dependencies point one way
 - the engine: catalog, lineage, planner
 - executors: DuckDB, later Spark
 - the test layer: cases, comparison
-- integrations: the pytest plugin, later the CLI and app server
+- integrations: the CLI and app server
 
 The engine depends on the executor interface, not on an executor. The test layer depends on the engine. Integrations depend on the test layer. Record the layout and the package names in [HELPER.md](HELPER.md).
 

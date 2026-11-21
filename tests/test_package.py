@@ -18,7 +18,6 @@ import pytest
         "sql_test.testing.cases",
         "sql_test.testing.comparison",
         "sql_test.integrations",
-        "sql_test.integrations.pytest_plugin",
     ],
 )
 def test_package_imports(name):
