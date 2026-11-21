@@ -34,10 +34,11 @@ Done:
 - [ENG-4](#eng-4)
 - [ENG-22](#eng-22)
 - [ENG-5](#eng-5)
+- [ENG-6](#eng-6)
 
 Can start now:
 
-- [ENG-6](#eng-6)
+- [ENG-8](#eng-8)
 - [ENG-11](#eng-11)
 - [ENG-14](#eng-14)
 
@@ -163,7 +164,7 @@ For each SQL statement, list the relations it reads, excluding CTE names. Parse 
 - **Depends on:** none
 
 <a id="eng-6"></a>
-#### ENG-6 Build upstream lineage
+#### ENG-6 Build upstream lineage (done)
 
 Build the upstream graph of a target relation as relation → operation → relation:
 

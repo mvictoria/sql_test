@@ -261,6 +261,10 @@ Producer-level execution semantics will become important for ordered DML, insert
 
 # Planned User Experience
 
+## Upstream lineage
+
+The **upstream lineage** of a target is the graph relation → operation → relation that leads to it. A relation with producers in the catalog is a **model**, and traversal continues through each of its operations; any other relation is a source, and traversal stops. Projected to relation → relation, it is the default lineage view. Lineage says only what depends on what; what runs is the plan's job.
+
 ## Repository discovery
 
 The application is initially launched against a single local repository. The repository is always passed in, for example `sql-test app <path>`. The tool never assumes where a consuming repository lives or that it is inside the tool's own directory.
