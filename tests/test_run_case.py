@@ -1,0 +1,73 @@
+from pathlib import Path
+
+from sql_test.engine import Engine
+from sql_test.engine.catalog.adapters import mapped_sql_folder
+from sql_test.executors.duckdb import DuckDBExecutor
+from sql_test.testing.run import run_case
+
+REPOSITORY = Path(__file__).parent / "fixtures" / "repos" / "lakehouse-data-customer"
+
+
+def _engine() -> Engine:
+    return Engine(
+        catalog=mapped_sql_folder(
+            sqls=REPOSITORY / "admin" / "sqls",
+            mapping=REPOSITORY / "admin" / "config" / "lookup_sql_table_mapping.csv",
+        ),
+        executor=DuckDBExecutor,
+    )
+
+
+def _case(root: Path, files: dict[str, str]) -> Path:
+    folder = root / "cases" / "medicaid_members" / "ada"
+    folder.mkdir(parents=True)
+    for name, text in files.items():
+        (folder / name).write_text(text)
+    return folder
+
+
+MOCKS = {
+    "members.csv": "member_id,member_name,lob\n1,Ada,30\n2,Bea,10\n",
+    "lob.csv": "lob,lob_name\n30,Medicaid\n10,Commercial\n",
+}
+
+
+def test_a_passing_case(tmp_path: Path):
+    folder = _case(tmp_path, MOCKS | {"expected.csv": "member_id,member_name\n1,Ada\n"})
+
+    result = run_case(folder, _engine())
+
+    assert result.passed
+    assert result.actual == [{"member_id": 1, "member_name": "Ada"}]
+
+
+def test_a_failing_case(tmp_path: Path):
+    folder = _case(tmp_path, MOCKS | {"expected.csv": "member_id,member_name\n2,Bea\n"})
+
+    result = run_case(folder, _engine())
+
+    assert not result.passed
+    assert result.comparison is not None
+    assert result.comparison.missing == [{"member_id": 2, "member_name": "Bea"}]
+    assert "missing" in result.report()
+
+
+def test_a_case_without_the_rows_it_needs_fails_naming_them(tmp_path: Path):
+    folder = _case(
+        tmp_path,
+        {"members.csv": MOCKS["members.csv"], "expected.csv": "member_id\n1\n"},
+    )
+
+    result = run_case(folder, _engine())
+
+    assert not result.passed
+    assert "lob" in result.report()
+
+
+def test_a_cell_that_cannot_be_cast_fails_the_case(tmp_path: Path):
+    folder = _case(tmp_path, MOCKS | {"expected.csv": "member_id\none\n"})
+
+    result = run_case(folder, _engine())
+
+    assert not result.passed
+    assert "expected.csv line 2 member_id" in result.report()

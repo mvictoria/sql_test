@@ -13,6 +13,10 @@ class Engine:
         self._catalog = catalog
         self._executor = executor
 
+    @property
+    def catalog(self) -> Catalog:
+        return self._catalog
+
     def plan(self, table: str, rows: dict[str, list[Row]]) -> Plan:
         given = {
             Relation.parse(name): len(table_rows) for name, table_rows in rows.items()
@@ -21,6 +25,21 @@ class Engine:
         return plan_run(Relation.parse(table).resolve(known), self._catalog, given)
 
     def run(self, table: str, rows: dict[str, list[Row]]) -> list[tuple[Any, ...]]:
+        return self._execute(
+            table, rows, lambda executor, target: executor.read_relation(target)
+        )
+
+    def run_rows(self, table: str, rows: dict[str, list[Row]]) -> list[Row]:
+        return self._execute(
+            table, rows, lambda executor, target: executor.read_rows(target)
+        )
+
+    def _execute[T](
+        self,
+        table: str,
+        rows: dict[str, list[Row]],
+        read: Callable[[Executor, Relation], T],
+    ) -> T:
         plan = self.plan(table, rows)
         plan.check_rows()
         executor = self._executor()
@@ -35,7 +54,7 @@ class Engine:
                 executor.create_relation(relation, schema, table_rows)
             for operation in plan.operations:
                 executor.execute(operation)
-            return executor.read_relation(plan.lineage.target)
+            return read(executor, plan.lineage.target)
         finally:
             executor.teardown()
 
