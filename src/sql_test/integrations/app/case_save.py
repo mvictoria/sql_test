@@ -15,7 +15,7 @@ def save_case(
     target: str,
     name: str,
     mocks: tuple[str, ...],
-    grid_rows: dict[str, list[dict[str, str]]],
+    grid_rows: dict[str, list[dict[str, str | None]]],
 ) -> Path:
     if not name or "/" in name or name in {".", ".."}:
         raise SaveError("case name is required and must not contain '/'")
@@ -53,19 +53,18 @@ def save_case(
     return folder
 
 
-def _table_from_grid(schema: Schema, rows: list[dict[str, str]]) -> CaseTable:
+def _table_from_grid(schema: Schema, rows: list[dict[str, str | None]]) -> CaseTable:
     columns = tuple(column.name for column in schema)
     by_name = {column.name: column for column in schema}
     typed = []
     for row in rows:
-        if not any(str(value).strip() for value in row.values()):
+        if not any(_filled(value) for value in row.values()):
             continue
-        typed.append(
-            {
-                name: by_name[name].cast(
-                    None if row.get(name, "") == "" else row.get(name)
-                )
-                for name in columns
-            }
-        )
+        typed.append({name: by_name[name].cast(row.get(name)) for name in columns})
     return CaseTable(columns=columns, rows=typed)
+
+
+def _filled(value: str | None) -> bool:
+    if value is None:
+        return False
+    return value.strip() != ""

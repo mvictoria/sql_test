@@ -11,17 +11,21 @@ def catalog(repository: Path) -> Catalog:
     return RepositoryConfig.load(repository).catalog()
 
 
+def _filled(value: str | None) -> bool:
+    if value is None:
+        return False
+    return value.strip() != ""
+
+
 def filled_rows(
     mocks: tuple[str, ...],
-    grid_rows: dict[str, list[dict[str, str]]],
+    grid_rows: dict[str, list[dict[str, str | None]]],
 ) -> dict[str, list[Row]]:
     rows: dict[str, list[Row]] = {}
     for name in mocks:
         table_rows = grid_rows.get(name, [])
         filled = [
-            row
-            for row in table_rows
-            if any(str(value).strip() for value in row.values())
+            row for row in table_rows if any(_filled(value) for value in row.values())
         ]
         rows[name] = filled
     return rows
@@ -31,7 +35,7 @@ def plan(
     repository: Path,
     target: str,
     mocks: tuple[str, ...],
-    grid_rows: dict[str, list[dict[str, str]]],
+    grid_rows: dict[str, list[dict[str, str | None]]],
 ) -> Plan:
     engine = Engine(catalog=catalog(repository), executor=DuckDBExecutor())
     return engine.plan(target, rows=filled_rows(mocks, grid_rows))
@@ -41,7 +45,7 @@ def run(
     repository: Path,
     target: str,
     mocks: tuple[str, ...],
-    grid_rows: dict[str, list[dict[str, str]]],
+    grid_rows: dict[str, list[dict[str, str | None]]],
 ) -> RunResult:
     engine = Engine(catalog=catalog(repository), executor=DuckDBExecutor())
     return engine.run(target, rows=filled_rows(mocks, grid_rows))

@@ -27,7 +27,7 @@ class WorkbenchState:
     case_name: str | None = None
     case_draft: str = ""
     mocks: tuple[str, ...] = ()
-    grid_rows: dict[str, list[dict[str, str]]] = field(default_factory=dict)
+    grid_rows: dict[str, list[dict[str, str | None]]] = field(default_factory=dict)
     engine_types: dict[str, dict[str, str]] = field(default_factory=dict)
     view: str = DEFAULT_VIEW
     result_view: str = DEFAULT_RESULT_VIEW

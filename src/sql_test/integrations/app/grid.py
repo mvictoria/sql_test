@@ -1,17 +1,44 @@
 from pathlib import Path
 
 from sql_test.engine.executor import Given
+from sql_test.engine.schema import Column, Schema
 from sql_test.executors.duckdb import DuckDBExecutor
 from sql_test.integrations.app.engine_access import catalog
+
+type Cell = str | None
+type GridRows = dict[str, list[dict[str, Cell]]]
+
+
+def cell_error(column: Column, value: Cell) -> str | None:
+    """Why `value` is not this column, or None when it is fine (including blank/NULL)."""
+    if value is None or value == "":
+        return None
+    try:
+        column.cast(value)
+    except TypeError, ValueError:
+        return f"not {column.type}"
+    return None
+
+
+def validate_grid(schemas: dict[str, Schema], rows: GridRows) -> dict[str, str]:
+    """Map `table.index.column` → error text for every invalid filled cell."""
+    errors: dict[str, str] = {}
+    for table, schema in schemas.items():
+        for index, row in enumerate(rows.get(table, [])):
+            for column in schema:
+                message = cell_error(column, row.get(column.name))
+                if message:
+                    errors[f"{table}.{index}.{column.name}"] = message
+    return errors
 
 
 def apply_grid_action(
     action: str,
     mocks: tuple[str, ...],
-    rows: dict[str, list[dict[str, str]]],
-) -> dict[str, list[dict[str, str]]]:
+    rows: GridRows,
+) -> GridRows:
     editable = frozenset(mocks) | {"expected"}
-    updated = {
+    updated: GridRows = {
         name: [dict(row) for row in table_rows] for name, table_rows in rows.items()
     }
     for name in editable:
@@ -30,14 +57,21 @@ def apply_grid_action(
             if not table_rows:
                 table_rows.append({})
             updated[table] = table_rows
+    elif action.startswith("duplicate:"):
+        _, table, index_text = action.split(":", 2)
+        if table in editable:
+            index = int(index_text)
+            table_rows = updated.setdefault(table, [{}])
+            if 0 <= index < len(table_rows):
+                table_rows.insert(index + 1, dict(table_rows[index]))
     return updated
 
 
 def type_grid_rows(
-    repository: Path, rows: dict[str, list[dict[str, str]]]
-) -> tuple[dict[str, list[dict[str, str]]], dict[str, dict[str, str]]]:
+    repository: Path, rows: GridRows
+) -> tuple[GridRows, dict[str, dict[str, str]]]:
     repo_catalog = catalog(repository)
-    typed_rows: dict[str, list[dict[str, str]]] = {}
+    typed_rows: GridRows = {}
     engine_types: dict[str, dict[str, str]] = {}
     for name, table_rows in rows.items():
         relation = repo_catalog.resolve(name)
@@ -46,23 +80,33 @@ def type_grid_rows(
             typed_rows[name] = table_rows
             continue
         non_empty = [
-            {column.name: row.get(column.name, "") for column in schema}
+            {column.name: row.get(column.name) for column in schema}
             for row in table_rows
-            if any(str(row.get(column.name, "")).strip() for column in schema)
+            if any(_filled(row.get(column.name)) for column in schema)
         ]
         if not non_empty:
             typed_rows[name] = table_rows or [{}]
             continue
-        written = DuckDBExecutor().run({relation: Given(schema, non_empty)}, [])
+        # DuckDB Given expects strings for casting through its loader; map NULL → None.
+        as_text = [
+            {
+                column.name: (
+                    None if row[column.name] is None else str(row[column.name])
+                )
+                for column in schema
+            }
+            for row in non_empty
+        ]
+        written = DuckDBExecutor().run({relation: Given(schema, as_text)}, [])
         loaded = [
             tuple(row[column.name] for column in schema) for row in written[relation]
         ]
-        display: list[dict[str, str]] = []
+        display: list[dict[str, Cell]] = []
         types: dict[str, str] = {}
         for values in loaded:
             display.append(
                 {
-                    column.name: "" if value is None else str(value)
+                    column.name: None if value is None else str(value)
                     for column, value in zip(schema, values, strict=True)
                 }
             )
@@ -71,3 +115,9 @@ def type_grid_rows(
         typed_rows[name] = display or [{}]
         engine_types[name] = types
     return typed_rows, engine_types
+
+
+def _filled(value: Cell) -> bool:
+    if value is None:
+        return False
+    return value.strip() != ""

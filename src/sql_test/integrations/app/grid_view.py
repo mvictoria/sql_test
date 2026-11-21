@@ -3,17 +3,20 @@ from dataclasses import dataclass
 
 from nicegui import ui
 
-from sql_test.engine.schema import Schema
+from sql_test.engine.schema import Column, Schema
 from sql_test.integrations.app.compare_view import target_schema
 from sql_test.integrations.app.engine_access import catalog
+from sql_test.integrations.app.grid import Cell, cell_error
 from sql_test.integrations.app.state import WorkbenchState
 
 
 @dataclass(frozen=True)
 class EditorActions:
     on_edit: Callable[[], None]
+    on_rebuild: Callable[[], None]
     on_add_row: Callable[[str], None]
     on_delete_row: Callable[[str, int], None]
+    on_duplicate_row: Callable[[str, int], None]
     on_apply: Callable[[], None]
     on_run: Callable[[], None]
     on_save: Callable[[], None]
@@ -33,12 +36,12 @@ def editor_view(state: WorkbenchState, actions: EditorActions) -> None:
             ui.label(f"{name}: no schema").classes("text-grey-7")
             continue
         ui.label(name).classes("text-subtitle2").mark(f"grid-{name}")
-        grid_view(state, name, schema, actions)
+        grid_view(name, schema, state, actions)
     ui.label("Expected").classes("text-subtitle1").mark("grid-expected")
     if expected_schema is None:
         ui.label("No schema for the table under test").classes("text-grey-7")
     else:
-        grid_view(state, "expected", expected_schema, actions)
+        grid_view("expected", expected_schema, state, actions)
     with ui.row():
         ui.button("Apply to engine", on_click=actions.on_apply).mark("apply")
         ui.button("Run", on_click=actions.on_run).mark("run")
@@ -46,12 +49,15 @@ def editor_view(state: WorkbenchState, actions: EditorActions) -> None:
 
 
 def grid_view(
-    state: WorkbenchState, name: str, schema: Schema, actions: EditorActions
+    name: str, schema: Schema, state: WorkbenchState, actions: EditorActions
 ) -> None:
     rows = state.grid_rows.setdefault(name, [{}])
     types = state.engine_types.get(name, {})
     columns = [column.name for column in schema]
-    with ui.grid(columns=f"repeat({len(columns)}, 10rem) auto").classes("items-start"):
+    by_name = {column.name: column for column in schema}
+    with ui.grid(columns=f"repeat({len(columns)}, 11rem) auto auto").classes(
+        "items-start"
+    ):
         for column in columns:
             with ui.column().classes("gap-0"):
                 ui.label(column).classes("text-caption text-weight-bold")
@@ -60,16 +66,14 @@ def grid_view(
                         f"engine-type-{name}.{column}"
                     )
         ui.label("")
+        ui.label("")
         for index, row in enumerate(rows):
             for column in columns:
-                ui.input(
-                    value=row.get(column, ""),
-                    on_change=lambda event, row=row, column=column: _edit(
-                        row, column, event.value, actions
-                    ),
-                ).props("dense outlined debounce=300").mark(
-                    f"cell-{name}.{index}.{column}"
-                )
+                _cell(name, index, row, by_name[column], actions)
+            ui.button(
+                "Duplicate",
+                on_click=lambda _, index=index: actions.on_duplicate_row(name, index),
+            ).props("flat dense").mark(f"duplicate-{name}.{index}")
             ui.button(
                 "Delete",
                 on_click=lambda _, index=index: actions.on_delete_row(name, index),
@@ -79,11 +83,79 @@ def grid_view(
     ).mark(f"add-row-{name}")
 
 
+def _cell(
+    table: str,
+    index: int,
+    row: dict[str, Cell],
+    column: Column,
+    actions: EditorActions,
+) -> None:
+    key = column.name
+    value = row.get(key)
+    is_null = key in row and value is None
+    error = cell_error(column, value)
+    invalid = f"invalid-{table}.{index}.{key}"
+    markers = f"cell-{table}.{index}.{key}"
+    if is_null:
+        markers = f"{markers} null-{table}.{index}.{key}"
+    with ui.column().classes("gap-0"):
+        error_label = ui.label(error or "").classes("text-caption text-negative")
+        if error:
+            error_label.mark(invalid)
+        with ui.row().classes("items-center no-wrap gap-1"):
+            field = (
+                ui.input(
+                    value="" if value is None else value,
+                    placeholder="NULL" if is_null else "",
+                    on_change=lambda event, row=row, key=key, column=column, invalid=invalid, error_label=error_label: (
+                        _edit(
+                            row, key, event.value, column, invalid, error_label, actions
+                        )
+                    ),
+                )
+                .props("dense outlined debounce=300")
+                .mark(markers)
+            )
+            if is_null:
+                field.props("readonly")
+            toggle = (
+                ui.button(
+                    "NULL",
+                    on_click=lambda _, row=row, key=key, is_null=is_null: _toggle_null(
+                        row, key, is_null, actions
+                    ),
+                )
+                .props("flat dense")
+                .mark(f"null-toggle-{table}.{index}.{key}")
+            )
+            if is_null:
+                toggle.props("unelevated")
+
+
 def _edit(
-    row: dict[str, str], column: str, value: str | None, actions: EditorActions
+    row: dict[str, Cell],
+    column: str,
+    value: str | None,
+    schema_column: Column,
+    invalid_marker: str,
+    error_label: ui.label,
+    actions: EditorActions,
 ) -> None:
     row[column] = value or ""
+    message = cell_error(schema_column, row[column])
+    error_label.set_text(message or "")
+    error_label.mark(invalid_marker if message else "")
     actions.on_edit()
+
+
+def _toggle_null(
+    row: dict[str, Cell],
+    column: str,
+    currently_null: bool,
+    actions: EditorActions,
+) -> None:
+    row[column] = "" if currently_null else None
+    actions.on_rebuild()
 
 
 def _case_name(state: WorkbenchState) -> None:

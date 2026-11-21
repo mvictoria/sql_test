@@ -271,6 +271,42 @@ async def test_grid_can_add_and_delete_rows(user: User):
     assert _value(user, "cell-members.0.member_name") == "Bea"
 
 
+async def test_a_non_integer_member_id_is_flagged_before_running(user: User):
+    register_app(FIXTURE)
+    await user.open(f"/workbench?target={ALICE}&view=lineage&mock=members")
+    user.find(marker="cell-members.0.member_id").type("abc")
+
+    await user.should_see(marker="invalid-members.0.member_id")
+    await user.should_see(marker="invalid-members.0.member_id", content="not INT")
+
+
+async def test_duplicate_row_copies_the_row(user: User):
+    register_app(FIXTURE)
+    await user.open(f"/workbench?target={ALICE}&view=lineage&mock=members")
+    _fill(user, "members", [{"member_id": "1", "member_name": "Ada", "lob": "30"}])
+
+    user.find(marker="duplicate-members.0").click()
+
+    await user.should_see(marker="cell-members.1.member_id")
+    assert _value(user, "cell-members.1.member_id") == "1"
+    assert _value(user, "cell-members.1.member_name") == "Ada"
+    assert _value(user, "cell-members.1.lob") == "30"
+
+
+async def test_null_is_distinct_from_an_empty_string(user: User):
+    register_app(FIXTURE)
+    await user.open("/workbench?target=members&view=lineage&mock=members")
+    user.find(marker="cell-members.0.member_name").type("Ada")
+
+    user.find(marker="null-toggle-members.0.member_name").click()
+    await user.should_see(marker="null-members.0.member_name")
+    assert _value(user, "cell-members.0.member_name") == ""
+
+    user.find(marker="null-toggle-members.0.member_name").click()
+    await user.should_not_see(marker="null-members.0.member_name")
+    assert _value(user, "cell-members.0.member_name") == ""
+
+
 async def test_grid_rows_reach_the_engine_with_schema_types(user: User):
     register_app(FIXTURE)
     await user.open("/workbench?target=members&view=lineage&mock=members")

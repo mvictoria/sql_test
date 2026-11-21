@@ -609,7 +609,7 @@ Edit a mocked table's rows in a grid with columns from its schema. Add and delet
   - [ENG-3](#eng-3)
 
 <a id="app-7"></a>
-#### APP-7 Duplicate rows, NULL, and type validation
+#### APP-7 Duplicate rows, NULL, and type validation (done)
 
 In the grid:
 

@@ -44,7 +44,7 @@ def open_workbench(
         return None
     view = query.get("view", [DEFAULT_VIEW])[0]
     saved = load_case(repository, target, case_name) if case_name is not None else None
-    grid_rows: dict[str, list[dict[str, str]]] = {}
+    grid_rows: dict[str, list[dict[str, str | None]]] = {}
     mock_params = tuple(sorted({name for name in query.get("mock", []) if name}))
     if saved is not None:
         grid_rows = case_grid_rows(saved)
@@ -74,8 +74,10 @@ class Workbench:
         self.state = state
         self.actions = EditorActions(
             on_edit=self.refresh_lineage,
+            on_rebuild=self.refresh_editor,
             on_add_row=self.add_row,
             on_delete_row=self.delete_row,
+            on_duplicate_row=self.duplicate_row,
             on_apply=self.apply,
             on_run=self.run,
             on_save=self.save,
@@ -180,6 +182,9 @@ class Workbench:
 
     def delete_row(self, table: str, index: int) -> None:
         self._grid_action(f"delete:{table}:{index}")
+
+    def duplicate_row(self, table: str, index: int) -> None:
+        self._grid_action(f"duplicate:{table}:{index}")
 
     def _grid_action(self, action: str) -> None:
         state = self.state
