@@ -44,10 +44,11 @@ Done:
 - [ENG-14](#eng-14)
 - [ENG-16](#eng-16)
 - [ENG-15](#eng-15)
+- [ENG-17](#eng-17)
 
 Can start now:
 
-- [ENG-17](#eng-17)
+- [ENG-18](#eng-18)
 
 ### Project skeleton
 
@@ -309,7 +310,7 @@ Read a case folder's CSVs into typed rows using the discovered schemas and the N
   - [ENG-14](#eng-14)
 
 <a id="eng-17"></a>
-#### ENG-17 Run a case
+#### ENG-17 Run a case (done)
 
 The test layer's entry point: take a case folder, give its mocks to the engine as rows, and return the actual rows, the comparison, and pass or fail. The app, pytest, and the CLI all call this.
 

@@ -45,6 +45,13 @@ class DuckDBExecutor:
         assert connection is not None
         return connection.execute(f"select * from {relation}").fetchall()
 
+    def read_rows(self, relation: Relation) -> list[Row]:
+        connection = self._connection
+        assert connection is not None
+        cursor = connection.execute(f"select * from {relation}")
+        names = [column[0] for column in cursor.description]
+        return [dict(zip(names, values, strict=True)) for values in cursor.fetchall()]
+
     def teardown(self) -> None:
         if self._connection is not None:
             self._connection.close()
