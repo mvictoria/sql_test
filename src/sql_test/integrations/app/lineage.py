@@ -2,10 +2,8 @@ import html
 from pathlib import Path
 from urllib.parse import urlencode
 
-from sql_test.engine.lineage.graph import upstream_lineage
 from sql_test.engine.planner.plan import Plan, State
 from sql_test.engine.relation import Relation
-from sql_test.integrations.app.engine_access import catalog
 from sql_test.integrations.app.engine_access import plan as build_plan
 
 
@@ -23,43 +21,16 @@ def workbench_query(
 def frontier_mocks(
     repository: Path, target: str, requested: tuple[str, ...]
 ) -> tuple[str, ...]:
-    """Keep only a mock frontier: drop any mock upstream of another mock."""
+    """Keep only a mock frontier: drop any mock the run would never read."""
     if not requested:
         return ()
-    repo_catalog = catalog(repository)
-    known = repo_catalog.relations().keys() | {
-        Relation.parse(name) for name in requested
+    unused = {
+        str(relation)
+        for relation in build_plan(repository, target, requested, {}).unused
     }
-    target_relation = Relation.parse(target).resolve(known)
-    projection = upstream_lineage(target_relation, repo_catalog).projection()
-    by_name = {str(relation): relation for relation in projection}
-    for name in requested:
-        by_name.setdefault(name, Relation.parse(name))
-    kept: list[str] = []
-    for name in requested:
-        relation = by_name[name]
-        upstream_of_another = any(
-            relation in _upstream_closure(by_name[other], projection)
-            for other in requested
-            if other != name
-        )
-        if not upstream_of_another:
-            kept.append(name)
-    return tuple(sorted(kept))
-
-
-def _upstream_closure(
-    relation: Relation, projection: dict[Relation, set[Relation]]
-) -> set[Relation]:
-    seen: set[Relation] = set()
-    stack = list(projection.get(relation, ()))
-    while stack:
-        current = stack.pop()
-        if current in seen:
-            continue
-        seen.add(current)
-        stack.extend(projection.get(current, ()))
-    return seen
+    return tuple(
+        sorted(name for name in requested if str(Relation.parse(name)) not in unused)
+    )
 
 
 def lineage_section(
