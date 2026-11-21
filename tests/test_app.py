@@ -280,6 +280,34 @@ def test_grid_rows_reach_the_engine_with_schema_types():
     assert "Reached engine" in body
 
 
+def test_apply_with_bad_types_shows_an_error_not_a_blank_page():
+    server = _with_server(DEMO)
+    try:
+        body = _post(
+            server,
+            "/workbench",
+            [
+                ("target", "customer_summary"),
+                ("view", "lineage"),
+                ("mock", "staged_claims"),
+                ("mock", "staged_members"),
+                ("action", "apply"),
+                ("staged_claims.0.claim_id", "a"),
+                ("staged_claims.0.member_id", "1"),
+                ("staged_members.0.member_id", "1"),
+                ("staged_members.0.member_name", "Ada"),
+            ],
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert "Mock editor" in body
+    assert "Could not load mocks" in body
+    assert "Conversion Error" in body or "INT" in body
+    assert 'value="a"' in body
+
+
 def test_selecting_a_case_opens_the_workbench(tmp_path):
     case = tmp_path / "cases" / "medicaid_members" / "alice"
     case.mkdir(parents=True)
