@@ -128,6 +128,27 @@ def test_init_adds_sql_test_section_to_an_existing_pyproject(
     assert "example" in capsys.readouterr().out
 
 
+def test_init_keeps_existing_sql_files(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+):
+    sqls = tmp_path / "admin" / "sqls"
+    sqls.mkdir(parents=True)
+    ddl = "create table raw (id int);\ncreate table orders (id int);\n"
+    (sqls / "ddl.sql").write_text(ddl)
+    (sqls / "orders.sql").write_text("select id from raw\n")
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "orders-data"\nversion = "0.1.0"\n'
+    )
+
+    assert main(["init", str(tmp_path)]) == 0
+    assert (sqls / "ddl.sql").read_text() == ddl
+    assert (sqls / "orders.sql").read_text() == "select id from raw\n"
+    assert (sqls / "example.sql").is_file()
+    assert "[tool.sql-test]" in (tmp_path / "pyproject.toml").read_text()
+    assert main(["discover", str(tmp_path)]) == 0
+    assert "example" in capsys.readouterr().out
+
+
 def test_init_refuses_when_sql_test_is_already_configured(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ):
