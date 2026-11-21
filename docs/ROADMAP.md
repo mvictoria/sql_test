@@ -45,10 +45,11 @@ Done:
 - [ENG-16](#eng-16)
 - [ENG-15](#eng-15)
 - [ENG-17](#eng-17)
+- [ENG-18](#eng-18)
 
 Can start now:
 
-- [ENG-18](#eng-18)
+- [ENG-19](#eng-19)
 
 ### Project skeleton
 
@@ -321,7 +322,7 @@ The test layer's entry point: take a case folder, give its mocks to the engine a
   - [ENG-16](#eng-16)
 
 <a id="eng-18"></a>
-#### ENG-18 pytest plugin
+#### ENG-18 pytest plugin (done)
 
 Discover every case folder and run each as its own pytest test through ENG-17. A failure shows the comparison or the tables that still need data.
 
