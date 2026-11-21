@@ -32,8 +32,7 @@ class Engine:
         known = self._catalog.relations() | given.keys()
         return plan_run(Relation.parse(table).resolve(known), self._catalog, given)
 
-    def run(self, table: str, rows: dict[str, list[Row]]) -> RunResult:
-        plan = self.plan(table, rows)
+    def execute(self, plan: Plan, rows: dict[str, list[Row]]) -> RunResult:
         if plan.needs_rows:
             names = ", ".join(sorted(map(str, plan.needs_rows)))
             raise MissingRows(f"These relations still need rows: {names}")
@@ -46,13 +45,18 @@ class Engine:
         target = plan.target
         return RunResult(
             rows=written[target],
-            counts={relation: len(rows) for relation, rows in written.items()},
+            counts={
+                relation: len(table_rows) for relation, table_rows in written.items()
+            },
             ordered=any(
                 ends_in_order_by(operation.sql)
                 for operation in plan.operations
                 if operation.writes == target
             ),
         )
+
+    def run(self, table: str, rows: dict[str, list[Row]]) -> RunResult:
+        return self.execute(self.plan(table, rows), rows)
 
 
 def _schema_from_rows(rows: list[Row]) -> Schema:
