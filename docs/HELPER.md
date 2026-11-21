@@ -381,6 +381,7 @@ These rules are part of the case format; changing one means migrating every case
 - **NULL** is an empty, unquoted cell. A quoted empty cell (`""`) is an empty string. Spreadsheets do not quote empty cells, so pasted blanks are NULL.
 - **Columns:** only the columns listed in `expected.csv` are checked; other output columns are ignored. A listed column the target does not have fails the case.
 - **Values** are compared after typing the expected cells with the target's schema, so `1` and `1.0` in an integer column are equal. An expected cell that cannot be cast to its column's type fails the case, naming the cell.
+- **Outcomes:** each expected row is matched, changed, or missing, and each actual row left over is unexpected. An expected row and an actual row that differ but agree on at least half of the checked columns (with two or more columns) are reported as one changed row, naming the columns that differ; otherwise they are a missing row and an unexpected row.
 
 ## Saving
 
