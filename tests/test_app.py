@@ -723,6 +723,27 @@ async def test_failing_alice_run_keeps_compare_expected_and_actions_in_focus(
     assert _count_within(user, "save", within="run-focus") == 1
 
 
+async def test_a_new_case_run_with_blank_expected_can_accept_its_actual_result(
+    user: User,
+):
+    _register(FIXTURE)
+    await user.open("/workbench?target=members&view=lineage&mock=members")
+    _fill(
+        user,
+        "members",
+        [
+            {"member_id": "1", "member_name": "Ada", "lob": "30"},
+            {"member_id": "2", "member_name": "Bea", "lob": "10"},
+        ],
+    )
+    user.find(marker="run").click()
+
+    user.find(marker="accept-all").click()
+
+    await user.should_see(marker="verdict-passed")
+    assert _value(user, "cell-expected.1.member_name") == "Bea"
+
+
 async def test_accepting_no_rows_expects_no_rows_through_save_and_load(
     user: User, tmp_path: Path
 ):

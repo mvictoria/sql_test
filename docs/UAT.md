@@ -80,6 +80,7 @@ Ordered roughly by how much they block a new adopter.
 19. **Broken configured paths at runtime** → “Something went wrong” + errno. Creating config via Settings is warmer; a broken checkout is colder.
 
 20. **Accept actual as expected** still missing (README admits it) — after a good Run, expected rows are still hand-built.
+    *(Accept was already in the workbench; the README was stale. Fixed by [APP-21](ROADMAP.md#app-21).)*
 
 ---
 
@@ -103,7 +104,7 @@ Turned into roadmap stories under **Pre-release — adoption (from UAT)** in [RO
 1. Ship a real floating major tag and align README + sample CI pins — [CI-6](ROADMAP.md#ci-6) (done).
 2. Copy-pasteable consumer `pyproject` / standalone sample — [DOC-1](ROADMAP.md#doc-1).
 3. `sql-test init` or template — [CLI-7](ROADMAP.md#cli-7).
-4. Path / DDL / mapping / INSERT diagnoses — [ENG-35](ROADMAP.md#eng-35).
+4. Path / DDL / mapping / INSERT diagnoses — [ENG-36](ROADMAP.md#eng-36).
 5. App first-run polish — [APP-20](ROADMAP.md#app-20); accept expected in the UI — [APP-21](ROADMAP.md#app-21).
 
 Massive-repo planning cost stays a parallel track: [ENG-31](ROADMAP.md#eng-31), [ENG-32](ROADMAP.md#eng-32).

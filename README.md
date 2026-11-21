@@ -124,11 +124,13 @@ Built with [NiceGUI](https://nicegui.io); its tests use NiceGUI's `User` fixture
 - Open a target or an existing case in the workbench
 - Lineage graph with mock / will-execute / source states (pruned nodes hidden)
 - Click a node to mock or unmock; mocks keep a frontier
-- Schema-aware mock grids (add/delete rows; Apply loads types through the engine)
-- Run and show output with row counts; expected and actual side by side
+- Schema-aware mock grids (add/delete rows, Tab between cells, paste from a spreadsheet)
+- Run types the mocks and shows output with row counts; expected and actual side by side
+- Accept actual as expected: a whole result, one row, or one cell, including "expect no rows"
 - Load and save case mocks and expected rows
+- Picks up SQL files added, edited, or deleted while the app is open
 
-Still to come: accept actual as expected. Details in HELPER and the ROADMAP.
+Details in HELPER and the ROADMAP.
 
 ## Sample repository
 
