@@ -15,10 +15,21 @@ def main(argv: list[str] | None = None) -> int:
     discover_parser.add_argument("repository", type=Path, nargs="?", default=Path("."))
 
     app_parser = sub.add_parser(
-        "app", help="open the authoring app against a repository"
+        "app", help="start the authoring app against a repository"
     )
-    app_parser.add_argument("repository", type=Path, nargs="?", default=Path("."))
-    app_parser.add_argument("--port", type=int, default=8765)
+    app_parser.add_argument(
+        "repository",
+        type=Path,
+        nargs="?",
+        default=Path("."),
+        help="path to the consuming repository (default: .)",
+    )
+    app_parser.add_argument(
+        "--port",
+        type=int,
+        default=8765,
+        help="localhost port (default: 8765)",
+    )
 
     args = parser.parse_args(argv)
     repository = args.repository.resolve()

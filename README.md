@@ -26,36 +26,33 @@ cases = "tests/cases"                               # case folders
 
 ## CLI
 
+The CLI starts the authoring app. pytest remains the test runner.
+
 ```bash
-sql-test discover [repository]
 sql-test app [repository] [--port 8765]
 ```
 
-`discover` lists models, sources, and case folders. `app` starts a localhost-only authoring UI against a repository (default `.`).
+- `repository` — path to the consuming repository (default `.`)
+- `--port` — localhost port (default `8765`)
 
-Example against the sample repo kept in this tree:
+The server binds to localhost only. Open the printed URL in a browser.
 
 ```bash
 uv run sql-test app lakehouse-data-customer
+uv run sql-test app tests/fixtures/repos/lineage-demo --port 9000
 ```
-
-Or the deeper lineage fixture:
-
-```bash
-uv run sql-test app tests/fixtures/repos/lineage-demo
-```
-
-Open http://127.0.0.1:8765/
 
 ## Authoring app (so far)
 
 - Browse models, sources, and cases
-- Open a target in the workbench
+- Open a target or an existing case in the workbench
 - Lineage graph with mock / will-execute / source states (pruned nodes hidden)
 - Click a node to mock or unmock; mocks keep a frontier
 - Schema-aware mock grids (add/delete rows; Apply loads types through the engine)
+- Run and show output with row counts; expected and actual side by side
+- Load an existing case's mocks and rows into the workbench
 
-Still to come: run and compare, save/load cases, coverage in the UI. Details in HELPER and the ROADMAP.
+Still to come: accept actual as expected, save cases, coverage in the UI. Details in HELPER and the ROADMAP.
 
 ## Sample repository
 

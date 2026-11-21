@@ -489,7 +489,7 @@ The test layer owns test semantics. It reads a case, passes the case's mocked ta
                Shared engine
 ```
 
-CI runs pytest or the CLI. It does not add CI-specific behavior to the engine.
+CI runs pytest. It does not add CI-specific behavior to the engine.
 
 The engine owns:
 
@@ -528,16 +528,13 @@ Safeguards for that server:
 
 **pytest.** A repository's own pytest tests import the package. A test can call the engine with rows written in Python, or run the repository's case folders as one parametrized test per case, passing the folder that holds them. A case saved by the app is a normal repository test, and it runs through pytest without the app installed or running. A plugin that collects case folders with no test file is deferred until the parametrized style has been used for a while.
 
-**CLI.** A headless interface over the engine, for example:
+**CLI.** The process entry for the authoring app:
 
 ```bash
-sql-test discover
-sql-test validate
-sql-test run
-sql-test app
+sql-test app [repository] [--port 8765]
 ```
 
-The exact commands are not final. What matters is that a headless interface exists beneath the app.
+`repository` defaults to `.`; `--port` defaults to `8765`. The server binds to localhost only. pytest remains the canonical test runner; the CLI does not re-run cases. Other commands (`discover`, `validate`, `run`) stay deferred until a demonstrated need (for example a pre-commit hook) appears.
 
 **Reusable GitHub Actions workflow.** It lives in the tool's repository. A consuming repository calls it in a few lines:
 
@@ -549,17 +546,7 @@ jobs:
 
 The workflow checks out the calling repository, sets up Python, installs the package, and runs pytest. It works from the checked-out repository, not from SQL, schema, or case files passed as parameters.
 
-**Pre-commit, later.** A hook running `sql-test validate` for fast static checks only:
-
-- the case parses
-- the target and mocked tables exist
-- mocked tables are upstream of the target
-- CSV columns match known schemas
-- CSV values parse to the expected types
-- lineage resolves
-- case paths and names follow repository conventions
-
-Execution stays with pytest and CI. Pre-commit is a consequence of having a CLI, not a requirement driving the design, and it is not part of the POC.
+**Pre-commit, later.** If static case checks earn their keep, a `sql-test validate` command could back a hook. That is not a reason to grow the CLI today; execution stays with pytest and CI.
 
 **Other consumers** such as IDE integrations, coverage reporting, change-impact tooling, and CDC tooling can be added the same way, only when there is a demonstrated use case.
 
