@@ -10,7 +10,7 @@ A library for testing SQL transformations: mock upstream tables, run the real SQ
 ## Way of working
 
 - **TDD.** Each story starts with a failing test for its done-when. Write the code that makes it pass, then refactor, one behaviour per red/green cycle.
-- **DDD.** Code uses the domain's words: table under test, case, mock, source, boundary, producer, lineage, plan. Name modules, types, and functions after them. A new term is defined in [docs/HELPER.md](docs/HELPER.md) before it appears in code.
+- **DDD.** Code uses the domain's words: table under test, case, mock, source, producer, lineage, plan, execution boundary. Name modules, types, and functions after them. A new term is defined in [docs/HELPER.md](docs/HELPER.md) before it appears in code. Source means source→target QA language, not a separate "boundary" relation type.
 - **Ship on a PR.** Push the branch and open (or update) a pull request; do not leave finished work only local. The PR body is for humans: succinct — what changed, why, and which roadmap story it serves.
 - **Keep the PR mergeable.** Before pushing, fetch and rebase the branch onto `origin/main` locally, resolve any conflicts commit by commit, and rerun prek and pytest. History stays linear: no merge commits on the branch. Push a rebased branch with `git push --force-with-lease`. Check that the PR shows as mergeable after pushing.
 

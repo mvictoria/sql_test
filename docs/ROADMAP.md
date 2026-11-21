@@ -31,10 +31,10 @@ Done:
 - [ENG-21](#eng-21)
 - [ENG-2](#eng-2)
 - [ENG-3](#eng-3)
+- [ENG-4](#eng-4)
 
 Can start now:
 
-- [ENG-4](#eng-4)
 - [ENG-5](#eng-5)
 - [ENG-11](#eng-11)
 - [ENG-14](#eng-14)
@@ -137,7 +137,7 @@ The engine reads a catalog of relations, operations, and schemas, not files. A r
   - [ENG-3](#eng-3)
 
 <a id="eng-4"></a>
-#### ENG-4 Discover case folders
+#### ENG-4 Discover case folders (done)
 
 Part of the test layer. List every `<table under test>/<case name>/` folder under the repository's case location, and its CSV files, without reading their contents.
 
@@ -174,11 +174,11 @@ The graph can be projected to relation → relation for the default lineage view
   - [ENG-5](#eng-5)
 
 <a id="eng-7"></a>
-#### ENG-7 Lineage boundaries
+#### ENG-7 Sources that stop lineage
 
-A model whose SQL cannot be parsed, or that has no schema, becomes a boundary. Traversal stops there, the relation is treated like a source, and the reason is recorded.
+A model whose SQL cannot be parsed, or that has no schema, is classified as a **source**. Traversal stops there, and the reason is recorded for drill-down.
 
-- **Done when:** a model with unparseable SQL and a model with no schema each appear as a boundary with the right reason, and their upstream relations are not in the graph.
+- **Done when:** a model with unparseable SQL and a model with no schema each appear as a source with the right reason, and their upstream relations are not in the graph.
 - **Depends on:**
   - [ENG-6](#eng-6)
   - [ENG-3](#eng-3)
@@ -194,12 +194,11 @@ Given a target and the relations whose rows are given, return a plan without exe
 - executed
 - pruned
 - source
-- boundary
 
 A relation upstream of a given relation is pruned unless another executed path still needs it. The plan can be inspected, for example by the app's lineage view, before or instead of running it. Define *plan* in [HELPER.md](HELPER.md).
 
 - **Done when:** giving `medicaid_members` prunes `members` and `lob` and leaves only the Alice operation to execute, and a diamond-shaped lineage keeps a relation that one path still needs.
-- **Depends on:** [ENG-6](#eng-6). Boundary states appear once [ENG-7](#eng-7) lands.
+- **Depends on:** [ENG-6](#eng-6). Source reasons from unparseable or schemaless models appear once [ENG-7](#eng-7) lands.
 
 <a id="eng-9"></a>
 #### ENG-9 Report relations that still need rows
@@ -237,7 +236,7 @@ How an operation's kind becomes SQL, for example a full-load `SELECT` becoming a
 <a id="eng-12"></a>
 #### ENG-12 Load given rows
 
-Create each relation whose rows are given from its discovered schema, and insert the rows. A boundary relation with no schema takes its columns from the rows; how it is typed is an open question in [HELPER.md](HELPER.md).
+Create each relation whose rows are given from its discovered schema, and insert the rows. A source relation with no schema takes its columns from the rows; how it is typed is an open question in [HELPER.md](HELPER.md).
 
 - **Done when:** given `members` rows with `member_id` as the string `"1"`, `members` loads with `member_id` as the integer `1`, replacing the sample repository's `test_medicaid_members_types`.
 - **Depends on:**
@@ -362,14 +361,15 @@ Readers for schemas and SQL-to-table mappings stored as YAML or JSON, returning 
 ### CLI
 
 <a id="cli-1"></a>
-#### CLI-1 `sql-test discover`
+#### CLI-1 `sql-test discover` (done)
 
 List, for the repository:
 
 - models
 - sources
-- boundaries
 - cases
+
+Built ahead of ENG-2 and ENG-6: models come from the mapping; sources are tables lineage cannot execute through (not produced here, or producer SQL that fails to parse). Full operation and lineage graphs land with those stories.
 
 - **Done when:** run against the sample repository's path, the command lists both v0 models, the `members` source, and every case.
 - **Depends on:**
@@ -459,7 +459,7 @@ Decide how the page reads and writes the checked-out repository, and record it i
 - **Depends on:** none
 
 <a id="app-2"></a>
-#### APP-2 App shell
+#### APP-2 App shell (done)
 
 `sql-test app .` opens the page against the current repository and can list what `discover` lists.
 
@@ -489,9 +489,8 @@ Draw the upstream graph of the selected target with these states:
 - executed
 - pruned
 - source
-- boundary
 
-Tables that still need data are grey and turn colored once they have data. A boundary shows why it is a boundary.
+Tables that still need data are grey and turn colored once they have data. A source shows why it is a source when that is not obvious (for example unparseable SQL).
 
 - **Done when:** the Alice target shows `members` grey until rows are added.
 - **Depends on:**
