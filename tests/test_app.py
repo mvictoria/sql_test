@@ -327,6 +327,55 @@ async def test_grid_can_add_and_delete_rows(user: User):
     assert _value(user, "cell-members.0.member_name") == "Bea"
 
 
+async def test_tab_from_a_cell_focuses_the_next_cell_not_row_actions(user: User):
+    _register(FIXTURE)
+    await user.open(f"/workbench?target={ALICE}&view=lineage&mock=members")
+    await user.should_see(marker="cell-members.0.member_id")
+
+    (duplicate,) = user.find(marker="duplicate-members.0").elements
+    (delete,) = user.find(marker="delete-members.0").elements
+    assert str(duplicate.props.get("tabindex")) == "-1"
+    assert str(delete.props.get("tabindex")) == "-1"
+
+    user.find(marker="cell-members.0.member_id").trigger("keydown.exact.tab.prevent")
+
+    (next_cell,) = user.find(
+        kind=ui.input, marker="cell-members.0.member_name"
+    ).elements
+    assert "grid-focus" in next_cell.classes
+
+
+async def test_tab_from_the_last_cell_of_a_row_adds_a_row(user: User):
+    _register(FIXTURE)
+    await user.open(f"/workbench?target={ALICE}&view=lineage&mock=members")
+    await user.should_see(marker="cell-members.0.lob")
+    await user.should_not_see(marker="cell-members.1.member_id")
+
+    user.find(marker="cell-members.0.lob").trigger("keydown.exact.tab.prevent")
+
+    await user.should_see(marker="cell-members.1.member_id")
+    (first_of_new,) = user.find(
+        kind=ui.input, marker="cell-members.1.member_id"
+    ).elements
+    assert "grid-focus" in first_of_new.classes
+
+
+async def test_shift_tab_walks_cells_in_reverse_without_row_actions(user: User):
+    _register(FIXTURE)
+    await user.open(f"/workbench?target={ALICE}&view=lineage&mock=members")
+    user.find(marker="add-row-members").click()
+    await user.should_see(marker="cell-members.1.member_id")
+
+    (duplicate,) = user.find(marker="duplicate-members.0").elements
+    assert str(duplicate.props.get("tabindex")) == "-1"
+
+    user.find(marker="cell-members.1.member_id").trigger("keydown.shift.tab.prevent")
+
+    (previous,) = user.find(kind=ui.input, marker="cell-members.0.lob").elements
+    assert "grid-focus" in previous.classes
+    await user.should_see(marker="cell-members.1.member_id")
+
+
 async def test_a_non_integer_member_id_is_flagged_before_running(user: User):
     _register(FIXTURE)
     await user.open(f"/workbench?target={ALICE}&view=lineage&mock=members")

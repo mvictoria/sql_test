@@ -1,7 +1,40 @@
+from collections.abc import Sequence
+
 from sql_test.engine import Catalog, Column, Schema
 
 type Cell = str | None
 type GridRows = dict[str, list[dict[str, Cell]]]
+type GridCell = tuple[int, str]
+
+
+def next_grid_cell(
+    columns: Sequence[str], row: int, column: str, row_count: int
+) -> GridCell | None:
+    """The next data cell left-to-right, then the next row; None past the last cell."""
+    try:
+        index = list(columns).index(column)
+    except ValueError:
+        return None
+    if index + 1 < len(columns):
+        return row, columns[index + 1]
+    if row + 1 < row_count:
+        return row + 1, columns[0]
+    return None
+
+
+def previous_grid_cell(
+    columns: Sequence[str], row: int, column: str
+) -> GridCell | None:
+    """The previous data cell right-to-left, then the prior row; None before the first."""
+    try:
+        index = list(columns).index(column)
+    except ValueError:
+        return None
+    if index > 0:
+        return row, columns[index - 1]
+    if row > 0:
+        return row - 1, columns[-1]
+    return None
 
 
 def cell_error(column: Column, value: Cell) -> str | None:

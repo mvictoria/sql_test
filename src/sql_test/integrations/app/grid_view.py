@@ -5,7 +5,12 @@ from nicegui import ui
 
 from sql_test.engine import Column, Schema
 from sql_test.integrations.app.compare_view import target_schema
-from sql_test.integrations.app.grid import Cell, cell_error
+from sql_test.integrations.app.grid import (
+    Cell,
+    cell_error,
+    next_grid_cell,
+    previous_grid_cell,
+)
 from sql_test.integrations.app.state import WorkbenchState
 
 
@@ -58,6 +63,7 @@ def grid_view(
     types = state.engine_types.get(name, {})
     columns = [column.name for column in schema]
     by_name = {column.name: column for column in schema}
+    fields: dict[tuple[int, str], ui.input] = {}
     with ui.grid(columns=f"repeat({len(columns)}, 11rem) auto auto").classes(
         "items-start"
     ):
@@ -72,15 +78,17 @@ def grid_view(
         ui.label("")
         for index, row in enumerate(rows):
             for column in columns:
-                _cell(name, index, row, by_name[column], actions)
+                _cell(
+                    name, index, row, by_name[column], state, actions, columns, fields
+                )
             ui.button(
                 "Duplicate",
                 on_click=lambda _, index=index: actions.on_duplicate_row(name, index),
-            ).props("flat dense").mark(f"duplicate-{name}.{index}")
+            ).props("flat dense tabindex=-1").mark(f"duplicate-{name}.{index}")
             ui.button(
                 "Delete",
                 on_click=lambda _, index=index: actions.on_delete_row(name, index),
-            ).props("flat dense").mark(f"delete-{name}.{index}")
+            ).props("flat dense tabindex=-1").mark(f"delete-{name}.{index}")
     ui.button("Add row", on_click=lambda: actions.on_add_row(name)).props(
         "flat dense"
     ).mark(f"add-row-{name}")
@@ -91,7 +99,10 @@ def _cell(
     index: int,
     row: dict[str, Cell],
     column: Column,
+    state: WorkbenchState,
     actions: EditorActions,
+    columns: list[str],
+    fields: dict[tuple[int, str], ui.input],
 ) -> None:
     key = column.name
     value = row.get(key)
@@ -119,6 +130,37 @@ def _cell(
                 .props("dense outlined debounce=300")
                 .mark(markers)
             )
+            fields[(index, key)] = field
+            if state.grid_focus == (table, index, key):
+                field.classes(add="grid-focus")
+                field.run_method("focus")
+                state.grid_focus = None
+            field.on(
+                "keydown.exact.tab.prevent",
+                lambda _, index=index, key=key: _move_grid_focus(
+                    table,
+                    state,
+                    actions,
+                    columns,
+                    fields,
+                    index,
+                    key,
+                    reverse=False,
+                ),
+            )
+            field.on(
+                "keydown.shift.tab.prevent",
+                lambda _, index=index, key=key: _move_grid_focus(
+                    table,
+                    state,
+                    actions,
+                    columns,
+                    fields,
+                    index,
+                    key,
+                    reverse=True,
+                ),
+            )
             if is_null:
                 field.props("readonly")
             toggle = (
@@ -128,11 +170,49 @@ def _cell(
                         row, key, is_null, actions
                     ),
                 )
-                .props("flat dense")
+                .props("flat dense tabindex=-1")
                 .mark(f"null-toggle-{table}.{index}.{key}")
             )
             if is_null:
                 toggle.props("unelevated")
+
+
+def _move_grid_focus(
+    table: str,
+    state: WorkbenchState,
+    actions: EditorActions,
+    columns: list[str],
+    fields: dict[tuple[int, str], ui.input],
+    row: int,
+    column: str,
+    *,
+    reverse: bool,
+) -> None:
+    if reverse:
+        target = previous_grid_cell(columns, row, column)
+        if target is None:
+            return
+        _focus_cell(fields, *target)
+        return
+    row_count = max((r for r, _ in fields), default=-1) + 1
+    target = next_grid_cell(columns, row, column, row_count)
+    if target is not None:
+        _focus_cell(fields, *target)
+        return
+    if not columns:
+        return
+    state.grid_focus = (table, row_count, columns[0])
+    actions.on_add_row(table)
+
+
+def _focus_cell(fields: dict[tuple[int, str], ui.input], row: int, column: str) -> None:
+    for field in fields.values():
+        field.classes(remove="grid-focus")
+    field = fields.get((row, column))
+    if field is None:
+        return
+    field.classes(add="grid-focus")
+    field.run_method("focus")
 
 
 def _edit(
