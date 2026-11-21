@@ -22,7 +22,8 @@ cd_bump = _load()
     ("title", "expected"),
     [
         ("(patch) CI-2: versioned releases", "patch"),
-        ("(major) break the API", "major"),
+        ("(Patch) CI-2: versioned releases", "patch"),
+        ("(MAJOR) break the API", "major"),
         ("(minor) add coverage report", "minor"),
         ("ENG-1: package skeleton", None),
         ("CI-2: versioned releases (patch)", None),

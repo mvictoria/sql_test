@@ -10,7 +10,7 @@ import argparse
 import re
 import sys
 
-FIRST_WORD_BUMP = re.compile(r"^\((major|minor|patch)\)$")
+FIRST_WORD_BUMP = re.compile(r"^\((major|minor|patch)\)$", re.IGNORECASE)
 
 
 def bump_from_title(title: str) -> str | None:
@@ -18,7 +18,7 @@ def bump_from_title(title: str) -> str | None:
     if not parts:
         return None
     match = FIRST_WORD_BUMP.fullmatch(parts[0])
-    return match.group(1) if match else None
+    return match.group(1).lower() if match else None
 
 
 def next_tag(latest: str | None, bump: str) -> str:
