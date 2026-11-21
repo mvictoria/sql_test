@@ -582,7 +582,7 @@ Run the case from the page and show the target's rows, with row counts on each t
   - [ENG-17](#eng-17)
 
 <a id="app-10"></a>
-#### APP-10 Expected and actual side by side
+#### APP-10 Expected and actual side by side (done)
 
 Show expected and actual together, with these rows marked:
 
