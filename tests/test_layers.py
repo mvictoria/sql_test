@@ -58,7 +58,7 @@ def test_executors_import_only_the_executor_interface():
         ("testing", (), ["sql_test.engine"]),
         (
             "integrations",
-            ("app",),
+            (),
             ["sql_test.engine", "sql_test.executors", "sql_test.testing"],
         ),
     ],
@@ -68,3 +68,23 @@ def test_layer_imports_other_layers_through_their_front_door(layer, exclude, fro
     assert not {
         name for name in imports for front in fronts if name.startswith(f"{front}.")
     }
+
+
+def test_app_modules_do_not_create_an_executor():
+    app = PACKAGE / "integrations" / "app"
+    created = []
+    for path in app.rglob("*.py"):
+        for node in ast.walk(ast.parse(path.read_text())):
+            if not isinstance(node, ast.Call):
+                continue
+            func = node.func
+            name = (
+                func.id
+                if isinstance(func, ast.Name)
+                else func.attr
+                if isinstance(func, ast.Attribute)
+                else None
+            )
+            if name == "DuckDBExecutor":
+                created.append(f"{path.relative_to(app)}:{node.lineno}")
+    assert created == []

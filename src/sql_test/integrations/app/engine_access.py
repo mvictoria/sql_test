@@ -1,10 +1,15 @@
 from pathlib import Path
 
-from sql_test.engine import Catalog, Engine, RunResult
-from sql_test.engine.executor import Row
-from sql_test.engine.planner.plan import Plan
-from sql_test.executors.duckdb import DuckDBExecutor
+from sql_test.engine import Catalog, Engine, Executor, Plan, Row, RunResult
 from sql_test.integrations.config import RepositoryConfig
+
+_executor: Executor | None = None
+
+
+def bind_executor(executor: Executor) -> None:
+    """Hand the app the one executor it keeps for the process."""
+    global _executor
+    _executor = executor
 
 
 def catalog(repository: Path) -> Catalog:
@@ -31,21 +36,25 @@ def filled_rows(
     return rows
 
 
+def _engine(repo_catalog: Catalog) -> Engine:
+    if _executor is None:
+        raise RuntimeError("app executor is not bound; call bind_executor first")
+    return Engine(catalog=repo_catalog, executor=_executor)
+
+
 def plan(
-    repository: Path,
+    repo_catalog: Catalog,
     target: str,
     mocks: tuple[str, ...],
     grid_rows: dict[str, list[dict[str, str | None]]],
 ) -> Plan:
-    engine = Engine(catalog=catalog(repository), executor=DuckDBExecutor())
-    return engine.plan(target, rows=filled_rows(mocks, grid_rows))
+    return _engine(repo_catalog).plan(target, rows=filled_rows(mocks, grid_rows))
 
 
 def run(
-    repository: Path,
+    repo_catalog: Catalog,
     target: str,
     mocks: tuple[str, ...],
     grid_rows: dict[str, list[dict[str, str | None]]],
 ) -> RunResult:
-    engine = Engine(catalog=catalog(repository), executor=DuckDBExecutor())
-    return engine.run(target, rows=filled_rows(mocks, grid_rows))
+    return _engine(repo_catalog).run(target, rows=filled_rows(mocks, grid_rows))

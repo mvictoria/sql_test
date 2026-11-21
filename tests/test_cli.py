@@ -22,25 +22,29 @@ def test_a_missing_repository_is_reported(capsys: pytest.CaptureFixture[str]):
 def test_app_starts_the_server_for_the_repository_and_port(
     monkeypatch: pytest.MonkeyPatch,
 ):
-    calls: list[tuple[Path, int]] = []
+    calls: list[tuple[Path, int, str]] = []
 
-    def fake_serve(repository: Path, host: str = "127.0.0.1", port: int = 8765) -> None:
-        calls.append((repository, port))
+    def fake_serve(
+        repository: Path, *, executor, host: str = "127.0.0.1", port: int = 8765
+    ) -> None:
+        calls.append((repository, port, type(executor).__name__))
 
     monkeypatch.setattr("sql_test.integrations.cli.serve", fake_serve)
 
     assert main(["app", str(FIXTURE), "--port", "9000"]) == 0
-    assert calls == [(FIXTURE.resolve(), 9000)]
+    assert calls == [(FIXTURE.resolve(), 9000, "DuckDBExecutor")]
 
 
 def test_app_defaults_to_cwd_and_port_8765(monkeypatch: pytest.MonkeyPatch):
-    calls: list[tuple[Path, int]] = []
+    calls: list[tuple[Path, int, str]] = []
 
-    def fake_serve(repository: Path, host: str = "127.0.0.1", port: int = 8765) -> None:
-        calls.append((repository, port))
+    def fake_serve(
+        repository: Path, *, executor, host: str = "127.0.0.1", port: int = 8765
+    ) -> None:
+        calls.append((repository, port, type(executor).__name__))
 
     monkeypatch.setattr("sql_test.integrations.cli.serve", fake_serve)
     monkeypatch.chdir(FIXTURE)
 
     assert main(["app"]) == 0
-    assert calls == [(FIXTURE.resolve(), 8765)]
+    assert calls == [(FIXTURE.resolve(), 8765, "DuckDBExecutor")]

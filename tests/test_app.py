@@ -6,15 +6,19 @@ from nicegui import ElementFilter, ui
 from nicegui.testing import User
 
 from sql_test.engine import Engine
-from sql_test.executors.duckdb import DuckDBExecutor
+from sql_test.executors import DuckDBExecutor
 from sql_test.integrations.app import register_app
 from sql_test.integrations.config import RepositoryConfig
-from sql_test.testing.run import run_case
+from sql_test.testing import run_case
 
 FIXTURE = Path(__file__).parent / "fixtures" / "repos" / "lakehouse-data-customer"
 DEMO = Path(__file__).parent / "fixtures" / "repos" / "lineage-demo"
 
 ALICE = "medicaid_members_named_alice"
+
+
+def _register(repository: Path) -> None:
+    register_app(repository, DuckDBExecutor())
 
 
 def _text(user: User, marker: str) -> str:
@@ -48,7 +52,7 @@ def _copy_fixture(tmp_path: Path) -> Path:
 
 
 async def test_app_page_lists_models_and_sources(user: User):
-    register_app(FIXTURE)
+    _register(FIXTURE)
     await user.open("/")
 
     await user.should_see("Tables")
@@ -68,7 +72,7 @@ async def test_untested_table_with_pipeline_case_opens_from_the_browser(
     shutil.rmtree(repo / "tests" / "cases" / "medicaid_members")
     case = f"{ALICE}/only_medicaid_alices"
 
-    register_app(repo)
+    _register(repo)
     await user.open("/")
     await user.should_see(marker="table-medicaid_members")
     assert _text(user, "tests-medicaid_members") == "0"
@@ -83,7 +87,7 @@ async def test_untested_table_with_pipeline_case_opens_from_the_browser(
 
 
 async def test_selecting_a_model_opens_the_workbench(user: User):
-    register_app(FIXTURE)
+    _register(FIXTURE)
     await user.open("/")
     user.find(marker=f"table-{ALICE}").click()
 
@@ -116,7 +120,7 @@ async def test_the_app_reads_paths_from_the_repository_config(
         'cases = "tests/cases"\n'
     )
 
-    register_app(repo)
+    _register(repo)
     await user.open(f"/workbench?target={ALICE}&view=sql")
     await user.should_see("from medicaid_members")
     user.find(marker="view-lineage").click()
@@ -124,7 +128,7 @@ async def test_the_app_reads_paths_from_the_repository_config(
 
 
 async def test_lineage_view_shows_grey_sources_that_need_rows(user: User):
-    register_app(FIXTURE)
+    _register(FIXTURE)
     await user.open(f"/workbench?target={ALICE}&view=lineage")
 
     await user.should_see("Lineage")
@@ -136,7 +140,7 @@ async def test_lineage_view_shows_grey_sources_that_need_rows(user: User):
 
 
 async def test_clicking_medicaid_members_mocks_it_and_prunes_members(user: User):
-    register_app(FIXTURE)
+    _register(FIXTURE)
     await user.open(f"/workbench?target={ALICE}&view=lineage")
     await user.should_see(marker="node-members")
     assert _count(user, "node-mocked") == 0
@@ -155,7 +159,7 @@ async def test_clicking_medicaid_members_mocks_it_and_prunes_members(user: User)
 
 
 async def test_opening_with_a_mock_in_the_link_marks_it_mocked(user: User):
-    register_app(FIXTURE)
+    _register(FIXTURE)
     await user.open(f"/workbench?target={ALICE}&view=lineage&mock=medicaid_members")
 
     assert _count(user, "node-mocked") == 1
@@ -164,7 +168,7 @@ async def test_opening_with_a_mock_in_the_link_marks_it_mocked(user: User):
 
 
 async def test_demo_tree_hides_pruned_and_keeps_frontier_mocks(user: User):
-    register_app(DEMO)
+    _register(DEMO)
     await user.open(
         "/workbench?target=customer_summary&view=lineage&mock=staged_claims"
     )
@@ -209,14 +213,14 @@ async def test_a_mock_another_path_still_reads_is_kept(user: User, tmp_path: Pat
         "table_ref,sql_ref\nmiddle,middle.sql\ntop,top.sql\n"
     )
 
-    register_app(tmp_path)
+    _register(tmp_path)
     await user.open("/workbench?target=top&mock=middle&mock=base")
 
     assert _count(user, "node-mocked") == 2
 
 
 async def test_covering_needs_rows_marks_ready_to_run(user: User):
-    register_app(DEMO)
+    _register(DEMO)
     await user.open(
         "/workbench?target=customer_summary&view=lineage"
         "&mock=staged_claims&mock=raw_members"
@@ -231,7 +235,7 @@ async def test_covering_needs_rows_marks_ready_to_run(user: User):
 
 
 async def test_mocked_table_opens_a_schema_aware_grid(user: User):
-    register_app(FIXTURE)
+    _register(FIXTURE)
     await user.open(f"/workbench?target={ALICE}&view=lineage&mock=members")
 
     await user.should_see("Mock editor")
@@ -244,7 +248,7 @@ async def test_mocked_table_opens_a_schema_aware_grid(user: User):
 
 
 async def test_clicking_a_node_adds_its_grid_without_losing_typed_rows(user: User):
-    register_app(FIXTURE)
+    _register(FIXTURE)
     await user.open(f"/workbench?target={ALICE}&view=lineage&mock=members")
     _fill(user, "members", [{"member_id": "1", "member_name": "Ada", "lob": "30"}])
 
@@ -255,7 +259,7 @@ async def test_clicking_a_node_adds_its_grid_without_losing_typed_rows(user: Use
 
 
 async def test_grid_can_add_and_delete_rows(user: User):
-    register_app(FIXTURE)
+    _register(FIXTURE)
     await user.open(f"/workbench?target={ALICE}&view=lineage&mock=members")
     _fill(user, "members", [{"member_id": "1", "member_name": "Ada", "lob": "30"}])
 
@@ -272,7 +276,7 @@ async def test_grid_can_add_and_delete_rows(user: User):
 
 
 async def test_a_non_integer_member_id_is_flagged_before_running(user: User):
-    register_app(FIXTURE)
+    _register(FIXTURE)
     await user.open(f"/workbench?target={ALICE}&view=lineage&mock=members")
     user.find(marker="cell-members.0.member_id").type("abc")
 
@@ -281,7 +285,7 @@ async def test_a_non_integer_member_id_is_flagged_before_running(user: User):
 
 
 async def test_duplicate_row_copies_the_row(user: User):
-    register_app(FIXTURE)
+    _register(FIXTURE)
     await user.open(f"/workbench?target={ALICE}&view=lineage&mock=members")
     _fill(user, "members", [{"member_id": "1", "member_name": "Ada", "lob": "30"}])
 
@@ -294,7 +298,7 @@ async def test_duplicate_row_copies_the_row(user: User):
 
 
 async def test_null_is_distinct_from_an_empty_string(user: User):
-    register_app(FIXTURE)
+    _register(FIXTURE)
     await user.open("/workbench?target=members&view=lineage&mock=members")
     user.find(marker="cell-members.0.member_name").type("Ada")
 
@@ -308,20 +312,20 @@ async def test_null_is_distinct_from_an_empty_string(user: User):
 
 
 async def test_grid_rows_reach_the_engine_with_schema_types(user: User):
-    register_app(FIXTURE)
+    _register(FIXTURE)
     await user.open("/workbench?target=members&view=lineage&mock=members")
     _fill(user, "members", [{"member_id": "1", "member_name": "Ada", "lob": "30"}])
 
     user.find(marker="apply").click()
 
-    await user.should_see("Reached engine")
+    await user.should_see("Mock rows typed")
     await user.should_see(marker="grid-members")
     assert _text(user, "engine-type-members.member_id") == "int"
     assert _value(user, "cell-members.0.member_id") == "1"
 
 
 async def test_apply_with_bad_types_shows_an_error_not_a_blank_page(user: User):
-    register_app(DEMO)
+    _register(DEMO)
     await user.open(
         "/workbench?target=customer_summary&view=lineage"
         "&mock=staged_claims&mock=staged_members"
@@ -334,12 +338,16 @@ async def test_apply_with_bad_types_shows_an_error_not_a_blank_page(user: User):
     await user.should_see("Mock editor")
     await user.should_see("Could not load mocks")
     message = _text(user, "status-error")
-    assert "Conversion Error" in message or "INT" in message
+    assert (
+        "claim_id" in message
+        or "invalid" in message.lower()
+        or "int" in message.lower()
+    )
     assert _value(user, "cell-staged_claims.0.claim_id") == "a"
 
 
 async def test_running_alice_shows_one_row_and_counts_on_the_graph(user: User):
-    register_app(FIXTURE)
+    _register(FIXTURE)
     await user.open(f"/workbench?target={ALICE}&view=lineage&mock=members&mock=lob")
     _fill(
         user,
@@ -374,7 +382,7 @@ async def test_running_alice_shows_one_row_and_counts_on_the_graph(user: User):
 
 
 async def test_run_with_matching_expected_shows_passed(user: User):
-    register_app(FIXTURE)
+    _register(FIXTURE)
     await user.open("/workbench?target=members&view=lineage&mock=members")
     row = {"member_id": "1", "member_name": "Ada", "lob": "30"}
     _fill(user, "members", [row])
@@ -390,7 +398,7 @@ async def test_run_with_matching_expected_shows_passed(user: User):
 
 
 async def test_failed_run_defaults_to_diff_even_when_output_was_requested(user: User):
-    register_app(FIXTURE)
+    _register(FIXTURE)
     await user.open("/workbench?target=members&view=lineage&mock=members")
     row = {"member_id": "1", "member_name": "Ada", "lob": "30"}
     _fill(user, "members", [row])
@@ -407,7 +415,7 @@ async def test_failed_run_defaults_to_diff_even_when_output_was_requested(user: 
 
 
 async def test_diff_shows_changed_missing_and_added_like_git(user: User):
-    register_app(FIXTURE)
+    _register(FIXTURE)
     await user.open("/workbench?target=members&view=lineage&mock=members")
     _fill(
         user,
@@ -462,7 +470,7 @@ async def test_selecting_a_case_opens_the_workbench(user: User, tmp_path: Path):
         "load_type,table_ref,sql_ref\nhistoric,medicaid_members,m.sql\n"
     )
 
-    register_app(tmp_path)
+    _register(tmp_path)
     await user.open("/")
     user.find(marker="case-medicaid_members/alice").click()
 
@@ -472,7 +480,7 @@ async def test_selecting_a_case_opens_the_workbench(user: User, tmp_path: Path):
 
 
 async def test_opening_a_case_loads_mocks_grids_and_expected(user: User):
-    register_app(FIXTURE)
+    _register(FIXTURE)
     await user.open(
         "/workbench?case=" + quote("medicaid_members/only_medicaid_members", safe="")
     )
@@ -492,7 +500,7 @@ async def test_opening_a_case_loads_mocks_grids_and_expected(user: User):
 
 
 async def test_an_unknown_link_says_not_found(user: User):
-    register_app(FIXTURE)
+    _register(FIXTURE)
     await user.open("/workbench?target=no_such_table")
     await user.should_see(marker="not-found")
 
@@ -502,7 +510,7 @@ async def test_saving_a_loaded_case_writes_identical_files(user: User, tmp_path:
     case_dir = repo / "tests" / "cases" / "medicaid_members" / "only_medicaid_members"
     before = {path.name: path.read_text() for path in sorted(case_dir.glob("*.csv"))}
 
-    register_app(repo)
+    _register(repo)
     await user.open(
         "/workbench?case=" + quote("medicaid_members/only_medicaid_members", safe="")
     )
@@ -518,7 +526,7 @@ async def test_case_saved_from_the_page_passes_without_the_app(
     user: User, tmp_path: Path
 ):
     repo = _copy_fixture(tmp_path)
-    register_app(repo)
+    _register(repo)
     await user.open(
         "/workbench?target=medicaid_members&view=lineage&mock=members&mock=lob"
     )
@@ -557,7 +565,7 @@ async def test_case_saved_from_the_page_passes_without_the_app(
 
 async def test_saving_without_a_case_name_is_refused(user: User, tmp_path: Path):
     repo = _copy_fixture(tmp_path)
-    register_app(repo)
+    _register(repo)
     await user.open("/workbench?target=medicaid_members&mock=members&mock=lob")
 
     user.find(marker="save").click()

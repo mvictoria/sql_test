@@ -2,6 +2,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from sql_test.executors import DuckDBExecutor
 from sql_test.integrations.app import serve
 from sql_test.integrations.config import ConfigError, RepositoryConfig
 from sql_test.integrations.discover import discover
@@ -55,7 +56,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "app":
-        serve(repository, port=args.port)
+        serve(repository, executor=DuckDBExecutor(), port=args.port)
         return 0
 
     return 1
