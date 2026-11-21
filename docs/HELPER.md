@@ -597,7 +597,12 @@ sql-test-tool/
 │       ├── pytest_plugin/
 │       ├── cli.py              sql-test discover / app
 │       ├── discover.py
-│       └── app.py              local authoring server
+│       └── app/                local authoring server
+│           ├── server.py       localhost bind + stdlib router
+│           ├── resources/      HTTP resources (home, workbench)
+│           ├── lineage.py
+│           ├── grid.py
+│           └── output.py
 ├── .github/workflows/data-tests.yml
 ├── tests/
 └── pyproject.toml
