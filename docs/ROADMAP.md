@@ -55,7 +55,7 @@ Done:
 - [ENG-29](#eng-29)
 
 
-v0.5 CI is done: [CI-1](#ci-1), [CI-2](#ci-2), [CI-3](#ci-3), [CI-4](#ci-4). [APP-17](#app-17), [APP-19](#app-19), and [APP-8](#app-8) are done. [CFG-1](#cfg-1) is done. Further CLI commands ([CLI-2](#cli-2)–[CLI-6](#cli-6)) are parked until a demonstrated need; the CLI's job today is `sql-test app`.
+v0.5 CI is done: [CI-1](#ci-1), [CI-2](#ci-2), [CI-3](#ci-3), [CI-4](#ci-4), [CI-5](#ci-5). [APP-17](#app-17), [APP-19](#app-19), and [APP-8](#app-8) are done. [CFG-1](#cfg-1) is done. Further CLI commands ([CLI-2](#cli-2)–[CLI-6](#cli-6)) are parked until a demonstrated need; the CLI's job today is `sql-test app`.
 
 ### Project skeleton
 
@@ -862,6 +862,7 @@ Done:
 - [CI-2](#ci-2)
 - [CI-3](#ci-3)
 - [CI-4](#ci-4)
+- [CI-5](#ci-5)
 
 <a id="ci-1"></a>
 #### CI-1 Reusable GitHub Actions workflow (done)
@@ -904,6 +905,14 @@ Document the minimal footprint of a consuming repository:
 Support Python 3.13 through 3.15. CI runs the suite on each version; lint and type checks run once on 3.15. The package floor is `requires-python = ">=3.13"` so case CSVs can keep stdlib `csv.QUOTE_NOTNULL` (NULL vs empty string is wrong on 3.12). Keep `uv.lock` for this repository's install.
 
 - **Done when:** tool CI matrices 3.13–3.15 and the package installs on 3.13+.
+- **Depends on:** [CI-1](#ci-1)
+
+<a id="ci-5"></a>
+#### CI-5 Tool CI on pull requests only (done)
+
+Run the tool's CI workflow on pull requests only, not on pushes to `main`. Releases still run via CD on `main`.
+
+- **Done when:** merging to `main` does not start the tool CI workflow.
 - **Depends on:** [CI-1](#ci-1)
 
 ---
