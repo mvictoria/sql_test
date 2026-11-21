@@ -21,7 +21,7 @@ class Relation:
         return cls.from_table(exp.to_table(text, dialect=dialect), dialect)
 
     @classmethod
-    def from_table(cls, table: exp.Table, dialect: str = "duckdb") -> Self:
+    def from_table(cls, table: exp.Table, dialect: str | None = "duckdb") -> Self:
         table = normalize_identifiers(table.copy(), dialect=dialect)
         return cls(
             name=table.name, schema=table.db or None, catalog=table.catalog or None
