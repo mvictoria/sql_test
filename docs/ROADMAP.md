@@ -682,7 +682,7 @@ Open an existing case folder in the same workbench used to create cases, with it
 Per-table test counts, and a separate count of tests whose pipeline runs a table. Coverage is always derived from the current checkout, never stored.
 
 <a id="cov-1"></a>
-#### COV-1 Test counts per table
+#### COV-1 Test counts per table (done)
 
 Count the cases that target each table.
 

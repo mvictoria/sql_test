@@ -9,6 +9,7 @@ from sql_test.testing.cases import (
     write_case,
 )
 from sql_test.testing.comparison import Comparison, compare
+from sql_test.testing.coverage import case_counts
 from sql_test.testing.run import run_case
 
 __all__ = [
@@ -16,6 +17,7 @@ __all__ = [
     "CaseSummary",
     "CaseTable",
     "Comparison",
+    "case_counts",
     "case_folders",
     "case_id",
     "compare",
