@@ -6,7 +6,7 @@ name: Data tests
       python-version:
         description: Python version for the run
         type: string
-        default: "3.12"
+        default: "3.13"
       working-directory:
         description: Directory within the calling repository that holds the pytest tests
         type: string

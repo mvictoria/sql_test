@@ -10,7 +10,7 @@ Design and vocabulary live in [docs/HELPER.md](docs/HELPER.md). Planned work is 
 uv sync
 ```
 
-Requires Python 3.12+.
+Requires Python 3.13+.
 
 ## Adopt in a consuming repository
 

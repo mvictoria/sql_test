@@ -901,9 +901,9 @@ Document the minimal footprint of a consuming repository:
 <a id="ci-4"></a>
 #### CI-4 Python version matrix (done)
 
-Support Python 3.12 through 3.15. CI runs the suite on each version; lint and type checks run once on 3.15. The package floor is `requires-python = ">=3.12"`. Case CSV reading uses its own NULL/`""` rules so behaviour does not depend on `csv.QUOTE_NOTNULL` (broken for unquoted empties on 3.12). Keep `uv.lock` for this repository's install.
+Support Python 3.13 through 3.15. CI runs the suite on each version; lint and type checks run once on 3.15. The package floor is `requires-python = ">=3.13"` so case CSVs can keep stdlib `csv.QUOTE_NOTNULL` (NULL vs empty string is wrong on 3.12). Keep `uv.lock` for this repository's install.
 
-- **Done when:** tool CI matrices 3.12–3.15 and the package installs on 3.12+.
+- **Done when:** tool CI matrices 3.13–3.15 and the package installs on 3.13+.
 - **Depends on:** [CI-1](#ci-1)
 
 ---
