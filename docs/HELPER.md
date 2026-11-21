@@ -297,7 +297,7 @@ The **upstream lineage** of a target is the graph relation → operation → rel
 
 ## Plan
 
-A relation is **given** when the caller supplies its rows; the test layer gives a case's mocks. A **plan** is what a run will do, worked out without executing anything. It marks each relation in the target's lineage as given, executed, pruned, or source, and lists the executed operations in the order they run. Given is the engine's word for what the UI shows as mocked. A relation upstream of a given relation is pruned unless another executed path still needs it. The app's lineage view draws the plan; a run executes it.
+A relation is **given** when the caller supplies its rows; the test layer gives a case's mocks. A **plan** is what a run will do, worked out without executing anything. It marks each relation in the target's lineage as given, executed, pruned, or source, and lists the executed operations in the order they run. Given is the engine's word for what the UI shows as mocked. A relation upstream of a given relation is pruned unless another executed path still needs it. A given relation is **unused** when the run never reads it: every path from it to the target passes through another given relation, or it is not in the target's lineage at all. The app's lineage view draws the plan; a run executes it.
 
 The application is initially launched against a single local repository. The repository is always passed in, for example `sql-test app <path>`. The tool never assumes where a consuming repository lives or that it is inside the tool's own directory.
 
