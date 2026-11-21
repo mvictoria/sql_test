@@ -55,7 +55,7 @@ Done:
 - [ENG-29](#eng-29)
 
 
-v0.5 CI is done: [CI-1](#ci-1), [CI-2](#ci-2), [CI-3](#ci-3). Next: app stories that are not done. [CFG-1](#cfg-1) is done. Further CLI commands ([CLI-2](#cli-2)–[CLI-6](#cli-6)) are parked until a demonstrated need; the CLI's job today is `sql-test app`.
+v0.5 CI is done: [CI-1](#ci-1), [CI-2](#ci-2), [CI-3](#ci-3). Next: app stories that are not done, including [APP-17](#app-17) (rebuild catalog when SQL files change). [CFG-1](#cfg-1) is done. Further CLI commands ([CLI-2](#cli-2)–[CLI-6](#cli-6)) are parked until a demonstrated need; the CLI's job today is `sql-test app`.
 
 ### Project skeleton
 
@@ -584,6 +584,16 @@ The authoring app is built with [NiceGUI](https://nicegui.io) instead of a stdli
 - **Depends on:**
   - [APP-2](#app-2)
   - the shipped APP stories: [APP-3](#app-3), [APP-4](#app-4), [APP-5](#app-5), [APP-6](#app-6), [APP-9](#app-9), [APP-10](#app-10), [APP-12](#app-12), [APP-13](#app-13)
+
+<a id="app-17"></a>
+#### APP-17 Rebuild the catalog when SQL files change
+
+While `sql-test app` is running, a SQL file under the repository's configured paths may be added, modified, or deleted outside the app. The next request builds a new catalog so home, lineage, and SQL views match the checkout. Parsing stays incremental: only the changed file's text is parsed again; unchanged files hit the memo from [ENG-26](#eng-26). Deleting a file drops its operations or DDL from the new catalog. The mapping file is watched the same way when a new model is registered.
+
+- **Done when:** editing a mapped SQL's upstream tables updates lineage on the next request; adding a mapped SQL shows the new model; deleting a mapped SQL removes it; and only the changed file is re-parsed.
+- **Depends on:**
+  - [APP-16](#app-16)
+  - [ENG-26](#eng-26)
 
 ### Target browser
 
