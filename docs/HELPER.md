@@ -569,13 +569,13 @@ This layout is illustrative. Where SQL, schemas, and cases live, and how SQL fil
 
 ## Versioning
 
-The engine, pytest plugin, CLI, app, and reusable workflow are released together as one version. Consuming repositories pin a tag such as `@v1`, never `main`, so a change on the tool's `main` branch cannot silently change CI in every consuming repository.
+The engine, CLI, app, and reusable workflow are released together as one version. Consuming repositories pin a tag such as `@v1`, never `main`, so a change on the tool's `main` branch cannot silently change CI in every consuming repository.
 
 The case format carries its own format version if compatibility ever requires it. The tool's release version and the case format version are separate.
 
 ## Tool repository layout
 
-One repository is enough. The engine, app, pytest plugin, and workflow do not need to be split into separate repositories or products.
+One repository is enough. The engine, app, and workflow do not need to be split into separate repositories or products.
 
 The package has one subpackage per layer:
 
@@ -593,7 +593,6 @@ sql-test-tool/
 │   │   ├── cases/
 │   │   └── comparison/
 │   └── integrations/
-│       ├── pytest_plugin/
 │       ├── cli.py              sql-test discover / app
 │       ├── discover.py
 │       └── app/                local authoring server
@@ -625,7 +624,7 @@ Entry points are added one at a time, and each stays thin:
 1. Engine as a headless spike (Phase 0).
 2. Minimal CLI around the engine.
 3. Authoring app (Phases 1–5).
-4. pytest plugin and durable case format (Phase 6). This may overlap with the app, because the app must save cases that pytest can run.
+4. Durable case format and repository pytest tests (Phase 6). This may overlap with the app, because the app must save cases that pytest can run.
 5. Reusable GitHub Actions workflow.
 6. Mature discovery and coverage (Phase 8).
 7. Additional execution capabilities, such as incremental models (Phase 7) and Spark.
