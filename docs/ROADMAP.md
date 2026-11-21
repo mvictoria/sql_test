@@ -35,10 +35,11 @@ Done:
 - [ENG-22](#eng-22)
 - [ENG-5](#eng-5)
 - [ENG-6](#eng-6)
+- [ENG-8](#eng-8)
 
 Can start now:
 
-- [ENG-8](#eng-8)
+- [ENG-9](#eng-9)
 - [ENG-11](#eng-11)
 - [ENG-14](#eng-14)
 
@@ -191,7 +192,7 @@ A model whose SQL cannot be parsed, or that has no schema, is classified as a **
 ### Planning
 
 <a id="eng-8"></a>
-#### ENG-8 Plan a run
+#### ENG-8 Plan a run (done)
 
 Given a target and the relations whose rows are given, return a plan without executing anything. The plan marks each relation in the lineage as one of:
 
@@ -216,7 +217,7 @@ List every relation the plan will read that no executed operation produces and t
 <a id="eng-10"></a>
 #### ENG-10 Order executed operations (done)
 
-Order the executed operations so each runs after the relations it reads have been produced. Built ahead of ENG-8: the engine currently runs every mapped SQL upstream of the requested table, stopping at tables whose rows are given and at tables with no SQL. The ordering moves into the plan when ENG-8 lands.
+Order the executed operations so each runs after the relations it reads have been produced. Built ahead of ENG-8: the engine currently runs every mapped SQL upstream of the requested table, stopping at tables whose rows are given and at tables with no SQL. The ordering now lives in the plan.
 
 - **Done when:** the Alice plan runs `medicaid_members.sql` before `medicaid_members_named_alice.sql`, and a cycle is reported as an error.
 - **Depends on:** [ENG-8](#eng-8)
