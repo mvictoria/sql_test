@@ -690,7 +690,7 @@ Count the cases that target each table.
 - **Depends on:** [ENG-4](#eng-4)
 
 <a id="cov-2"></a>
-#### COV-2 In-pipeline counts per table
+#### COV-2 In-pipeline counts per table (done)
 
 For each table, count the other cases whose plan executes its SQL, using lineage with each case's mocks applied. No SQL is run.
 
