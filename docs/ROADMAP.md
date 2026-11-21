@@ -982,6 +982,33 @@ After a run, open any executed table's rows and see at which table an input row 
 
 ---
 
+## Framework testing — not a product version
+
+Work that hardens how *this* repository tests the engine and test layer. It is not a feature QA sees in the app. Example-based tests stay; these add property-based coverage where the input space is large.
+
+<a id="test-1"></a>
+#### TEST-1 Property-based tests with Hypothesis
+
+Add Hypothesis as a **dev** dependency and use it only in this repository's tests — not in the authoring app, and not to generate checked-in case folders (those stay hand-written or Faker-once-then-commit).
+
+Cover pure rules first, in this order:
+
+1. **Comparison** ([ENG-15](#eng-15)): generated multisets of rows; same multiset passes; remove / change / add a row yields missing / changed / unexpected under the [comparison defaults](HELPER.md#comparison-defaults).
+2. **Column cast / CSV cell round-trip** ([ENG-14](#eng-14), [ENG-16](#eng-16)): typed values survive write-as-text then `Column.cast`; invalid text raises.
+3. **Relation parse and resolve** ([ENG-21](#eng-21)): random catalogs of one-, two-, and three-level names; unique short names resolve, ambiguous bare names error naming candidates, unknown names stay as written.
+4. **Small synthetic plans** ([ENG-8](#eng-8), [ENG-25](#eng-25)): tiny DAGs with random givens; pruned relations are not executed, `unused` ⊆ given, `needs_rows` empty iff every source still needed is given. Not a substitute for the scale suite or real-SQL lineage tests.
+
+Do not use Hypothesis for DuckDB execution, the app UI, or N-table scale shapes.
+
+- **Done when:** Hypothesis is in the dev dependency group; each of the four areas has at least one `@given` test that fails if the property is broken; existing example-based tests still pass.
+- **Depends on:**
+  - [ENG-15](#eng-15) for comparison
+  - [ENG-14](#eng-14) and [ENG-16](#eng-16) for cast / case cells
+  - [ENG-21](#eng-21) for relations
+  - [ENG-8](#eng-8) and [ENG-25](#eng-25) for plan properties
+
+---
+
 ## Later — not yet planned
 
 - **Pre-commit validation.** A hook running `sql-test validate`. Depends on [CLI-6](#cli-6).
@@ -991,3 +1018,4 @@ After a run, open any executed table's rows and see at which table an input row 
 - **pytest plugin.** Collect case folders without a test file in the repository. Deferred until the parametrized style has been used for a while, so the behaviour (how case folders are found, how the engine is built, opt-in or automatic) is chosen from experience. Depends on [CFG-1](#cfg-1).
 - **Undefined-relation checks.** Flag inferred relations with no schema, naming the SQL that reads them, with a did-you-mean against declared relations, and a strict mode with an allowlist of external sources. Mostly the repository's own linting's job; add only if users ask. Depends on [ENG-22](#eng-22).
 - **Browser E2E for the app.** Click-through coverage (for example Playwright) once the workbench is interactive enough that the NiceGUI `User` tests in `tests/test_app.py`, which simulate the browser without rendering, are not enough.
+- **Faker for authoring.** Optional seeded fake rows in the mock grid; separate from [TEST-1](#test-1). Add only if QA asks for generated sample data in the app.
