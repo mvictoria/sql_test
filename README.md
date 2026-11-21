@@ -73,16 +73,32 @@ Manual tag push (`git tag vX.Y.Z && git push origin vX.Y.Z`) still runs the same
 
 ## CLI
 
-The CLI starts the authoring app. pytest remains the test runner.
+pytest remains the test runner. The CLI also discovers tables/cases, prints coverage, and starts the authoring app.
 
 ```bash
+sql-test discover [repository]
+sql-test coverage [repository]
 sql-test app [repository] [--port 8765]
 ```
 
 - `repository` — path to the consuming repository (default `.`)
-- `--port` — localhost port (default `8765`)
+- `--port` — localhost port for `app` (default `8765`)
 
-The server binds to localhost only. Open the printed URL in a browser.
+`coverage` prints tests and in-pipeline counts per table, untested first (same `coverage_report` the app home uses):
+
+```bash
+uv run sql-test coverage tests/fixtures/repos/lakehouse-data-customer
+```
+
+```text
+table   tests   in pipelines
+lob     0       0
+members 0       0
+medicaid_members        1       1
+medicaid_members_named_alice    2       0
+```
+
+The app server binds to localhost only. Open the printed URL in a browser.
 
 ```bash
 uv run sql-test app lakehouse-data-customer
@@ -93,15 +109,15 @@ uv run sql-test app tests/fixtures/repos/lineage-demo --port 9000
 
 Built with [NiceGUI](https://nicegui.io); its tests use NiceGUI's `User` fixture (`tests/test_app.py`).
 
-- Browse models, sources, and cases
+- Browse models, sources, and cases (tests and in-pipeline counts; untested first)
 - Open a target or an existing case in the workbench
 - Lineage graph with mock / will-execute / source states (pruned nodes hidden)
 - Click a node to mock or unmock; mocks keep a frontier
 - Schema-aware mock grids (add/delete rows; Apply loads types through the engine)
 - Run and show output with row counts; expected and actual side by side
-- Load an existing case's mocks and rows into the workbench
+- Load and save case mocks and expected rows
 
-Still to come: accept actual as expected, save cases, coverage in the UI. Details in HELPER and the ROADMAP.
+Still to come: accept actual as expected. Details in HELPER and the ROADMAP.
 
 ## Sample repository
 
