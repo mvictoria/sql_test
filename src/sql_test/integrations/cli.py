@@ -6,6 +6,7 @@ from sql_test.executors import DuckDBExecutor
 from sql_test.integrations.app import serve
 from sql_test.integrations.config import ConfigError, RepositoryConfig
 from sql_test.integrations.discover import discover
+from sql_test.testing import coverage_report
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -14,6 +15,11 @@ def main(argv: list[str] | None = None) -> int:
 
     discover_parser = sub.add_parser("discover", help="list models, sources, and cases")
     discover_parser.add_argument("repository", type=Path, nargs="?", default=Path("."))
+
+    coverage_parser = sub.add_parser(
+        "coverage", help="list test and in-pipeline counts per table"
+    )
+    coverage_parser.add_argument("repository", type=Path, nargs="?", default=Path("."))
 
     app_parser = sub.add_parser(
         "app", help="start the authoring app against a repository"
@@ -38,7 +44,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"repository not found: {repository}", file=sys.stderr)
         return 1
     try:
-        RepositoryConfig.load(repository)
+        config = RepositoryConfig.load(repository)
     except ConfigError as error:
         print(error, file=sys.stderr)
         return 1
@@ -53,6 +59,16 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"  {case.target}/{case.name}")
         else:
             print("cases: (none)")
+        return 0
+
+    if args.command == "coverage":
+        catalog = config.catalog()
+        result = discover(repository, catalog)
+        tables = (*result.models, *result.sources)
+        report = coverage_report(tables, result.cases, catalog)
+        print("table\ttests\tin pipelines")
+        for row in report:
+            print(f"{row.table}\t{row.tests}\t{row.pipelines}")
         return 0
 
     if args.command == "app":

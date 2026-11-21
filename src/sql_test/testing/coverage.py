@@ -1,7 +1,15 @@
 from collections.abc import Iterable
+from dataclasses import dataclass
 
 from sql_test.engine import Catalog, State, plan_run
 from sql_test.testing.cases import CaseSummary
+
+
+@dataclass(frozen=True)
+class CoverageRow:
+    table: str
+    tests: int
+    pipelines: int
 
 
 def case_counts(tables: Iterable[str], cases: Iterable[CaseSummary]) -> dict[str, int]:
@@ -31,6 +39,22 @@ def pipeline_counts(
                 continue
             counts[name] += 1
     return counts
+
+
+def coverage_report(
+    tables: Iterable[str],
+    cases: Iterable[CaseSummary],
+    catalog: Catalog,
+) -> list[CoverageRow]:
+    """Tests and in-pipeline counts per table, untested tables first."""
+    table_names = tuple(tables)
+    tests = case_counts(table_names, cases)
+    pipelines = pipeline_counts(table_names, cases, catalog)
+    rows = [
+        CoverageRow(table=name, tests=tests[name], pipelines=pipelines[name])
+        for name in table_names
+    ]
+    return sorted(rows, key=lambda row: (row.tests > 0, row.table))
 
 
 def pipeline_cases(
