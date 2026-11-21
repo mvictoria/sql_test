@@ -4,7 +4,7 @@ Library and local tools for testing SQL transformations: mock upstream tables, r
 
 Design and vocabulary live in [docs/HELPER.md](docs/HELPER.md). Planned work is in [docs/ROADMAP.md](docs/ROADMAP.md).
 
-## Setup
+## Setup (this repository)
 
 ```bash
 uv sync
@@ -12,9 +12,29 @@ uv sync
 
 Requires Python 3.14+.
 
-## Configure a repository
+## Adopt in a consuming repository
 
-A consuming repository says where its files live in a `[tool.sql-test]` table in its `pyproject.toml`. Paths are relative to the repository root, and all four are required:
+Minimal footprint:
+
+```text
+customer-data/
+├── admin/sqls/                         # SQL + DDL (paths are yours to choose)
+├── admin/config/lookup_sql_table_mapping.csv
+├── tests/
+│   ├── cases/<table>/<case>/           # mocks + expected.csv
+│   ├── conftest.py                     # builds Engine from RepositoryConfig
+│   └── test_case_folders.py            # parametrize case_folders(...)
+├── pyproject.toml                      # [tool.sql-test] paths
+└── .github/workflows/data-tests.yml    # calls the reusable workflow
+```
+
+**Install locally** from a git tag (same tags CI uses):
+
+```bash
+uv add "sql-test @ git+https://github.com/mvictoria/sql_test.git@v0"
+```
+
+**Configure** paths in `pyproject.toml` (all four required, relative to the repository root):
 
 ```toml
 [tool.sql-test]
@@ -23,6 +43,27 @@ mapping = "admin/config/lookup_sql_table_mapping.csv"  # SQL file -> table it wr
 schemas = "admin/sqls"                              # CREATE TABLE DDL
 cases = "tests/cases"                               # case folders
 ```
+
+**Run cases** with a parametrized pytest test (see `lakehouse-data-customer/tests/` for a full example):
+
+```python
+@pytest.mark.parametrize("case", case_folders(CASES), ids=case_id)
+def test_case(case, engine):
+    result = run_case(case, engine)
+    assert result.passed, result.report()
+```
+
+**CI** — pin the reusable workflow to the floating major tag, never `main`:
+
+```yaml
+jobs:
+  data-tests:
+    uses: mvictoria/sql_test/.github/workflows/data-tests.yml@v0
+```
+
+Copy [lakehouse-data-customer/.github/workflows/data-tests.yml](lakehouse-data-customer/.github/workflows/data-tests.yml). The workflow installs `sql-test` from the same git commit as that pin and runs pytest in the calling repository.
+
+**Releases** of the tool are `vX.Y.Z` tags. Pushing one creates a GitHub Release and moves `vX` (for example `v0`) to that commit.
 
 ## CLI
 
