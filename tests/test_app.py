@@ -32,6 +32,11 @@ def _count(user: User, marker: str) -> int:
         return len(list(ElementFilter(marker=marker)))
 
 
+def _count_within(user: User, marker: str, *, within: str) -> int:
+    with user:
+        return len(list(ElementFilter(marker=marker).within(marker=within)))
+
+
 def _value(user: User, marker: str) -> str:
     (field,) = user.find(kind=ui.input, marker=marker).elements
     return field.value
@@ -654,6 +659,35 @@ async def test_accepting_the_whole_actual_result_makes_the_case_pass(user: User)
     assert _value(user, "cell-expected.1.member_name") == "Bea"
     user.find(marker="run").click()
     await user.should_see(marker="verdict-passed")
+
+
+async def test_failing_alice_run_keeps_compare_expected_and_actions_in_focus(
+    user: User,
+):
+    """APP-27: verdict, Expected, Accept, and Run/Save share one run-focus region."""
+    _register(FIXTURE)
+    await user.open(f"/workbench?target={ALICE}&view=lineage&mock=medicaid_members")
+    _fill(user, "medicaid_members", [{"member_id": "1", "member_name": "Alice"}])
+    _fill(user, "expected", [{"member_id": "1", "member_name": "Wrong"}])
+
+    user.find(marker="run").click()
+
+    await user.should_see(marker="verdict-failed")
+    await user.should_see(marker="run-focus")
+    assert _count_within(user, "verdict-failed", within="run-focus") == 1
+    assert _count_within(user, "accept-all", within="run-focus") == 1
+    assert _count_within(user, "grid-expected", within="run-focus") == 1
+    assert _count_within(user, "cell-expected.0.member_name", within="run-focus") == 1
+    assert _count_within(user, "run", within="run-focus") == 1
+    assert _count_within(user, "save", within="run-focus") == 1
+
+    user.find(marker="accept-all").click()
+
+    await user.should_see(marker="verdict-passed")
+    assert _count_within(user, "verdict-passed", within="run-focus") == 1
+    assert _value(user, "cell-expected.0.member_name") == "Alice"
+    assert _count_within(user, "run", within="run-focus") == 1
+    assert _count_within(user, "save", within="run-focus") == 1
 
 
 async def test_accepting_no_rows_expects_no_rows_through_save_and_load(

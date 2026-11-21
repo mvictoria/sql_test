@@ -391,7 +391,7 @@ QA should be able to:
 - remove an obsolete expected row
 - accept the complete actual result as the expectation
 
-This interaction is central to the product. Run types mocks and executes — Apply is not a required peer step ([APP-25](ROADMAP.md#app-25)). After a run, keeping verdict, diff / accept, and Expected in one working region is [APP-27](ROADMAP.md#app-27).
+This interaction is central to the product. Run types mocks and executes — Apply is not a required peer step ([APP-25](ROADMAP.md#app-25)). After a run, verdict, diff / accept, and Expected sit in one `run-focus` region with sticky Run / Save ([APP-27](ROADMAP.md#app-27)); mock grids stay above that region so the fail → fix → re-run loop does not scroll through them.
 
 ### Comparison defaults
 
