@@ -55,7 +55,9 @@ Done:
 - [ENG-29](#eng-29)
 
 
-v0.5 CI is done: [CI-1](#ci-1), [CI-2](#ci-2), [CI-3](#ci-3), [CI-4](#ci-4), [CI-5](#ci-5). [APP-17](#app-17), [APP-19](#app-19), and [APP-8](#app-8) are done. [APP-25](#app-25) is done. [CFG-1](#cfg-1) is done. Further CLI commands ([CLI-2](#cli-2)–[CLI-6](#cli-6)) are parked until a demonstrated need; the CLI's job today is `sql-test app`.
+v0.5 CI is done: [CI-1](#ci-1), [CI-2](#ci-2), [CI-3](#ci-3), [CI-4](#ci-4), [CI-5](#ci-5). Authoring app v0.3 is done ([APP-8](#app-8), [APP-17](#app-17), [APP-19](#app-19), and the earlier APP stories). [APP-25](#app-25) is done. [CFG-1](#cfg-1) is done.
+
+**Before the next release:** performance for massive repositories — [ENG-31](#eng-31) then [ENG-32](#eng-32) — plus polish from UAT. Frontend ease-of-use design work happens in parallel; keep [APP-18](#app-18) parked until that design and UAT say synthetic fill is the right next UX. Do not open Spark, incremental, or richer lineage until after the release. Further CLI commands ([CLI-2](#cli-2)–[CLI-6](#cli-6)) stay parked; the CLI's job today is `sql-test app`.
 
 ### Project skeleton
 
@@ -731,7 +733,7 @@ Faker is an optional dependency of the authoring app only. It does not write `ex
   - [APP-9](#app-9)
   - [APP-11](#app-11)
   - [APP-12](#app-12)
-- **Parked until:** QA asks for faster mock entry (hand entry and paste are enough until then).
+- **Parked until:** UAT and front-end design work make mock entry easier overall; only then decide whether seeded Faker fill is the right next control (hand entry, Tab order, and paste may already be enough).
 
 ### Run and compare
 
