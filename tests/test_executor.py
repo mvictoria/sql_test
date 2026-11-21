@@ -28,9 +28,9 @@ def test_creates_a_relation_from_a_schema_and_rows():
             ],
         )
 
-        assert executor.read_relation(MEMBERS) == [
-            (1, "Ada", "30"),
-            (2, "Bea", "10"),
+        assert executor.read_rows(MEMBERS) == [
+            {"member_id": 1, "member_name": "Ada", "lob": "30"},
+            {"member_id": 2, "member_name": "Bea", "lob": "10"},
         ]
     finally:
         executor.teardown()
@@ -58,7 +58,7 @@ def test_executes_a_full_load_operation(tmp_path):
         )
         executor.execute(operation)
 
-        assert executor.read_relation(MEDICAID) == [(1, "Ada")]
+        assert executor.read_rows(MEDICAID) == [{"member_id": 1, "member_name": "Ada"}]
     finally:
         executor.teardown()
 
@@ -76,7 +76,7 @@ def test_two_runs_do_not_share_relations():
     second.setup()
     try:
         with pytest.raises(Exception, match="(?i)members|Catalog Error|does not exist"):
-            second.read_relation(MEMBERS)
+            second.read_rows(MEMBERS)
     finally:
         first.teardown()
         second.teardown()

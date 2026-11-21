@@ -40,6 +40,7 @@ class DuckDBExecutor:
             return
         raise NotImplementedError(operation.kind)
 
+    # Not part of the executor interface; the app still uses it until APP-15.
     def read_relation(self, relation: Relation) -> list[tuple[Any, ...]]:
         connection = self._connection
         assert connection is not None
