@@ -18,6 +18,13 @@ def test_discover_lists_case_folders(tmp_path):
     case.mkdir(parents=True)
     (case / "members.csv").write_text("member_id\n1\n")
     (case / "expected.csv").write_text("member_id\n1\n")
+    (tmp_path / "pyproject.toml").write_text(
+        "[tool.sql-test]\n"
+        'sqls = "admin/sqls"\n'
+        'mapping = "admin/config/lookup_sql_table_mapping.csv"\n'
+        'schemas = "admin/sqls"\n'
+        'cases = "cases"\n'
+    )
     (tmp_path / "admin" / "sqls").mkdir(parents=True)
     (tmp_path / "admin" / "config").mkdir(parents=True)
     (tmp_path / "admin" / "sqls" / "m.sql").write_text("select 1 as member_id")

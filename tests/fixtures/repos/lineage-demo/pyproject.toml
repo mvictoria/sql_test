@@ -1,0 +1,5 @@
+[tool.sql-test]
+sqls = "admin/sqls"
+mapping = "admin/config/lookup_sql_table_mapping.csv"
+schemas = "admin/sqls"
+cases = "cases"

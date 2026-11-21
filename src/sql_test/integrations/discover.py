@@ -4,12 +4,12 @@ from pathlib import Path
 from sql_test.engine.catalog.mapping import read_operations
 from sql_test.engine.lineage.references import UnparseableSql, tables_read
 from sql_test.engine.relation import Relation
+from sql_test.integrations.config import RepositoryConfig
 from sql_test.testing.cases import CaseSummary, discover_cases
 
-# Sample-repo convention until CFG-1.
+# The app still builds paths from these; remove once it reads RepositoryConfig.
 SQLS = Path("admin") / "sqls"
 MAPPING = Path("admin") / "config" / "lookup_sql_table_mapping.csv"
-CASES = Path("cases")
 
 
 @dataclass(frozen=True)
@@ -20,8 +20,8 @@ class Discovery:
 
 
 def discover(repository: Path) -> Discovery:
-    repository = repository.resolve()
-    operations = read_operations(repository / MAPPING, repository / SQLS)
+    config = RepositoryConfig.load(repository)
+    operations = read_operations(config.mapping, config.sqls)
     produced = {operation.writes for operation in operations}
     referenced: set[Relation] = set()
     sources: set[Relation] = set()
@@ -34,5 +34,5 @@ def discover(repository: Path) -> Discovery:
     return Discovery(
         models=tuple(sorted(str(relation) for relation in produced)),
         sources=tuple(sorted(str(relation) for relation in sources)),
-        cases=tuple(discover_cases(repository / CASES)),
+        cases=tuple(discover_cases(config.cases)),
     )

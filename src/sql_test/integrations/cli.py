@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 
 from sql_test.integrations.app import serve
+from sql_test.integrations.config import ConfigError, RepositoryConfig
 from sql_test.integrations.discover import discover
 
 
@@ -23,6 +24,11 @@ def main(argv: list[str] | None = None) -> int:
     repository = args.repository.resolve()
     if not repository.is_dir():
         print(f"repository not found: {repository}", file=sys.stderr)
+        return 1
+    try:
+        RepositoryConfig.load(repository)
+    except ConfigError as error:
+        print(error, file=sys.stderr)
         return 1
 
     if args.command == "discover":
