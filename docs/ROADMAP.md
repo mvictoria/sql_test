@@ -305,6 +305,24 @@ Planning a run parsed every SQL file in the repository once per name it resolved
 - **Done when:** resolving several names in one catalog parses each SQL once; a second catalog over the same unchanged files parses nothing; and a catalog built after a SQL file is edited sees the new tables it reads.
 - **Depends on:** [ENG-24](#eng-24)
 
+<a id="eng-33"></a>
+#### ENG-33 Parse only DDL in the DDL reader (done)
+
+The DDL reader reads every file in the schemas folder, which is often the SQL folder. It parsed every statement in them only to keep the `CREATE TABLE`s, so on a cold start each model's SQL was parsed twice: once by the DDL reader, then by lineage. It now parses only statements that begin with `CREATE`, and skips a file that never mentions `create` without splitting it. Measured on generated repositories with one DDL file per table, median of 3–5 fresh processes:
+
+| Models (files) | Cold catalog build | Full `pytest` run |
+| --- | --- | --- |
+| 300 (601) | 1.12 s → 0.75 s | 2.53 s → 2.04 s |
+| 1,000 (2,001) | 2.82 s → 2.10 s | 4.32 s → 3.19 s |
+| 3,000 (6,001) | 7.79 s → 5.68 s | 12.64 s → 7.48 s |
+
+A rebuild after a one-file edit is unchanged, because it already parsed only the edited file.
+
+The saving applies once per process, on the first catalog build: once per local `pytest` run, once per CI job (once per pytest-xdist worker, in parallel), and once per app start. After a branch switch it applies to the files that changed. It does not make each case faster; per-case cost is planning and execution ([ENG-31](#eng-31), [ENG-32](#eng-32)).
+
+- **Done when:** a first catalog over a SQL folder that holds both DDL and model SQL parses each model's SQL once.
+- **Depends on:** [ENG-26](#eng-26)
+
 <a id="eng-27"></a>
 #### ENG-27 Share one DuckDB instance across runs (done)
 
