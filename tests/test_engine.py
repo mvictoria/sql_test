@@ -20,7 +20,7 @@ def test_runs_a_tables_sql_over_given_rows():
         executor=DuckDBExecutor,
     )
 
-    rows = engine.run(
+    result = engine.run(
         "medicaid_members",
         rows={
             "members": [
@@ -34,7 +34,7 @@ def test_runs_a_tables_sql_over_given_rows():
         },
     )
 
-    assert rows == [(1, "Ada")]
+    assert result.rows == [{"member_id": 1, "member_name": "Ada"}]
 
 
 def test_runs_upstream_sql_before_the_table():
@@ -46,7 +46,7 @@ def test_runs_upstream_sql_before_the_table():
         executor=DuckDBExecutor,
     )
 
-    rows = engine.run(
+    result = engine.run(
         "medicaid_members_named_alice",
         rows={
             "members": [
@@ -61,10 +61,10 @@ def test_runs_upstream_sql_before_the_table():
         },
     )
 
-    assert rows == [(1, "Alice")]
+    assert result.rows == [{"member_id": 1, "member_name": "Alice"}]
 
 
-def test_run_result_includes_row_counts_for_each_relation():
+def test_run_counts_rows_for_each_relation():
     engine = Engine(
         catalog=mapped_sql_folder(
             sqls=REPOSITORY / "admin" / "sqls",
@@ -73,7 +73,7 @@ def test_run_result_includes_row_counts_for_each_relation():
         executor=DuckDBExecutor,
     )
 
-    result = engine.run_result(
+    result = engine.run(
         "medicaid_members_named_alice",
         rows={
             "members": [
@@ -143,13 +143,13 @@ def test_given_rows_load_with_their_schema_types():
         executor=DuckDBExecutor,
     )
 
-    rows = engine.run(
+    result = engine.run(
         "members",
         rows={"members": [{"member_id": "1", "member_name": "Ada", "lob": "30"}]},
     )
 
-    assert rows == [(1, "Ada", "30")]
-    assert type(rows[0][0]) is int
+    assert result.rows == [{"member_id": 1, "member_name": "Ada", "lob": "30"}]
+    assert type(result.rows[0]["member_id"]) is int
 
 
 def test_columns_missing_from_given_rows_are_null():
@@ -161,6 +161,27 @@ def test_columns_missing_from_given_rows_are_null():
         executor=DuckDBExecutor,
     )
 
-    rows = engine.run("members", rows={"members": [{"member_id": "1"}]})
+    result = engine.run("members", rows={"members": [{"member_id": "1"}]})
 
-    assert rows == [(1, None, None)]
+    assert result.rows == [{"member_id": 1, "member_name": None, "lob": None}]
+
+
+def test_run_says_whether_the_target_sql_orders_its_rows(tmp_path):
+    (tmp_path / "ddl.sql").write_text(
+        "create table ordered (id int);\ncreate table unordered (id int);\n"
+    )
+    (tmp_path / "ordered.sql").write_text("select 1 as id order by id")
+    (tmp_path / "unordered.sql").write_text("select 1 as id")
+    mapping = tmp_path / "mapping.csv"
+    mapping.write_text(
+        "load_type,table_ref,sql_ref\n"
+        "historic,ordered,ordered.sql\n"
+        "historic,unordered,unordered.sql\n"
+    )
+    engine = Engine(
+        catalog=mapped_sql_folder(sqls=tmp_path, mapping=mapping),
+        executor=DuckDBExecutor,
+    )
+
+    assert engine.run("ordered", rows={}).ordered
+    assert not engine.run("unordered", rows={}).ordered
