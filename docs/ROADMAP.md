@@ -50,7 +50,7 @@ Done:
 
 In progress: [ENG-24](#eng-24) engine cleanup.
 
-Next, now unblocked: [CLI-2](#cli-2), [CLI-3](#cli-3), [CLI-4](#cli-4), [CLI-5](#cli-5), and [CI-1](#ci-1). [CFG-1](#cfg-1) is done.
+Next, now unblocked: [CI-1](#ci-1), and app stories that are not done. [CFG-1](#cfg-1) is done. Further CLI commands ([CLI-2](#cli-2)–[CLI-6](#cli-6)) are parked until a demonstrated need; the CLI's job today is `sql-test app`.
 
 ### Project skeleton
 
@@ -365,7 +365,7 @@ In the sample repository, show both ways a repository's pytest tests use the lib
 
 ## v0.2 — CLI and static validation
 
-A headless command-line interface over the engine, and checks that run without executing SQL.
+The CLI starts the authoring app (`sql-test app [repository] [--port]`). pytest remains the test runner. Extra commands and static validation below are parked until something needs them (for example a pre-commit hook).
 
 ### Repository config
 
@@ -410,17 +410,19 @@ Built ahead of ENG-2 and ENG-6: models come from the mapping; sources are tables
   - [ENG-20](#eng-20)
 
 <a id="cli-2"></a>
-#### CLI-2 `sql-test run`
+#### CLI-2 `sql-test run` (parked)
 
-Run one case, several cases, or all of them, and print each result and comparison.
+Run one case, several cases, or all of them, and print each result and comparison. Parked: pytest already runs cases.
 
 - **Done when:** a failing case prints the same comparison pytest shows.
 - **Depends on:** [ENG-17](#eng-17)
 
-### Static validation
+### Static validation (parked)
+
+Parked until a hook or other consumer needs static checks without executing SQL.
 
 <a id="cli-3"></a>
-#### CLI-3 Check case structure
+#### CLI-3 Check case structure (parked)
 
 Check that:
 
@@ -434,7 +436,7 @@ Check that:
   - [ENG-2](#eng-2)
 
 <a id="cli-4"></a>
-#### CLI-4 Check a case against lineage
+#### CLI-4 Check a case against lineage (parked)
 
 Check that:
 
@@ -447,7 +449,7 @@ Check that:
   - [ENG-9](#eng-9)
 
 <a id="cli-5"></a>
-#### CLI-5 Check CSVs against schemas
+#### CLI-5 Check CSVs against schemas (parked)
 
 Check that:
 
@@ -458,7 +460,7 @@ Check that:
 - **Depends on:** [ENG-16](#eng-16)
 
 <a id="cli-6"></a>
-#### CLI-6 `sql-test validate`
+#### CLI-6 `sql-test validate` (parked)
 
 Run whichever checks exist and exit non-zero on any failure. Each check from CLI-3, CLI-4, and CLI-5 can be added to it as it lands.
 
