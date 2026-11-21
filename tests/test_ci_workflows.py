@@ -57,6 +57,27 @@ def test_tool_ci_calls_reusable_workflow_for_sample():
     assert job["with"]["working-directory"] == "lakehouse-data-customer"
 
 
+def test_tool_ci_tests_python_312_through_315():
+    ci = _load(WORKFLOWS / "ci.yml")
+    job = ci["jobs"]["test"]
+    assert job["strategy"]["matrix"]["python-version"] == [
+        "3.12",
+        "3.13",
+        "3.14",
+        "3.15",
+    ]
+
+    install_uv = next(s for s in job["steps"] if s.get("name") == "Install uv")
+    assert install_uv["with"]["python-version"] == "${{ matrix.python-version }}"
+
+    checks = next(s for s in job["steps"] if s.get("name") == "Checks")
+    assert checks["if"] == "matrix.python-version == '3.15'"
+
+    pyproject = (ROOT / "pyproject.toml").read_text()
+    assert 'requires-python = ">=3.12"' in pyproject
+    assert 'target-version = "py312"' in pyproject
+
+
 def test_cd_tags_main_from_pr_title_then_releases_on_version_tag():
     workflow = _load(WORKFLOWS / "cd.yml")
     push = _on(workflow)["push"]
