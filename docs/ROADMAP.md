@@ -48,6 +48,8 @@ Done:
 - [ENG-18](#eng-18)
 - [ENG-19](#eng-19)
 
+In progress: [ENG-24](#eng-24) engine cleanup.
+
 Next, now unblocked: [CLI-2](#cli-2), [CLI-3](#cli-3), [CLI-4](#cli-4), [CLI-5](#cli-5), and [CI-1](#ci-1). [CFG-1](#cfg-1) is done.
 
 ### Project skeleton
@@ -265,6 +267,16 @@ The executor runs a plan's ordered operations against the given rows and returns
 - **Depends on:**
   - [ENG-10](#eng-10)
   - [ENG-12](#eng-12)
+
+<a id="eng-24"></a>
+#### ENG-24 Engine cleanup
+
+Behaviour-preserving cleanup of the engine, one commit per item:
+
+- [x] One run path: `run`, `run_rows`, and `run_result` share a single load-and-execute step.
+
+- **Done when:** each item's commit lands with the existing tests passing unchanged.
+- **Depends on:** none
 
 ### Comparison
 

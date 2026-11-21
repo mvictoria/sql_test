@@ -1,4 +1,4 @@
-from collections.abc import Callable
+from collections.abc import Callable, Sized
 from dataclasses import dataclass
 from typing import Any
 
@@ -32,16 +32,26 @@ class Engine:
         return plan_run(Relation.parse(table).resolve(known), self._catalog, given)
 
     def run(self, table: str, rows: dict[str, list[Row]]) -> list[tuple[Any, ...]]:
-        return self._execute(
+        target, _ = self._execute(
             table, rows, lambda executor, target: executor.read_relation(target)
         )
+        return target
 
     def run_rows(self, table: str, rows: dict[str, list[Row]]) -> list[Row]:
-        return self._execute(
-            table, rows, lambda executor, target: executor.read_rows(target)
-        )
+        return self.run_result(table, rows).rows
 
     def run_result(self, table: str, rows: dict[str, list[Row]]) -> RunResult:
+        target, counts = self._execute(
+            table, rows, lambda executor, target: executor.read_rows(target)
+        )
+        return RunResult(rows=target, counts=counts)
+
+    def _execute[T: Sized](
+        self,
+        table: str,
+        rows: dict[str, list[Row]],
+        read: Callable[[Executor, Relation], T],
+    ) -> tuple[T, dict[Relation, int]]:
         plan = self.plan(table, rows)
         plan.check_rows()
         executor = self._executor()
@@ -55,38 +65,14 @@ class Engine:
                     table_rows
                 )
                 executor.create_relation(relation, schema, table_rows)
-                counts[relation] = len(executor.read_rows(relation))
+                counts[relation] = len(table_rows)
             for operation in plan.operations:
                 executor.execute(operation)
                 counts[operation.writes] = len(executor.read_rows(operation.writes))
             target = plan.lineage.target
-            result_rows = executor.read_rows(target)
-            counts[target] = len(result_rows)
-            return RunResult(rows=result_rows, counts=counts)
-        finally:
-            executor.teardown()
-
-    def _execute[T](
-        self,
-        table: str,
-        rows: dict[str, list[Row]],
-        read: Callable[[Executor, Relation], T],
-    ) -> T:
-        plan = self.plan(table, rows)
-        plan.check_rows()
-        executor = self._executor()
-        executor.setup()
-        try:
-            known = self._catalog.relations().keys()
-            for name, table_rows in rows.items():
-                relation = Relation.parse(name).resolve(known)
-                schema = self._catalog.schemas.get(relation) or _schema_from_rows(
-                    table_rows
-                )
-                executor.create_relation(relation, schema, table_rows)
-            for operation in plan.operations:
-                executor.execute(operation)
-            return read(executor, plan.lineage.target)
+            result = read(executor, target)
+            counts[target] = len(result)
+            return result, counts
         finally:
             executor.teardown()
 
