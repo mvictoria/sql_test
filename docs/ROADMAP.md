@@ -329,6 +329,14 @@ Resolving a name compared it with every relation in the catalog, and finding a r
 - **Done when:** resolving a name compares it only with relations of that name; planning a 50-table chain makes fewer than 250 relation comparisons; and parsing the same name twice parses it once.
 - **Depends on:** [ENG-26](#eng-26)
 
+<a id="eng-30"></a>
+#### ENG-30 SQL parameters
+
+Repositories whose orchestrator fills placeholders in SQL, such as `in (@@batch_var@@)`, had no lineage for those models: the placeholder does not parse, so the model became a source with unparseable SQL. The config's `parameter_style` names the placeholder syntax. Lineage replaces each placeholder with `NULL` before parsing; a run replaces each with the case's values from `parameters.csv`, joining several with `, `. See [SQL parameters](HELPER.md#sql-parameters).
+
+- **Done when:** a model reading `etl.claims` through `in (@@batch_var@@)` has `etl.claims` in its lineage; a case giving `batch_var` the values 41 and 42 runs SQL reading `in (41, 42)`; a placeholder the case gives no value fails the run, naming it; and a repository without `parameter_style` is unchanged.
+- **Depends on:** [CFG-1](#cfg-1)
+
 ### Comparison
 
 <a id="eng-14"></a>
@@ -889,9 +897,9 @@ Detect SQL that reads the table it writes, and show it as before and after rathe
   - [ENG-6](#eng-6)
 
 <a id="inc-2"></a>
-#### INC-2 Decide how target-before is stored
+#### INC-2 Decide how target-before is stored (done)
 
-Decide how a case folder holds the target's before state, and record it in [HELPER.md](HELPER.md).
+Decide how a case folder holds the target's before state, and record it in [HELPER.md](HELPER.md). Decided: case format version 2 adds `before.csv`, the target before, and `parameters.csv`, the run's [SQL parameter](#eng-30) values. `append` adds the returned rows to the target before; `merge` updates rows whose `merge_key` matches and inserts the rest, with no deletes; `incremental` is a merge when the repository sets `merge_key`, otherwise an append. `merge_key` and `parameter_style` are optional config settings.
 
 - **Done when:** the decision is written in HELPER.md.
 - **Depends on:** none
@@ -901,10 +909,11 @@ Decide how a case folder holds the target's before state, and record it in [HELP
 
 Load the target's before state, run the incremental SQL, and compare the target after against expected.
 
-- **Done when:** an incremental case passes and fails correctly.
+- **Done when:** an append case and a merge case each pass and fail correctly; a merge updates the before row whose `merge_key` matches and inserts the rest; a missing `before.csv` starts the target empty; and a `before.csv` on a full-load target fails, naming it.
 - **Depends on:**
   - [INC-1](#inc-1)
   - [INC-2](#inc-2)
+  - [ENG-30](#eng-30)
   - [ENG-13](#eng-13)
   - [SPK-4](#spk-4)
 

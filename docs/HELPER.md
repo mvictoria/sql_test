@@ -116,6 +116,8 @@ cases/
 └── <table under test>/
     └── <case name>/
         ├── <mocked table>.csv    one per mocked table
+        ├── before.csv            incremental models only: the target before
+        ├── parameters.csv        templated SQL only: the run's parameter values
         └── expected.csv
 ```
 
@@ -136,7 +138,19 @@ A **case table** is the columns and typed rows of one CSV in a case — a mock f
 
 A repository's own pytest test runs its case folders, one parametrized test per case, so a saved case needs no new Python. The repository passes the folder that holds its cases; the library assumes no location.
 
-How target-before state is stored for incremental models is decided with incremental support.
+### Case format, version 2
+
+Version 2 adds two optional files to version 1. `before.csv`, `parameters.csv`, and `expected.csv` are reserved names: none of them is a mock.
+
+- `before.csv` is the target before, for a case whose table under test is incremental. It is a case table typed by the target's schema, like `expected.csv`, and lists only some columns if it likes; unlisted columns are NULL. A missing `before.csv` means the target starts empty, as on a first load. `expected.csv` is then the target after. A case whose table under test is not incremental and has a `before.csv` fails, naming it.
+- `parameters.csv` holds the values for the run's [SQL parameters](#sql-parameters). It has the header `name,value` and one row per value; a name on several rows is a list. Values are SQL text, written as they should appear in the SQL: `42`, or `'abc'` with its quotes.
+
+```text
+name,value
+batch_var,41
+batch_var,42
+pub_batch,43
+```
 
 ---
 
@@ -291,7 +305,16 @@ schemas = "admin/sqls"
 cases = "tests/cases"
 ```
 
-Every setting is required. A repository with no `pyproject.toml`, no `[tool.sql-test]` table, or a missing setting is an error that names what is missing; the tool assumes no layout. The CLI and the app read the config; a repository's own pytest tests may read it too, or pass paths directly.
+Two optional settings describe incremental models and templated SQL:
+
+```toml
+merge_key = "di_audit_pk_hash_key"
+parameter_style = "@@{name}@@"
+```
+
+`merge_key` is the column a [merge](#incremental-semantics) matches rows on, the same in every table; a merge in a repository without one fails, naming the table. `parameter_style` is how the repository's SQL writes a [parameter](#sql-parameters), with `{name}` standing for its name.
+
+Every other setting is required. A repository with no `pyproject.toml`, no `[tool.sql-test]` table, or a missing setting is an error that names what is missing; the tool assumes no layout. The CLI and the app read the config; a repository's own pytest tests may read it too, or pass paths directly.
 
 ## Upstream lineage
 
@@ -1108,9 +1131,21 @@ The POC should establish sensible defaults without exposing unnecessary configur
 
 ## Incremental semantics
 
-The framework needs a deterministic way to materialize `target_before`, execute incremental SQL, and inspect `target_after`.
+An incremental model's operation runs against its target before, from the case's `before.csv`, and its kind says how the rows its SQL returns become the target after:
 
-This should be solved after the full-load authoring loop unless it blocks representative testing.
+- **append**: the target after is the target before plus the returned rows.
+- **merge**: the returned rows are a delta. A returned row whose `merge_key` matches a row in the target before replaces that row; any other returned row is inserted. Nothing is deleted. A soft delete is a column the SQL sets, such as `delete_flg`, so it needs nothing from the tool.
+- **incremental**, dbt's word: a merge when the repository has a `merge_key`, otherwise an append.
+
+SQL that reads its own target reads the target before, whatever its kind.
+
+## SQL parameters
+
+A **parameter** is a placeholder in a repository's SQL that its orchestrator fills before running it, for example the batch numbers an incremental model reads: `where di_audit_update_batch_num_cd in (@@batch_var@@)`. The config's `parameter_style` says how placeholders are written. The tool never reads the orchestrator's control tables; a case supplies the values directly in `parameters.csv`.
+
+- For lineage, every placeholder is replaced by `NULL` before the SQL is parsed, so templated SQL has the same lineage as the SQL it becomes. Placeholders stand where values go.
+- For a run, each placeholder is replaced by its values from the case, joined with `, ` when there are several. A placeholder the case gives no value fails the run, naming it.
+- Rendering belongs to the repository's conventions, not the executor: an executor receives SQL with no placeholders left.
 
 ---
 
