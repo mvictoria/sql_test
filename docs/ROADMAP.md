@@ -33,10 +33,11 @@ Done:
 - [ENG-3](#eng-3)
 - [ENG-4](#eng-4)
 - [ENG-22](#eng-22)
+- [ENG-5](#eng-5)
 
 Can start now:
 
-- [ENG-5](#eng-5)
+- [ENG-6](#eng-6)
 - [ENG-11](#eng-11)
 - [ENG-14](#eng-14)
 
@@ -154,7 +155,7 @@ Part of the test layer. List every `<table under test>/<case name>/` folder unde
 ### Lineage
 
 <a id="eng-5"></a>
-#### ENG-5 Extract table references
+#### ENG-5 Extract table references (done)
 
 For each SQL statement, list the relations it reads, excluding CTE names. Parse with a configurable dialect, defaulting to DuckDB. Keep sqlglot inside the parsing module; other modules see relations, not sqlglot types.
 
