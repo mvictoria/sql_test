@@ -63,7 +63,13 @@ jobs:
 
 Copy [lakehouse-data-customer/.github/workflows/data-tests.yml](lakehouse-data-customer/.github/workflows/data-tests.yml). The workflow installs `sql-test` from the same git commit as that pin and runs pytest in the calling repository.
 
-**Releases** — the git tag is the version. Push `vX.Y.Z`; CD builds the package from that tag, attaches artifacts to a GitHub Release, and moves `vX` (for example `v0`).
+**Releases** — the git tag is the version (`dynamic` via hatchling / `uv-dynamic-versioning`).
+
+1. Put `(major)`, `(minor)`, or `(patch)` in the **PR title** when that PR should release (example: `CI-2: versioned releases (patch)`). Skip the token if it should not.
+2. Merge with linear history (rebase). CD runs on `main`, finds the merged PR, and tags **`main`'s new tip** — not the old branch commits.
+3. The tag push builds the wheel/sdist, creates/updates the GitHub Release, and moves floating `vX` (for example `v0`).
+
+Manual tag push (`git tag vX.Y.Z && git push origin vX.Y.Z`) still runs the same build/release path.
 
 ## CLI
 

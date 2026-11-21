@@ -57,12 +57,23 @@ def test_tool_ci_calls_reusable_workflow_for_sample():
     assert job["with"]["working-directory"] == "lakehouse-data-customer"
 
 
-def test_cd_builds_from_tag_then_releases_then_moves_major():
+def test_cd_tags_main_from_pr_title_then_releases_on_version_tag():
     workflow = _load(WORKFLOWS / "cd.yml")
-    triggers = _on(workflow)["push"]["tags"]
-    assert "v[0-9]+.[0-9]+.[0-9]+" in triggers
+    push = _on(workflow)["push"]
+    assert "main" in push["branches"]
+    assert "v[0-9]+.[0-9]+.[0-9]+" in push["tags"]
+
+    tag_job = workflow["jobs"]["tag-from-pr"]
+    assert "refs/heads/main" in tag_job["if"]
+    assert tag_job["permissions"]["pull-requests"] == "read"
+    tag_step = next(
+        s for s in tag_job["steps"] if s.get("name") == "Tag release from PR title"
+    )
+    assert "scripts/cd_bump.py" in tag_step["run"]
+    assert "github.sha" in tag_step["run"]
 
     job = workflow["jobs"]["release"]
+    assert "refs/tags/v" in job["if"]
     assert job["permissions"]["contents"] == "write"
     step_names = [s.get("name") for s in job["steps"]]
     assert step_names.index("Build") < step_names.index("Create GitHub Release")

@@ -2,6 +2,7 @@ name: CD
 
 "on":
   push:
+    branches: [main]
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
 
@@ -9,7 +10,48 @@ permissions:
   contents: write
 
 jobs:
+  # After a PR lands on main (rewritten SHAs), read the bump from that PR's
+  # title and tag this commit — never the pre-merge branch tip.
+  tag-from-pr:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Tag release from PR title
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          pr_json="$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/${{ github.repository }}/commits/${{ github.sha }}/pulls")"
+          title="$(printf '%s' "$pr_json" | python3 -c 'import json,sys; ps=json.load(sys.stdin); print(ps[0]["title"] if ps else "")')"
+          if [[ -z "$title" ]]; then
+            echo "No PR associated with ${{ github.sha }}; skip tag."
+            exit 0
+          fi
+          echo "PR title: $title"
+          bump="$(python3 scripts/cd_bump.py from-title "$title")"
+          if [[ -z "$bump" ]]; then
+            echo "No (major)|(minor)|(patch) in PR title; skip tag."
+            exit 0
+          fi
+          latest="$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' | sort -V | tail -1 || true)"
+          tag="$(python3 scripts/cd_bump.py next "${latest:-}" "$bump")"
+          echo "Tagging ${{ github.sha }} as $tag (bump=$bump, latest=${latest:-none})"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "$tag" "${{ github.sha }}"
+          git push origin "$tag"
+
   release:
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: write

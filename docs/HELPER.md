@@ -573,7 +573,11 @@ This layout is illustrative. Where SQL, schemas, and cases live, and how SQL fil
 
 The engine, CLI, app, and reusable workflow are released together as one version. Consuming repositories pin a floating major tag such as `@v0` (while the package is 0.x), never `main`, so a change on the tool's `main` branch cannot silently change CI in every consuming repository.
 
-The git tag is the source of truth for the package version (`dynamic = ["version"]` via hatchling and `uv-dynamic-versioning`). A release is pushing `vX.Y.Z`: `.github/workflows/cd.yml` builds the sdist/wheel from that tag, creates or updates the GitHub Release with those artifacts, then force-moves the floating major tag `vX`. Local and CI installs both use those git tags (for example `uv add "sql-test @ git+https://github.com/mvictoria/sql_test.git@v0"`).
+The git tag is the source of truth for the package version (`dynamic = ["version"]` via hatchling and `uv-dynamic-versioning`).
+
+**How a release is cut.** A PR title includes exactly one of `(major)`, `(minor)`, or `(patch)`. After that PR lands on `main` (linear history: rebase, so branch SHAs are rewritten), `.github/workflows/cd.yml` looks up the PR for the new `main` tip, computes the next `vX.Y.Z` from the latest version tag via `scripts/cd_bump.py`, and tags **that `main` commit**. The same workflow then builds the sdist/wheel from the tag, creates or updates the GitHub Release with those artifacts, and force-moves the floating major tag `vX`. A PR title without a bump token does not release. Pushing a `vX.Y.Z` tag by hand still runs the build/release half only.
+
+Local and CI installs both use those git tags (for example `uv add "sql-test @ git+https://github.com/mvictoria/sql_test.git@v0"`).
 
 The case format carries its own format version if compatibility ever requires it. The tool's release version and the case format version are separate.
 
