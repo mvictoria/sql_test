@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from sql_test.engine.catalog.adapters import mapped_sql_folder
-from sql_test.engine.lineage.graph import upstream_lineage
+from sql_test.engine.lineage.graph import SourceReason, upstream_lineage
 from sql_test.engine.relation import Relation
 
 REPOSITORY = Path(__file__).parent / "fixtures" / "repos" / "lakehouse-data-customer"
@@ -45,5 +45,28 @@ def test_a_target_with_no_producer_is_its_own_source(tmp_path: Path):
         members, mapped_sql_folder(sqls=tmp_path, mapping=mapping)
     )
 
-    assert lineage.sources == {members}
+    assert lineage.source_reasons == {members: SourceReason.NOT_PRODUCED}
     assert lineage.projection() == {members: set()}
+
+
+def test_models_lineage_cannot_go_through_are_sources(tmp_path: Path):
+    (tmp_path / "ddl.sql").write_text(
+        "create table top (id int);\ncreate table broken (id int);\n"
+    )
+    (tmp_path / "top.sql").write_text("select * from broken, schemaless")
+    (tmp_path / "broken.sql").write_text("select * frm raw")
+    (tmp_path / "schemaless.sql").write_text("select * from raw")
+    mapping = tmp_path / "mapping.csv"
+    mapping.write_text(
+        "table_ref,sql_ref\ntop,top.sql\nbroken,broken.sql\nschemaless,schemaless.sql\n"
+    )
+
+    lineage = upstream_lineage(
+        Relation(name="top"), mapped_sql_folder(sqls=tmp_path, mapping=mapping)
+    )
+
+    assert lineage.source_reasons == {
+        Relation(name="broken"): SourceReason.UNPARSEABLE_SQL,
+        Relation(name="schemaless"): SourceReason.NO_SCHEMA,
+    }
+    assert lineage.models == {Relation(name="top")}

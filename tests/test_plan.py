@@ -34,6 +34,12 @@ def test_giving_an_upstream_model_prunes_what_is_behind_it():
 
 
 def test_a_diamond_keeps_what_another_path_still_needs(tmp_path: Path):
+    (tmp_path / "ddl.sql").write_text(
+        "".join(
+            f"create table {name} (id int);\n"
+            for name in ("base", "left_side", "right_side", "top")
+        )
+    )
     (tmp_path / "base.sql").write_text("select * from raw")
     (tmp_path / "left_side.sql").write_text("select * from base")
     (tmp_path / "right_side.sql").write_text("select * from base")
