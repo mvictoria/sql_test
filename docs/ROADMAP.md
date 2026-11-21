@@ -276,6 +276,7 @@ Behaviour-preserving cleanup of the engine, one commit per item:
 - [x] One run path: `run`, `run_rows`, and `run_result` share a single load-and-execute step.
 - [x] One run method: `Engine.run` returns a `RunResult` with the target's rows, row counts, and whether the target's SQL orders its rows. `run_rows` and `run_result` are gone, and `run_case` no longer parses SQL.
 - [x] Front doors: `sql_test.engine`, `sql_test.executors`, and `sql_test.testing` export what other layers use; `tests/test_layers.py` checks that the test layer and integrations import through them, with the app exempt until [APP-15](#app-15). `discover()` reads models and sources from the catalog instead of parsing SQL itself.
+- [x] Front doors export only names used outside their layer: 11 from `sql_test.engine` and 11 from `sql_test.testing`. Executors import only `sql_test.engine.executor`.
 - [x] The executor interface reads rows one way: `read_rows`. `read_relation` stays on `DuckDBExecutor` only until [APP-15](#app-15).
 
 - **Done when:** each item's commit lands with the existing tests passing unchanged.
