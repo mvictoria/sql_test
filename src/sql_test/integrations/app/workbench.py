@@ -168,9 +168,23 @@ class Workbench:
         with self.editor:
             editor_view(self.state, self.actions)
 
+    def reload_catalog(self) -> None:
+        """Replace the catalog with one built from the checkout as it is now."""
+        state = self.state
+        try:
+            state.catalog = catalog(state.repository)
+        except Exception as error:  # noqa: BLE001 — show failures in the page
+            state.message = Message(
+                f"Could not reload the repository: {error}", ok=False
+            )
+            return
+        state.mocks = frontier_mocks(state.catalog, state.target, state.mocks)
+        state.grid_rows = apply_grid_action("", state.mocks, state.grid_rows)
+
     def show_view(self, name: str) -> None:
+        self.reload_catalog()
         self.state.view = name
-        self.refresh_body()
+        self.refresh()
 
     def show_result_view(self, name: str) -> None:
         self.state.result_view = name
@@ -178,6 +192,7 @@ class Workbench:
 
     def toggle_mock(self, name: str) -> None:
         state = self.state
+        self.reload_catalog()
         requested = toggled_mocks(state.mocks, name)
         state.mocks = frontier_mocks(state.catalog, state.target, requested)
         state.grid_rows = apply_grid_action("", state.mocks, state.grid_rows)
@@ -207,6 +222,7 @@ class Workbench:
     def apply(self) -> None:
         state = self.state
         self._reset_results()
+        self.reload_catalog()
         mocked = {name: state.grid_rows.get(name, []) for name in state.mocks}
         try:
             typed, state.engine_types = type_grid_rows(state.catalog, mocked)
@@ -219,6 +235,7 @@ class Workbench:
     def run(self) -> None:
         state = self.state
         self._reset_results()
+        self.reload_catalog()
         try:
             result = run_case(state.catalog, state.target, state.mocks, state.grid_rows)
             panel = compare_section(
@@ -256,6 +273,7 @@ class Workbench:
 
     def save(self) -> None:
         state = self.state
+        self.reload_catalog()
         name = state.case_name or state.case_draft.strip()
         try:
             folder = save_case(

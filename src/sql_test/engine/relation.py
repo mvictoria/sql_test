@@ -46,6 +46,6 @@ class Relation:
         return candidates[0] if candidates else self
 
 
-@lru_cache(maxsize=4096)
+@lru_cache(maxsize=65536)
 def _parse(text: str, dialect: str) -> Relation:
     return Relation.from_table(exp.to_table(text, dialect=dialect), dialect)

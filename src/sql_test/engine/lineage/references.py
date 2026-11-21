@@ -32,7 +32,7 @@ def _reads(sql: str, dialect: str) -> _Reads:
     return reads
 
 
-@lru_cache(maxsize=4096)
+@lru_cache(maxsize=65536)
 def _parsed(sql: str, dialect: str) -> _Reads | str:
     """What `sql` reads, or why it does not parse; keyed on the text, so an edit misses."""
     try:

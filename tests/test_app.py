@@ -610,6 +610,106 @@ async def test_removing_a_missing_row_drops_it_from_expected(user: User):
     await user.should_not_see(marker="diff-missing")
 
 
+def _sqls(repo: Path) -> Path:
+    return repo / "admin" / "sqls"
+
+
+def _map(repo: Path, table: str) -> None:
+    mapping = repo / "admin" / "config" / "lookup_sql_table_mapping.csv"
+    with mapping.open("a") as file:
+        file.write(f"historic,{table},{table}.sql\n")
+
+
+async def test_home_shows_a_newly_mapped_sql_on_the_next_load(
+    user: User, tmp_path: Path
+):
+    repo = _copy_fixture(tmp_path)
+    _register(repo)
+    await user.open("/")
+    await user.should_not_see(marker="table-medicaid_adas")
+
+    (_sqls(repo) / "medicaid_adas.sql").write_text(
+        "select member_id, member_name\nfrom medicaid_members\n"
+        "where member_name = 'Ada'\n"
+    )
+    _map(repo, "medicaid_adas")
+    await user.open("/")
+
+    await user.should_see(marker="table-medicaid_adas")
+
+
+async def test_home_drops_a_deleted_mapped_sql_on_the_next_load(
+    user: User, tmp_path: Path
+):
+    repo = _copy_fixture(tmp_path)
+    (_sqls(repo) / "medicaid_adas.sql").write_text(
+        "select member_id, member_name from medicaid_members\n"
+    )
+    _map(repo, "medicaid_adas")
+    _register(repo)
+    await user.open("/")
+    await user.should_see(marker="table-medicaid_adas")
+
+    (_sqls(repo) / "medicaid_adas.sql").unlink()
+    await user.open("/")
+
+    await user.should_not_see(marker="table-medicaid_adas")
+    await user.should_see(marker=f"table-{ALICE}")
+
+
+async def test_lineage_follows_a_sql_edited_while_the_workbench_is_open(
+    user: User, tmp_path: Path
+):
+    repo = _copy_fixture(tmp_path)
+    _register(repo)
+    await user.open(f"/workbench?target={ALICE}&view=lineage")
+    await user.should_see(marker="node-medicaid_members")
+
+    (_sqls(repo) / f"{ALICE}.sql").write_text(
+        "select member_id, member_name\nfrom members\nwhere member_name = 'Alice'\n"
+    )
+    user.find(marker="view-lineage").click()
+
+    await user.should_not_see(marker="node-medicaid_members")
+    await user.should_see(marker="node-members")
+
+
+async def test_lineage_follows_a_sql_deleted_while_the_workbench_is_open(
+    user: User, tmp_path: Path
+):
+    repo = _copy_fixture(tmp_path)
+    _register(repo)
+    await user.open(f"/workbench?target={ALICE}&view=lineage")
+    await user.should_see(marker="node-members")
+
+    (_sqls(repo) / "medicaid_members.sql").unlink()
+    user.find(marker="view-lineage").click()
+
+    await user.should_see(marker="node-medicaid_members")
+    await user.should_not_see(marker="node-members")
+
+
+async def test_run_uses_a_sql_edited_while_the_workbench_is_open(
+    user: User, tmp_path: Path
+):
+    repo = _copy_fixture(tmp_path)
+    _register(repo)
+    await user.open(f"/workbench?target={ALICE}&view=lineage&mock=medicaid_members")
+    _fill(user, "medicaid_members", [{"member_id": "1", "member_name": "Alice"}])
+    user.find(marker="run").click()
+    user.find(marker="result-output").click()
+    await user.should_see(marker="output-rows-1")
+
+    (_sqls(repo) / f"{ALICE}.sql").write_text(
+        "select member_id, member_name\nfrom medicaid_members\n"
+        "where member_name = 'Bob'\n"
+    )
+    user.find(marker="run").click()
+    user.find(marker="result-output").click()
+
+    await user.should_see(marker="output-rows-0")
+
+
 async def test_selecting_a_case_opens_the_workbench(user: User, tmp_path: Path):
     case = tmp_path / "cases" / "medicaid_members" / "alice"
     case.mkdir(parents=True)
