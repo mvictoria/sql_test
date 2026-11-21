@@ -18,6 +18,9 @@ dev = [
     "sqlfluff>=4.5.0",
 ]
 
+[project.scripts]
+sql-test = "sql_test.integrations.cli:main"
+
 [build-system]
 requires = ["uv_build>=0.12.2,<0.13"]
 build-backend = "uv_build"
