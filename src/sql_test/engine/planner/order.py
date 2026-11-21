@@ -1,18 +1,19 @@
 from collections import defaultdict
 from graphlib import TopologicalSorter
 
+from sql_test.engine.catalog import Catalog
 from sql_test.engine.lineage.references import tables_read
 from sql_test.engine.operation import Operation
 from sql_test.engine.relation import Relation
 
 
 def execution_order(
-    table: Relation, operations: list[Operation], given: set[Relation]
+    table: Relation, catalog: Catalog, given: set[Relation]
 ) -> list[Operation]:
     producers: dict[Relation, list[Operation]] = defaultdict(list)
-    for operation in operations:
+    for operation in catalog.operations:
         producers[operation.writes].append(operation)
-    known = producers.keys() | given
+    known = catalog.relations().keys() | given
     upstream: dict[Relation, set[Relation]] = {}
     pending = [table]
     while pending:
