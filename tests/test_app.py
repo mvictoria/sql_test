@@ -299,6 +299,32 @@ async def test_mocked_table_opens_a_schema_aware_grid(user: User):
     await user.should_see(marker="cell-members.0.lob")
 
 
+async def test_clicking_blocked_needs_rows_focuses_that_grid(user: User):
+    """APP-30: blocked status names jump to the matching mock grid."""
+    _register(FIXTURE)
+    await user.open(f"/workbench?target={ALICE}&view=lineage&mock=members")
+    await user.should_see(marker="plan-blocked")
+    await user.should_see(marker="grid-members")
+
+    user.find(marker="focus-grid-members").click()
+
+    (cell,) = user.find(kind=ui.input, marker="cell-members.0.member_id").elements
+    assert "grid-focus" in cell.classes
+
+
+async def test_mocking_a_frontier_table_focuses_its_grid(user: User):
+    """APP-30: mocking a node lands focus on that table's grid."""
+    _register(FIXTURE)
+    await user.open(f"/workbench?target={ALICE}&view=lineage")
+    await user.should_see(marker="node-members")
+
+    user.find(marker="node-members").click()
+
+    await user.should_see(marker="grid-members")
+    (cell,) = user.find(kind=ui.input, marker="cell-members.0.member_id").elements
+    assert "grid-focus" in cell.classes
+
+
 async def test_clicking_a_node_adds_its_grid_without_losing_typed_rows(user: User):
     _register(FIXTURE)
     await user.open(f"/workbench?target={ALICE}&view=lineage&mock=members")

@@ -121,7 +121,17 @@ class Workbench:
                         "case-label"
                     )
             if state.mocks:
-                ui.label("Mocks: " + ", ".join(state.mocks)).mark("mocks")
+                with ui.row().classes("gap-1 items-center").mark("mocks"):
+                    ui.label("Mocks:")
+                    for index, name in enumerate(state.mocks):
+                        if index:
+                            ui.label(",")
+                        ui.button(
+                            name,
+                            on_click=lambda _, name=name: self.focus_grid(name),
+                        ).props("flat dense").classes("focus-grid-link").mark(
+                            f"focus-grid-{name}"
+                        )
 
     def refresh_body(self) -> None:
         self.body.clear()
@@ -133,7 +143,7 @@ class Workbench:
                     ).mark(f"view-{name}")
                     button.props("unelevated" if name == self.state.view else "outline")
             if self.state.view == "lineage":
-                lineage_view(self.state, self.toggle_mock)
+                lineage_view(self.state, self.toggle_mock, self.focus_grid)
             else:
                 sql_view(self.state.catalog, self.state.target)
 
@@ -192,11 +202,31 @@ class Workbench:
     def toggle_mock(self, name: str) -> None:
         state = self.state
         self.reload_catalog()
+        before = set(state.mocks)
         requested = toggled_mocks(state.mocks, name)
         state.mocks = frontier_mocks(state.catalog, state.target, requested)
         state.grid_rows = apply_grid_action("", state.mocks, state.grid_rows)
         self._reset_results()
         self.refresh()
+        added = set(state.mocks) - before
+        if name in added:
+            self.focus_grid(name)
+        elif added:
+            self.focus_grid(next(iter(sorted(added))))
+
+    def focus_grid(self, table: str) -> None:
+        """Scroll the named mock grid into view and focus its first cell."""
+        state = self.state
+        if table not in state.mocks:
+            return
+        schema = state.catalog.schema(state.catalog.resolve(table))
+        if not schema:
+            return
+        rows = state.grid_rows.setdefault(table, [{}])
+        if not rows:
+            rows.append({})
+        state.grid_focus = (table, 0, schema[0].name)
+        self.refresh_editor()
 
     def add_row(self, table: str) -> None:
         self._grid_action(f"add:{table}")
