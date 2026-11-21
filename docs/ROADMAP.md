@@ -487,6 +487,16 @@ Decide how the page reads and writes the checked-out repository, and record it i
   - [APP-1](#app-1)
   - [CLI-1](#cli-1)
 
+<a id="app-14"></a>
+#### APP-14 Edit the repository config
+
+A settings page shows the repository's `[tool.sql-test]` paths and lets QA change them. Each path is checked before saving: it exists, and with the new paths the catalog still discovers SQL, the mapping, and schemas. Saving writes only the `[tool.sql-test]` table and leaves the rest of `pyproject.toml`, including comments, unchanged. Python's `tomllib` only reads TOML, so writing needs a library such as `tomlkit`; record the choice in [HELPER.md](HELPER.md). A repository with no config opens this page to create one, instead of `sql-test app` exiting with the config error.
+
+- **Done when:** changing `cases` in the app updates `pyproject.toml` with the rest of the file byte-for-byte unchanged, and the page then lists the cases from the new folder.
+- **Depends on:**
+  - [CFG-1](#cfg-1)
+  - [APP-2](#app-2)
+
 ### Target browser
 
 <a id="app-3"></a>
