@@ -1,6 +1,6 @@
 name: CI
 
-on:
+"on":
   push:
     branches: [main]
   pull_request:
@@ -29,7 +29,10 @@ jobs:
       - name: Pytest
         run: uv run pytest
 
-      - name: Sample repository tests
-        run: |
-          uv run pytest -p no:cacheprovider lakehouse-data-customer/tests
-          uv run pytest -p no:cacheprovider tests/fixtures/repos/lakehouse-data-customer/tests
+      - name: Fixture repository tests
+        run: uv run pytest -p no:cacheprovider tests/fixtures/repos/lakehouse-data-customer/tests
+
+  sample-data-tests:
+    uses: ./.github/workflows/data-tests.yml
+    with:
+      working-directory: lakehouse-data-customer

@@ -1,0 +1,37 @@
+name: Data tests
+
+"on":
+  workflow_call:
+    inputs:
+      python-version:
+        description: Python version for the run
+        type: string
+        default: "3.14"
+      working-directory:
+        description: Directory within the calling repository that holds the pytest tests
+        type: string
+        default: "."
+
+permissions:
+  contents: read
+
+jobs:
+  data-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+          python-version: ${{ inputs.python-version }}
+
+      - name: Install sql-test from workflow ref
+        run: |
+          uv venv
+          uv pip install "sql-test @ git+https://github.com/mvictoria/sql_test.git@${{ github.workflow_sha }}" pytest
+
+      - name: Pytest
+        working-directory: ${{ inputs.working-directory }}
+        run: uv run pytest
