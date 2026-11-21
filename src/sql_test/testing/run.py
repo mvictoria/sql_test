@@ -46,12 +46,12 @@ def run_case(folder: Path, engine: Engine) -> CaseResult:
     if case.expected is None:
         return CaseResult(folder=folder, problem="the case has no expected.csv")
     rows = {str(relation): table.rows for relation, table in case.mocks.items()}
-    unused = engine.plan(str(case.target), rows).unused
-    if unused:
-        names = ", ".join(sorted(map(str, unused)))
+    plan = engine.plan(str(case.target), rows)
+    if plan.unused:
+        names = ", ".join(sorted(map(str, plan.unused)))
         return CaseResult(folder=folder, problem=f"mocks the run never reads: {names}")
     try:
-        result = engine.run(str(case.target), rows)
+        result = engine.execute(plan, rows)
     except MissingRows as error:
         return CaseResult(folder=folder, problem=str(error))
     return CaseResult(

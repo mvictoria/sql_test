@@ -1,7 +1,10 @@
 from pathlib import Path
+from typing import Any
 
 from sql_test.engine import Engine
 from sql_test.engine.catalog.adapters import mapped_sql_folder
+from sql_test.engine.executor import Row
+from sql_test.engine.planner.plan import Plan
 from sql_test.executors.duckdb import DuckDBExecutor
 from sql_test.testing.run import run_case
 
@@ -16,6 +19,18 @@ def _engine() -> Engine:
         ),
         executor=DuckDBExecutor(),
     )
+
+
+class _CountingEngine(Engine):
+    """Counts plan calls so run_case cannot hide a second plan inside run."""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.plan_calls = 0
+
+    def plan(self, table: str, rows: dict[str, list[Row]]) -> Plan:
+        self.plan_calls += 1
+        return super().plan(table, rows)
 
 
 def _case(root: Path, files: dict[str, str]) -> Path:
@@ -39,6 +54,22 @@ def test_a_passing_case(tmp_path: Path):
 
     assert result.passed
     assert result.actual == [{"member_id": 1, "member_name": "Ada"}]
+
+
+def test_a_passing_case_plans_only_once(tmp_path: Path):
+    folder = _case(tmp_path, MOCKS | {"expected.csv": "member_id,member_name\n1,Ada\n"})
+    engine = _CountingEngine(
+        catalog=mapped_sql_folder(
+            sqls=REPOSITORY / "admin" / "sqls",
+            mapping=REPOSITORY / "admin" / "config" / "lookup_sql_table_mapping.csv",
+        ),
+        executor=DuckDBExecutor(),
+    )
+
+    result = run_case(folder, engine)
+
+    assert result.passed
+    assert engine.plan_calls == 1
 
 
 def test_a_failing_case(tmp_path: Path):
