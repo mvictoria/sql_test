@@ -2,6 +2,7 @@ import html
 import re
 from pathlib import Path
 
+from sql_test.engine.executor import Given
 from sql_test.engine.relation import Relation
 from sql_test.engine.schema import Schema
 from sql_test.executors.duckdb import DuckDBExecutor
@@ -168,13 +169,10 @@ def type_grid_rows(
         if not non_empty:
             typed_rows[name] = table_rows or [{}]
             continue
-        executor = DuckDBExecutor()
-        executor.setup()
-        try:
-            executor.create_relation(relation, schema, non_empty)
-            loaded = executor.read_relation(relation)
-        finally:
-            executor.teardown()
+        written = DuckDBExecutor().run({relation: Given(schema, non_empty)}, [])
+        loaded = [
+            tuple(row[column.name] for column in schema) for row in written[relation]
+        ]
         display: list[dict[str, str]] = []
         types: dict[str, str] = {}
         for values in loaded:

@@ -14,7 +14,7 @@ def _engine() -> Engine:
             sqls=REPOSITORY / "admin" / "sqls",
             mapping=REPOSITORY / "admin" / "config" / "lookup_sql_table_mapping.csv",
         ),
-        executor=DuckDBExecutor,
+        executor=DuckDBExecutor(),
     )
 
 

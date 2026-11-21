@@ -33,7 +33,7 @@ def plan(
     mocks: tuple[str, ...],
     grid_rows: dict[str, list[dict[str, str]]],
 ) -> Plan:
-    engine = Engine(catalog=catalog(repository), executor=DuckDBExecutor)
+    engine = Engine(catalog=catalog(repository), executor=DuckDBExecutor())
     return engine.plan(target, rows=filled_rows(mocks, grid_rows))
 
 
@@ -43,5 +43,5 @@ def run(
     mocks: tuple[str, ...],
     grid_rows: dict[str, list[dict[str, str]]],
 ) -> RunResult:
-    engine = Engine(catalog=catalog(repository), executor=DuckDBExecutor)
+    engine = Engine(catalog=catalog(repository), executor=DuckDBExecutor())
     return engine.run(target, rows=filled_rows(mocks, grid_rows))

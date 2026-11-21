@@ -590,5 +590,7 @@ def test_case_saved_from_the_page_passes_without_the_app(tmp_path):
     folder = repo / "tests" / "cases" / "medicaid_members" / "from_the_app"
     assert folder.is_dir()
     config = RepositoryConfig.load(repo)
-    result = run_case(folder, Engine(catalog=config.catalog(), executor=DuckDBExecutor))
+    result = run_case(
+        folder, Engine(catalog=config.catalog(), executor=DuckDBExecutor())
+    )
     assert result.passed, result.report()

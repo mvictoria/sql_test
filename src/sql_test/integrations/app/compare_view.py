@@ -1,7 +1,7 @@
 import html
 from pathlib import Path
 
-from sql_test.engine.executor import Row
+from sql_test.engine.executor import Given, Row
 from sql_test.engine.relation import Relation
 from sql_test.engine.schema import Schema
 from sql_test.executors.duckdb import DuckDBExecutor
@@ -83,13 +83,7 @@ def _load_typed_rows(
         return []
     repo_catalog = catalog(repository)
     relation = Relation.parse(target).resolve(repo_catalog.relations().keys())
-    executor = DuckDBExecutor()
-    executor.setup()
-    try:
-        executor.create_relation(relation, schema, rows)
-        return executor.read_rows(relation)
-    finally:
-        executor.teardown()
+    return DuckDBExecutor().run({relation: Given(schema, rows)}, [])[relation]
 
 
 def _target_schema(repository: Path, target: str) -> Schema | None:

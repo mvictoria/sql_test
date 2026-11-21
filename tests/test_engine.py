@@ -17,7 +17,7 @@ def test_runs_a_tables_sql_over_given_rows():
             sqls=REPOSITORY / "admin" / "sqls",
             mapping=REPOSITORY / "admin" / "config" / "lookup_sql_table_mapping.csv",
         ),
-        executor=DuckDBExecutor,
+        executor=DuckDBExecutor(),
     )
 
     result = engine.run(
@@ -43,7 +43,7 @@ def test_runs_upstream_sql_before_the_table():
             sqls=REPOSITORY / "admin" / "sqls",
             mapping=REPOSITORY / "admin" / "config" / "lookup_sql_table_mapping.csv",
         ),
-        executor=DuckDBExecutor,
+        executor=DuckDBExecutor(),
     )
 
     result = engine.run(
@@ -70,7 +70,7 @@ def test_run_counts_rows_for_each_relation():
             sqls=REPOSITORY / "admin" / "sqls",
             mapping=REPOSITORY / "admin" / "config" / "lookup_sql_table_mapping.csv",
         ),
-        executor=DuckDBExecutor,
+        executor=DuckDBExecutor(),
     )
 
     result = engine.run(
@@ -111,7 +111,7 @@ def test_reports_a_cycle(tmp_path):
     with pytest.raises(CycleError):
         Engine(
             catalog=mapped_sql_folder(sqls=tmp_path, mapping=mapping),
-            executor=DuckDBExecutor,
+            executor=DuckDBExecutor(),
         ).run("a", rows={})
 
 
@@ -121,7 +121,7 @@ def test_reports_an_ambiguous_table():
             sqls=REPOSITORY / "admin" / "sqls",
             mapping=REPOSITORY / "admin" / "config" / "lookup_sql_table_mapping.csv",
         ),
-        executor=DuckDBExecutor,
+        executor=DuckDBExecutor(),
     )
 
     with pytest.raises(AmbiguousRelation, match="billing.members.*claims.members"):
@@ -140,7 +140,7 @@ def test_given_rows_load_with_their_schema_types():
             sqls=REPOSITORY / "admin" / "sqls",
             mapping=REPOSITORY / "admin" / "config" / "lookup_sql_table_mapping.csv",
         ),
-        executor=DuckDBExecutor,
+        executor=DuckDBExecutor(),
     )
 
     result = engine.run(
@@ -158,7 +158,7 @@ def test_columns_missing_from_given_rows_are_null():
             sqls=REPOSITORY / "admin" / "sqls",
             mapping=REPOSITORY / "admin" / "config" / "lookup_sql_table_mapping.csv",
         ),
-        executor=DuckDBExecutor,
+        executor=DuckDBExecutor(),
     )
 
     result = engine.run("members", rows={"members": [{"member_id": "1"}]})
@@ -180,7 +180,7 @@ def test_run_says_whether_the_target_sql_orders_its_rows(tmp_path):
     )
     engine = Engine(
         catalog=mapped_sql_folder(sqls=tmp_path, mapping=mapping),
-        executor=DuckDBExecutor,
+        executor=DuckDBExecutor(),
     )
 
     assert engine.run("ordered", rows={}).ordered
