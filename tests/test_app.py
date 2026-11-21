@@ -65,8 +65,40 @@ def test_app_page_lists_models_and_sources():
     assert "medicaid_members" in body
     assert "medicaid_members_named_alice" in body
     assert "members" in body
-    assert "Sources" in body
+    assert "Tables" in body
+    assert "Tests" in body
+    assert "In pipelines" in body
     assert "Boundaries" not in body
+
+
+def test_untested_table_with_pipeline_case_opens_from_the_browser(tmp_path):
+    repo = tmp_path / "repo"
+    shutil.copytree(FIXTURE, repo)
+    shutil.rmtree(repo / "tests" / "cases" / "medicaid_members")
+
+    server = _with_server(repo)
+    try:
+        home = _get(server, "/")
+        assert 'data-table="medicaid_members"' in home
+        assert 'data-tests="0"' in home
+        assert 'href="/?pipelines=medicaid_members"' in home
+        assert 'data-pipelines="1"' in home
+        pipelines = _get(server, "/?pipelines=medicaid_members")
+        href = "/workbench?case=" + quote(
+            "medicaid_members_named_alice/only_medicaid_alices", safe=""
+        )
+        assert href in pipelines
+        assert (
+            'data-pipeline-case="medicaid_members_named_alice/only_medicaid_alices"'
+            in pipelines
+        )
+        body = _get(server, href)
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert "Workbench" in body
+    assert "only_medicaid_alices" in body
 
 
 def test_selecting_a_model_opens_the_workbench():
