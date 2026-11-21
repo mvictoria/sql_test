@@ -89,7 +89,7 @@ sql-test coverage [repository]
 sql-test app [repository] [--port 8765]
 ```
 
-- `init` — write a minimal consuming-repository skeleton (refuses an existing `pyproject.toml`)
+- `init` — write a minimal consuming-repository skeleton; adds `[tool.sql-test]` to an existing `pyproject.toml`, refuses if that table is already present
 - `repository` / `directory` — path (default `.`)
 - `--port` — localhost port for `app` (default `8765`)
 

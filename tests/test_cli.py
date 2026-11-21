@@ -112,9 +112,31 @@ def test_init_writes_a_consumer_skeleton_that_discovers_and_passes_pytest(
     assert result.returncode == 0, result.stdout + result.stderr
 
 
-def test_init_refuses_an_existing_pyproject(
+def test_init_adds_sql_test_section_to_an_existing_pyproject(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ):
-    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'x'\n")
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "orders-data"\nversion = "1.0.0"\n'
+    )
+    assert main(["init", str(tmp_path)]) == 0
+    text = (tmp_path / "pyproject.toml").read_text()
+    assert 'name = "orders-data"' in text
+    assert "[tool.sql-test]" in text
+    assert 'sqls = "admin/sqls"' in text
+    assert (tmp_path / "admin/sqls/example.sql").is_file()
+    assert main(["discover", str(tmp_path)]) == 0
+    assert "example" in capsys.readouterr().out
+
+
+def test_init_refuses_when_sql_test_is_already_configured(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+):
+    (tmp_path / "pyproject.toml").write_text(
+        "[tool.sql-test]\n"
+        'sqls = "admin/sqls"\n'
+        'mapping = "admin/config/lookup_sql_table_mapping.csv"\n'
+        'schemas = "admin/sqls"\n'
+        'cases = "tests/cases"\n'
+    )
     assert main(["init", str(tmp_path)]) == 1
-    assert "already has" in capsys.readouterr().err
+    assert "[tool.sql-test]" in capsys.readouterr().err
