@@ -4,7 +4,7 @@ from enum import StrEnum
 from graphlib import TopologicalSorter
 
 from sql_test.engine.catalog import Catalog
-from sql_test.engine.lineage.graph import Lineage, upstream_lineage
+from sql_test.engine.lineage.graph import SourceReason, upstream_lineage
 from sql_test.engine.operation import Operation
 from sql_test.engine.relation import Relation
 
@@ -22,21 +22,19 @@ class MissingRows(Exception):
 
 @dataclass(frozen=True)
 class Plan:
-    lineage: Lineage
+    target: Relation
     states: dict[Relation, State]
-    operations: list[Operation]
+    built_from: dict[Relation, set[Relation]]
+    source_reasons: dict[Relation, SourceReason]
     needs_rows: set[Relation]
     unused: set[Relation]
-
-    def check_rows(self) -> None:
-        if self.needs_rows:
-            names = ", ".join(sorted(map(str, self.needs_rows)))
-            raise MissingRows(f"These relations still need rows: {names}")
+    operations: list[Operation]
 
 
 def plan_run(target: Relation, catalog: Catalog, given: Mapping[Relation, int]) -> Plan:
     """Plan building `target`; `given` maps each given relation to its row count."""
     lineage = upstream_lineage(target, catalog)
+    projection = lineage.projection()
     states: dict[Relation, State] = {}
     built_from: dict[Relation, set[Relation]] = {}
     pending = [target]
@@ -48,7 +46,7 @@ def plan_run(target: Relation, catalog: Catalog, given: Mapping[Relation, int]) 
             states[relation] = State.GIVEN
         elif relation in lineage.models:
             states[relation] = State.EXECUTED
-            built_from[relation] = lineage.projection()[relation]
+            built_from[relation] = projection[relation]
             pending.extend(built_from[relation])
         else:
             states[relation] = State.SOURCE
@@ -66,8 +64,10 @@ def plan_run(target: Relation, catalog: Catalog, given: Mapping[Relation, int]) 
         if state is State.SOURCE or (state is State.GIVEN and not given[relation])
     }
     return Plan(
-        lineage=lineage,
+        target=target,
         states=states,
+        built_from=projection,
+        source_reasons=lineage.source_reasons,
         operations=operations,
         needs_rows=needs_rows,
         unused={
