@@ -85,7 +85,6 @@ class Workbench:
             on_add_row=self.add_row,
             on_delete_row=self.delete_row,
             on_duplicate_row=self.duplicate_row,
-            on_apply=self.apply,
             on_run=self.run,
             on_save=self.save,
         )
@@ -219,7 +218,7 @@ class Workbench:
         self.state.panel = None
         self.state.message = None
 
-    def apply(self) -> None:
+    def run(self) -> None:
         state = self.state
         self._reset_results()
         self.reload_catalog()
@@ -227,16 +226,6 @@ class Workbench:
         try:
             typed, state.engine_types = type_grid_rows(state.catalog, mocked)
             state.grid_rows.update(typed)
-            state.message = Message("Mock rows typed with schema types", ok=True)
-        except Exception as error:  # noqa: BLE001 — show failures in the page
-            state.message = Message(f"Could not load mocks: {error}", ok=False)
-        self.refresh()
-
-    def run(self) -> None:
-        state = self.state
-        self._reset_results()
-        self.reload_catalog()
-        try:
             result = run_case(state.catalog, state.target, state.mocks, state.grid_rows)
             panel = compare_section(
                 state.catalog,

@@ -55,7 +55,7 @@ Done:
 - [ENG-29](#eng-29)
 
 
-v0.5 CI is done: [CI-1](#ci-1), [CI-2](#ci-2), [CI-3](#ci-3), [CI-4](#ci-4), [CI-5](#ci-5). [APP-17](#app-17), [APP-19](#app-19), and [APP-8](#app-8) are done. [CFG-1](#cfg-1) is done. Further CLI commands ([CLI-2](#cli-2)–[CLI-6](#cli-6)) are parked until a demonstrated need; the CLI's job today is `sql-test app`.
+v0.5 CI is done: [CI-1](#ci-1), [CI-2](#ci-2), [CI-3](#ci-3), [CI-4](#ci-4), [CI-5](#ci-5). [APP-17](#app-17), [APP-19](#app-19), and [APP-8](#app-8) are done. [APP-25](#app-25) is done. [CFG-1](#cfg-1) is done. Further CLI commands ([CLI-2](#cli-2)–[CLI-6](#cli-6)) are parked until a demonstrated need; the CLI's job today is `sql-test app`.
 
 ### Project skeleton
 
@@ -745,6 +745,16 @@ Run the case from the page and show the target's rows, with row counts on each t
   - [APP-5](#app-5)
   - [APP-6](#app-6)
   - [ENG-17](#eng-17)
+
+<a id="app-25"></a>
+#### APP-25 Fold Apply into Run (done)
+
+“Apply to engine” is a ritual click beside Run. Run already types mocks and executes; Apply only previews schema types. Typing and engine types happen as part of Run (and optionally when the grid needs types), so Apply is not required on the happy path. If a type-preview control remains, it is secondary — not a peer of Run/Save.
+
+- **Done when:** the Alice case reaches Passed with Run (and Save) only — never clicking Apply; column engine types still appear after a successful Run (or an equivalent non-blocking preview); the primary action row is Run and Save, not Apply / Run / Save as three equal peers.
+- **Depends on:**
+  - [APP-6](#app-6)
+  - [APP-9](#app-9)
 
 <a id="app-10"></a>
 #### APP-10 Expected and actual side by side (done)
