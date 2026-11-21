@@ -6,6 +6,7 @@ A library for testing SQL transformations: mock upstream tables, run the real SQ
 
 - **Design decisions** (case format, lineage, mocking, coverage, architecture): [docs/HELPER.md](docs/HELPER.md). Read it before changing engine behaviour or the case format.
 - **Work items**: [docs/ROADMAP.md](docs/ROADMAP.md). Each story has an ID such as `ENG-2`, a done-when, and its dependencies. Find the story before starting work, and update the roadmap when scope changes.
+- **Adoption UAT**: [docs/UAT.md](docs/UAT.md). Pre-release adoption stories come from this pass; prefer those over opening Spark/incremental early.
 
 ## Way of working
 

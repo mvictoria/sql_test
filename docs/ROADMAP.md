@@ -57,7 +57,7 @@ Done:
 
 v0.5 CI is done: [CI-1](#ci-1), [CI-2](#ci-2), [CI-3](#ci-3), [CI-4](#ci-4), [CI-5](#ci-5). Authoring app v0.3 is done ([APP-8](#app-8), [APP-17](#app-17), [APP-19](#app-19), and the earlier APP stories). [APP-25](#app-25) is done. [CFG-1](#cfg-1) is done.
 
-**Before the next release:** performance for massive repositories — [ENG-31](#eng-31) then [ENG-32](#eng-32) — plus polish from UAT. Frontend ease-of-use design work happens in parallel; keep [APP-18](#app-18) parked until that design and UAT say synthetic fill is the right next UX. Do not open Spark, incremental, or richer lineage until after the release. Further CLI commands ([CLI-2](#cli-2)–[CLI-6](#cli-6)) stay parked; the CLI's job today is `sql-test app`.
+**Before the next release** (from [UAT.md](UAT.md)): adoption first — [CI-6](#ci-6), [DOC-1](#doc-1), [CLI-7](#cli-7), [ENG-36](#eng-36), [APP-20](#app-20), [APP-21](#app-21) — then or beside massive-repo perf [ENG-31](#eng-31) and [ENG-32](#eng-32). Keep [APP-18](#app-18) parked until UAT and front-end design say synthetic fill is next. Do not open Spark, incremental, or richer lineage until after the release. Further CLI commands ([CLI-2](#cli-2)–[CLI-6](#cli-6)) stay parked; the CLI's job today is `sql-test app` (plus [CLI-7](#cli-7) when built).
 
 ### Project skeleton
 
@@ -759,7 +759,7 @@ Faker is an optional dependency of the authoring app only. It does not write `ex
   - [APP-9](#app-9)
   - [APP-11](#app-11)
   - [APP-12](#app-12)
-- **Parked until:** UAT and front-end design work make mock entry easier overall; only then decide whether seeded Faker fill is the right next control (hand entry, Tab order, and paste may already be enough).
+- **Parked until:** UAT and front-end design work make mock entry easier overall ([UAT.md](UAT.md)); only then decide whether seeded Faker fill is the right next control (hand entry, Tab order, and paste may already be enough).
 
 ### Run and compare
 
@@ -952,6 +952,60 @@ Run the tool's CI workflow on pull requests only, not on pushes to `main`. Skip 
 
 - **Done when:** merging to `main` does not start the tool CI workflow, and a Markdown-only PR does not start it either.
 - **Depends on:** [CI-1](#ci-1)
+
+---
+
+## Pre-release — adoption (from UAT)
+
+Findings and method: [UAT.md](UAT.md). Happy path after install is strong; getting a stranger to that path is not. Do this before opening v0.6+. Massive-repo planning cost is a parallel track: [ENG-31](#eng-31), [ENG-32](#eng-32).
+
+<a id="ci-6"></a>
+#### CI-6 Floating adopt tag and pins
+
+[UAT.md](UAT.md) #1 and #5: documented `git+…@v0` and the sample workflow pin `@v0` failed because no floating major tag existed. Ship (or keep current) a floating adopt tag that matches the README and the sample workflow, document `@main` only as a bleeding-edge fallback, and make a greenfield `uv add "sql-test @ git+…@<tag>"` succeed.
+
+- **Done when:** a new directory can `uv add` the documented tag and import `sql_test`; the sample workflow pin resolves; README and [CI-3](#ci-3) adopt text name the same tag.
+- **Depends on:** [CI-2](#ci-2), [CI-3](#ci-3)
+
+<a id="doc-1"></a>
+#### DOC-1 Copy-pasteable consumer project
+
+[UAT.md](UAT.md) #2, #3, #10, #11: the sample's `pyproject.toml` is only `[tool.sql-test]`, so literal README `uv add` fails without a `[project]` table (and usually `[tool.uv] package = false`). Adopt docs must include a full minimal consumer `pyproject.toml`, mapping CSV headers (`table_ref`, `sql_ref`), Python version floor, and either a standalone sample that installs `sql-test` itself or a clear “this folder is monorepo-only” warning.
+
+- **Done when:** following the adopt section alone produces a consumer repo that installs, discovers, and runs one case under pytest without reading HELPER.
+- **Depends on:** [CI-6](#ci-6), [CI-3](#ci-3)
+
+<a id="cli-7"></a>
+#### CLI-7 `sql-test init`
+
+[UAT.md](UAT.md) #4 and #13: adopters invent mapping shape, DDL layout, case folders, `conftest.py`, and `test_case_folders.py`. `sql-test init [path]` writes a minimal consumer skeleton (config, mapping stub, sqls stub, one empty case layout, pytest wiring) so `discover` and pytest work before any product SQL exists.
+
+- **Done when:** `sql-test init /tmp/demo && cd /tmp/demo && uv sync && uv run pytest` is green (or skips with an explicit “add SQL” message), and `sql-test discover .` lists the stub model once a SELECT + mapping row are filled in.
+- **Depends on:** [DOC-1](#doc-1), [CLI-1](#cli-1)
+
+<a id="eng-36"></a>
+#### ENG-36 Diagnose adoption failures
+
+[UAT.md](UAT.md) #6–#9: missing DDL, bad `sql_ref`, typo’d `sqls=` path, wrong mapping headers, INSERT-as-producer, and misnamed mock columns often look like unused mocks, empty actuals, `KeyError`, or raw `CycleError`. Validate mapping headers; name missing SQL files and configured paths; reject or explain INSERT/MERGE producers until those kinds exist; report unknown mock/expected columns against the schema before compare looks like a logic fail.
+
+- **Done when:** each of those failure modes names the file or config key involved, and none of the UAT reproduction steps surface only `mocks the run never reads` or an uncaught traceback for those mistakes.
+- **Depends on:** [ENG-9](#eng-9), [ENG-25](#eng-25), [ENG-2](#eng-2)
+
+<a id="app-20"></a>
+#### APP-20 First-run authoring polish
+
+[UAT.md](UAT.md) #12, #15–#19: blank workbench is dense; Case name is easy to miss; compliance copy says “member” data; port-in-use looks like success then dies; broken configured paths show errno. Emphasize naming a case before Save; generalize the synthetic-data reminder; fail clearly when the port is taken; warm up broken-path errors the way Settings does for missing config; gloss “in pipelines” on first contact.
+
+- **Done when:** a UAT-style first save without a name points at the Case name field; compliance copy is repo-agnostic; a busy port never prints a false “serving at” success; a bad `sqls=` path names the path.
+- **Depends on:** [APP-16](#app-16), [APP-14](#app-14)
+
+<a id="app-21"></a>
+#### APP-21 Accept actual as expected in the workbench
+
+[UAT.md](UAT.md) #20: [APP-11](#app-11) is marked done, but the adopt README still said accept was missing and a greenfield Run still left expected hand-built. Wire (or restore) accept cell / row / all in the NiceGUI expected view so a good Run can become a passing case without editing CSV by hand.
+
+- **Done when:** after Run, accepting the whole actual result fills expected and the case passes; README no longer says accept is unimplemented.
+- **Depends on:** [APP-11](#app-11), [APP-16](#app-16)
 
 ---
 
