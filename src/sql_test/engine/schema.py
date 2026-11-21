@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
+from functools import cache
 from pathlib import Path
 from typing import Any, Self
 
@@ -26,7 +27,7 @@ class Column:
         """Read `text` as this column's type; raises ValueError if it is not one."""
         if text is None:
             return None
-        kind = exp.DataType.build(self.type).this
+        kind = _kind(self.type)
         if kind in exp.DataType.INTEGER_TYPES:
             return int(text)
         if kind in _DECIMALS:
@@ -45,6 +46,11 @@ class Column:
         if kind in exp.DataType.TEMPORAL_TYPES:
             return datetime.fromisoformat(text)
         return text
+
+
+@cache
+def _kind(type: str) -> exp.DataType.Type:
+    return exp.DataType.build(type).this
 
 
 type Schema = tuple[Column, ...]
