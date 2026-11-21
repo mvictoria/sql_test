@@ -14,7 +14,6 @@ class Operation:
     sql_file: Path
     writes: Relation
     kind: Kind
-    load_type: str | None = None
 
     @property
     def sql(self) -> str:

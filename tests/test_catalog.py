@@ -23,13 +23,11 @@ def test_mapped_sql_files_are_full_load_operations():
             sql_file=sqls / "medicaid_members.sql",
             writes=Relation(name="medicaid_members"),
             kind=Kind.FULL_LOAD,
-            load_type="historic",
         ),
         Operation(
             sql_file=sqls / "medicaid_members_named_alice.sql",
             writes=Relation(name="medicaid_members_named_alice"),
             kind=Kind.FULL_LOAD,
-            load_type="historic",
         ),
     ]
 
