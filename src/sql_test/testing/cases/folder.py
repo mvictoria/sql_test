@@ -4,9 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from sql_test.engine.executor import Row
-from sql_test.engine.relation import Relation
-from sql_test.engine.schema import Column, Schema
+from sql_test.engine import Column, Relation, Row, Schema
 
 EXPECTED = "expected.csv"
 

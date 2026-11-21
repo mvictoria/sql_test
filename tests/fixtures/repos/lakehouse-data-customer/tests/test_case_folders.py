@@ -3,8 +3,7 @@ from pathlib import Path
 import pytest
 
 from sql_test.integrations.config import RepositoryConfig
-from sql_test.testing.cases import case_folders, case_id
-from sql_test.testing.run import run_case
+from sql_test.testing import case_folders, case_id, run_case
 
 CASES = RepositoryConfig.load(Path(__file__).parent.parent).cases
 

@@ -631,6 +631,8 @@ Dependencies point one way:
 - the test layer imports the engine
 - integrations import the test layer, the engine, and executors
 
+Each layer's package is its **front door**: `sql_test.engine`, `sql_test.executors`, and `sql_test.testing` export what other layers and consuming repositories use, and nothing outside a layer imports its modules directly. The app is exempt until [APP-15](ROADMAP.md#app-15).
+
 ## Entry point sequence
 
 Entry points are added one at a time, and each stays thin:

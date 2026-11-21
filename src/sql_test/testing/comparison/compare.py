@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-from sql_test.engine.executor import Row
+from sql_test.engine import Row
 from sql_test.testing.cases import CaseTable
 
 
