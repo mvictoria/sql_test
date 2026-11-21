@@ -369,7 +369,7 @@ These rules are part of the case format; changing one means migrating every case
 - **Duplicates count.** Rows are compared as a multiset: if expected has a row once and actual has it twice, the case fails.
 - **NULL** is an empty, unquoted cell. A quoted empty cell (`""`) is an empty string. Spreadsheets do not quote empty cells, so pasted blanks are NULL.
 - **Columns:** only the columns listed in `expected.csv` are checked; other output columns are ignored. A listed column the target does not have fails the case.
-- **Values** are compared after typing the expected cells with the target's schema, so `1` and `1.0` in an integer column are equal.
+- **Values** are compared after typing the expected cells with the target's schema, so `1` and `1.0` in an integer column are equal. An expected cell that cannot be cast to its column's type fails the case, naming the cell.
 
 ## Saving
 
