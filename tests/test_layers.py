@@ -44,6 +44,14 @@ def test_layer_does_not_import(layer, forbidden):
     }
 
 
+def test_executors_import_only_the_executor_interface():
+    imports = set(imported_modules("executors"))
+    assert {name for name in imports if name.startswith("sql_test.")} <= {
+        "sql_test.engine.executor",
+        "sql_test.executors.duckdb",
+    }
+
+
 @pytest.mark.parametrize(
     ("layer", "exclude", "fronts"),
     [

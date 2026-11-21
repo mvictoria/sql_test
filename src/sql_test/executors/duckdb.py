@@ -2,10 +2,7 @@ from typing import Any
 
 import duckdb
 
-from sql_test.engine.executor import Row
-from sql_test.engine.operation import Kind, Operation
-from sql_test.engine.relation import Relation
-from sql_test.engine.schema import Schema
+from sql_test.engine.executor import Kind, Operation, Relation, Row, Schema
 
 
 class DuckDBExecutor:
