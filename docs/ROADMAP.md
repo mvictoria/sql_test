@@ -396,9 +396,17 @@ The saving applies to every case, on every run. What remains is almost all loadi
 - **Depends on:** [ENG-14](#eng-14)
 
 <a id="eng-35"></a>
-#### ENG-35 Load each mock in one insert
+#### ENG-35 Load each mock in one insert (done)
 
-The DuckDB executor loads a mock with `executemany`, which runs one `INSERT` per row. In the [ENG-34](#eng-34) measurement, after that fix, this was 96% of a case with 100-row mocks: about 207 ms per mock. A single multi-row `INSERT` loads the same rows two to three and a half times faster in a micro-benchmark.
+The DuckDB executor loaded a mock with `executemany`, which runs one `INSERT` per row. In the [ENG-34](#eng-34) measurement, after that fix, this was 96% of a case with 100-row mocks: about 207 ms per mock. It now loads a mock in one `INSERT` that binds one list per column and unnests them. That is faster than one multi-row `INSERT` too, which binds every cell separately. For mocks of 10 mixed-type columns, median of 7 runs:
+
+| Rows per mock | `executemany` | One multi-row `INSERT` | One `INSERT` of unnested columns |
+| --- | --- | --- | --- |
+| 4 | 13.9 ms | 7.5 ms | 6.1 ms |
+| 100 | 362 ms | 73.7 ms | 6.7 ms |
+| 1,000 | 2.81 s | 280 ms | 43.6 ms |
+
+Per case, on the [ENG-34](#eng-34) case, with two mocks and an expected file of 10 columns: 44.8 ms → 14.5 ms at 4 rows, 381 ms → 26.2 ms at 100 rows, and 3.86 s → 98 ms at 1,000 rows. A serial `pytest` run of 2,000 cases with 4-row mocks went from 51 s to 35 s. Stored values are the same as with `executemany`, including decimals, huge integers, nulls, and text cast to typed columns.
 
 - **Done when:** loading a mock of many rows runs one insert; and a 100-row mock of 10 columns loads at least twice as fast as with `executemany`.
 - **Depends on:** [ENG-27](#eng-27)
