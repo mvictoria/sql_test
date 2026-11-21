@@ -35,11 +35,13 @@ customer-data/
 └── .github/workflows/data-tests.yml    # calls the reusable workflow
 ```
 
-**Install locally** from a git tag (same tags CI uses), if you are not using `init`:
+**Install locally** from the floating major tag (same pin CI uses), if you are not using `init`:
 
 ```bash
 uv add "sql-test @ git+https://github.com/mvictoria/sql_test.git@v0"
 ```
+
+Use `@main` only as a bleeding-edge fallback while developing against unreleased commits.
 
 **Configure** paths in `pyproject.toml` (all four required, relative to the repository root):
 
@@ -74,9 +76,9 @@ Copy [lakehouse-data-customer/.github/workflows/data-tests.yml](lakehouse-data-c
 
 1. Start the **PR title** with `(major)`, `(minor)`, or `(patch)` as the first word when that PR should release (case-insensitive; example: `(patch) CI-2: versioned releases`). Later mentions are ignored. Skip the token if it should not release.
 2. Merge with linear history (rebase). CD runs on `main`, finds the merged PR, and tags **`main`'s new tip** — not the old branch commits.
-3. The tag push builds the wheel/sdist, creates/updates the GitHub Release, and moves floating `vX` (for example `v0`).
+3. CD tags **`main`'s tip**, builds the wheel/sdist, creates/updates the GitHub Release, and moves floating `vX` (for example `v0`) in that same run — a bot tag push alone does not start a second workflow.
 
-Manual tag push (`git tag vX.Y.Z && git push origin vX.Y.Z`) still runs the same build/release path.
+Manual tag push (`git tag vX.Y.Z && git push origin vX.Y.Z`) still runs the release job.
 
 ## CLI
 

@@ -60,9 +60,9 @@ Done:
 
 Per-case performance is done: after [ENG-31](#eng-31), [ENG-34](#eng-34), and [ENG-35](#eng-35) a case costs about 15–25 ms, spread across reading CSVs, DuckDB, and fixed overhead. The remaining performance stories are tabled because each saves little at expected scale: [ENG-30](#eng-30), [ENG-32](#eng-32), [ENG-37](#eng-37), [COV-5](#cov-5) (measured by [TEST-2](#test-2)).
 
-v0.5 CI is done: [CI-1](#ci-1), [CI-2](#ci-2), [CI-3](#ci-3), [CI-4](#ci-4), [CI-5](#ci-5). Authoring app v0.3 is done ([APP-8](#app-8), [APP-17](#app-17), [APP-19](#app-19), and the earlier APP stories). [APP-25](#app-25) is done. [APP-30](#app-30) is done. [APP-27](#app-27) is done. [CFG-1](#cfg-1) is done.
+v0.5 CI is done: [CI-1](#ci-1), [CI-2](#ci-2), [CI-3](#ci-3), [CI-4](#ci-4), [CI-5](#ci-5), [CI-6](#ci-6). Authoring app v0.3 is done ([APP-8](#app-8), [APP-17](#app-17), [APP-19](#app-19), and the earlier APP stories). [APP-25](#app-25) is done. [APP-30](#app-30) is done. [APP-27](#app-27) is done. [CFG-1](#cfg-1) is done.
 
-**Before the next release** (from [UAT.md](UAT.md)): adoption first — [CI-6](#ci-6), [DOC-1](#doc-1), [CLI-7](#cli-7), [ENG-36](#eng-36), [APP-20](#app-20), [APP-21](#app-21). Massive-repo performance is done ([ENG-31](#eng-31), [ENG-33](#eng-33)–[ENG-35](#eng-35)); the rest is tabled. Workbench navigation track in parallel: [APP-30](#app-30) (done), [APP-27](#app-27) (done), then [APP-26](#app-26), [APP-28](#app-28), [APP-29](#app-29). Keep [APP-18](#app-18) parked until UAT and front-end design say synthetic fill is next. Do not open Spark, incremental, or richer lineage until after the release. Further CLI commands ([CLI-2](#cli-2)–[CLI-6](#cli-6)) stay parked; the CLI's job today is `sql-test app` (plus [CLI-7](#cli-7) when built).
+**Before the next release** (from [UAT.md](UAT.md)): adoption first — [DOC-1](#doc-1), [CLI-7](#cli-7), [ENG-36](#eng-36), [APP-20](#app-20), [APP-21](#app-21). Massive-repo performance is done ([ENG-31](#eng-31), [ENG-33](#eng-33)–[ENG-35](#eng-35)); the rest is tabled. Workbench navigation track in parallel: [APP-30](#app-30) (done), [APP-27](#app-27) (done), then [APP-26](#app-26), [APP-28](#app-28), [APP-29](#app-29). Keep [APP-18](#app-18) parked until UAT and front-end design say synthetic fill is next. Do not open Spark, incremental, or richer lineage until after the release. Further CLI commands ([CLI-2](#cli-2)–[CLI-6](#cli-6)) stay parked; the CLI's job today is `sql-test app` (plus [CLI-7](#cli-7) when built).
 
 ### Project skeleton
 
@@ -997,6 +997,7 @@ Done:
 - [CI-3](#ci-3)
 - [CI-4](#ci-4)
 - [CI-5](#ci-5)
+- [CI-6](#ci-6)
 
 <a id="ci-1"></a>
 #### CI-1 Reusable GitHub Actions workflow (done)
@@ -1056,9 +1057,9 @@ Run the tool's CI workflow on pull requests only, not on pushes to `main`. Skip 
 Findings and method: [UAT.md](UAT.md). Happy path after install is strong; getting a stranger to that path is not. Do this before opening v0.6+. Massive-repo planning cost is a parallel track: [ENG-31](#eng-31), [ENG-32](#eng-32).
 
 <a id="ci-6"></a>
-#### CI-6 Floating adopt tag and pins
+#### CI-6 Floating adopt tag and pins (done)
 
-[UAT.md](UAT.md) #1 and #5: documented `git+…@v0` and the sample workflow pin `@v0` failed because no floating major tag existed. Ship (or keep current) a floating adopt tag that matches the README and the sample workflow, document `@main` only as a bleeding-edge fallback, and make a greenfield `uv add "sql-test @ git+…@<tag>"` succeed.
+[UAT.md](UAT.md) #1 and #5: documented `git+…@v0` and the sample workflow pin `@v0` failed because no floating major tag existed (CD tagged `v0.0.1` but a `GITHUB_TOKEN` tag push never started the release job, so `v0` never moved). CD now builds the release and moves `vX` in the same `tag-from-pr` run. The floating adopt tag matches the README and the sample workflow; `@main` is documented only as a bleeding-edge fallback.
 
 - **Done when:** a new directory can `uv add` the documented tag and import `sql_test`; the sample workflow pin resolves; README and [CI-3](#ci-3) adopt text name the same tag.
 - **Depends on:** [CI-2](#ci-2), [CI-3](#ci-3)

@@ -12,6 +12,7 @@ permissions:
 jobs:
   # After a PR lands on main (rewritten SHAs), read the bump from that PR's
   # title and tag this commit — never the pre-merge branch tip.
+  # Publish in this same job: a GITHUB_TOKEN tag push does not start workflows.
   tag-from-pr:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -24,6 +25,7 @@ jobs:
           fetch-depth: 0
 
       - name: Tag release from PR title
+        id: bump
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -34,12 +36,14 @@ jobs:
           title="$(printf '%s' "$pr_json" | python3 -c 'import json,sys; ps=json.load(sys.stdin); print(ps[0]["title"] if ps else "")')"
           if [[ -z "$title" ]]; then
             echo "No PR associated with ${{ github.sha }}; skip tag."
+            echo "tag=" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           echo "PR title: $title"
           bump="$(python3 scripts/cd_bump.py from-title "$title")"
           if [[ -z "$bump" ]]; then
             echo "PR title does not start with (major)|(minor)|(patch); skip tag."
+            echo "tag=" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           latest="$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' | sort -V | tail -1 || true)"
@@ -49,7 +53,43 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag "$tag" "${{ github.sha }}"
           git push origin "$tag"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
+      - name: Install uv
+        if: steps.bump.outputs.tag != ''
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+          python-version: "3.14"
+
+      - name: Build
+        if: steps.bump.outputs.tag != ''
+        run: uv build
+
+      - name: Create GitHub Release
+        if: steps.bump.outputs.tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${{ steps.bump.outputs.tag }}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" dist/* --clobber
+          else
+            gh release create "$tag" dist/* --generate-notes --verify-tag
+          fi
+
+      - name: Move major version tag
+        if: steps.bump.outputs.tag != ''
+        run: |
+          tag="${{ steps.bump.outputs.tag }}"
+          version="${tag#v}"
+          major="${version%%.*}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -f "v${major}" "$tag"
+          git push origin "v${major}" --force
+
+  # Manual / external semver tag pushes (GITHUB_TOKEN pushes from above do not hit this).
   release:
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
