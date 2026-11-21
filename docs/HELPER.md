@@ -125,6 +125,8 @@ Schemas are not stored in the case. Column types come from the schemas discovere
 
 The case format is a public contract: people and other tools write cases by hand. A change to it gets a new version here.
 
+A **case table** is the columns and typed rows of one CSV in a case — a mock file or `expected.csv`.
+
 - The folder names are the table under test and the case name. A mocked table's file is its relation name as written in the SQL, for example `members.csv` or `claims.members.csv`.
 - Each CSV is UTF-8, comma-separated, with a header row of column names and `\n` line endings.
 - Cells follow the [comparison defaults](#comparison-defaults): an empty, unquoted cell is NULL and `""` is an empty string. A cell is quoted only when it is empty or contains a comma, quote, or line break.
