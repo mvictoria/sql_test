@@ -1,0 +1,5 @@
+load_type,table_ref,sql_ref
+historic,staged_claims,staged_claims.sql
+historic,staged_members,staged_members.sql
+historic,member_claims,member_claims.sql
+historic,customer_summary,customer_summary.sql

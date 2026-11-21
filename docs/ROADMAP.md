@@ -490,7 +490,7 @@ Search or browse tables, select one as the table under test, or select an existi
 ### Lineage view
 
 <a id="app-4"></a>
-#### APP-4 Show lineage with states
+#### APP-4 Show lineage with states (done)
 
 Draw the upstream graph of the selected target with these states:
 
