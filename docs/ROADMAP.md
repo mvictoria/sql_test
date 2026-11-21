@@ -329,6 +329,14 @@ Resolving a name compared it with every relation in the catalog, and finding a r
 - **Done when:** resolving a name compares it only with relations of that name; planning a 50-table chain makes fewer than 250 relation comparisons; and parsing the same name twice parses it once.
 - **Depends on:** [ENG-26](#eng-26)
 
+<a id="eng-30"></a>
+#### ENG-30 SQL parameters
+
+Repositories whose orchestrator fills placeholders in SQL, such as `in (@@batch_var@@)`, had no lineage for those models: the placeholder does not parse, so the model became a source with unparseable SQL. The config's `parameter_style` names the placeholder syntax. Lineage replaces each placeholder with `NULL` before parsing; a run replaces each with the case's values from `parameters.csv`, joining several with `, `. See [SQL parameters](HELPER.md#sql-parameters).
+
+- **Done when:** a model reading `etl.claims` through `in (@@batch_var@@)` has `etl.claims` in its lineage; a case giving `batch_var` the values 41 and 42 runs SQL reading `in (41, 42)`; a placeholder the case gives no value fails the run, naming it; and a repository without `parameter_style` is unchanged.
+- **Depends on:** [CFG-1](#cfg-1)
+
 ### Comparison
 
 <a id="eng-14"></a>
@@ -889,35 +897,43 @@ Detect SQL that reads the table it writes, and show it as before and after rathe
   - [ENG-6](#eng-6)
 
 <a id="inc-2"></a>
-#### INC-2 Decide how target-before is stored
+#### INC-2 Decide how target-before is stored (done)
 
-Decide how a case folder holds the target's before state, and record it in [HELPER.md](HELPER.md).
-
+Decide how a case folder holds the target's before state, and record it in [HELPER.md](HELPER.md). Decided: nobody writes a before by hand. A case's mocks are the history, and case format version 2 adds `delta/<table>.csv`, a batch's change to any table, and `parameters.csv`, the run's [SQL parameter](#eng-30) values. An incremental case runs twice: a historical run builds every table's before from the history through the historical producers, then a CDC run applies the deltas and runs the incremental producers downstream of them. `expected.csv` is the whole table under test after the batch. `append` adds the returned rows to the before; `merge` updates rows whose `merge_key` matches and inserts the rest, with no deletes; `incremental` is a merge when the repository sets `merge_key`, otherwise an append. A [history check](#inc-5) compares the CDC run with a historical run over history and deltas together. `merge_key`, `parameter_style`, and `audit_columns` are optional config settings.
 - **Done when:** the decision is written in HELPER.md.
 - **Depends on:** none
 
 <a id="inc-3"></a>
 #### INC-3 Run incremental cases
 
-Load the target's before state, run the incremental SQL, and compare the target after against expected.
+Run an incremental case in two phases: a historical run builds each executed table's before from the case's history, then a CDC run applies the case's deltas and runs the incremental producers downstream of them, and the table under test after is compared with `expected.csv`. Several incremental producers of one table run in mapping order.
 
-- **Done when:** an incremental case passes and fails correctly.
+- **Done when:** for a → b → c with historical and merge producers, a case with history at a, a delta at a, and parameters for the batch passes and fails correctly on c after; b's before comes from the historical run, so a latest-record flag over b's existing rows flips correctly; a delta on a mid-chain table works the same; an append producer adds rows; and a merge in a repository without `merge_key` fails, naming the table.
 - **Depends on:**
   - [INC-1](#inc-1)
   - [INC-2](#inc-2)
+  - [ENG-30](#eng-30)
   - [ENG-13](#eng-13)
   - [SPK-4](#spk-4)
 
 <a id="inc-4"></a>
 #### INC-4 Incremental cases in the app
 
-Edit the target's before state in the grid and show before and after in the lineage view.
+Edit a case's history, deltas, and parameters in the grid, and show each incremental table's before and after in the lineage view.
 
 - **Done when:** an incremental case can be created and saved from the page.
 - **Depends on:**
   - [INC-3](#inc-3)
   - [APP-4](#app-4)
   - [APP-6](#app-6)
+
+<a id="inc-5"></a>
+#### INC-5 History check
+
+A CDC run must end where history ends. Every incremental case also runs the historical producers over the history with each delta applied, and compares each table the CDC run wrote with that historical run, ignoring the config's `audit_columns`. A difference fails the case, naming the table and rows. It catches an incremental SQL that drifts from its historical SQL, such as a changed key, without anyone writing an expectation for it.
+
+- **Done when:** a case whose incremental SQL merges on a different key than its historical SQL builds fails the history check, naming the table; a case whose two SQLs agree passes; and a column matching `audit_columns` is ignored.
+- **Depends on:** [INC-3](#inc-3)
 
 ---
 
