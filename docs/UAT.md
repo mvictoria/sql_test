@@ -100,7 +100,7 @@ Ordered roughly by how much they block a new adopter.
 
 Turned into roadmap stories under **Pre-release — adoption (from UAT)** in [ROADMAP.md](ROADMAP.md):
 
-1. Ship a real floating major tag and align README + sample CI pins — [CI-6](ROADMAP.md#ci-6).
+1. Ship a real floating major tag and align README + sample CI pins — [CI-6](ROADMAP.md#ci-6) (done).
 2. Copy-pasteable consumer `pyproject` / standalone sample — [DOC-1](ROADMAP.md#doc-1).
 3. `sql-test init` or template — [CLI-7](ROADMAP.md#cli-7).
 4. Path / DDL / mapping / INSERT diagnoses — [ENG-35](ROADMAP.md#eng-35).

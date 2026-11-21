@@ -84,7 +84,8 @@ def test_tool_ci_tests_python_313_through_315():
     assert 'target-version = "py313"' in pyproject
 
 
-def test_cd_tags_main_from_pr_title_then_releases_on_version_tag():
+def test_cd_tags_main_from_pr_title_then_releases_in_the_same_run():
+    """GITHUB_TOKEN tag pushes do not start workflows; publish in tag-from-pr."""
     workflow = _load(WORKFLOWS / "cd.yml")
     push = _on(workflow)["push"]
     assert "main" in push["branches"]
@@ -96,24 +97,34 @@ def test_cd_tags_main_from_pr_title_then_releases_on_version_tag():
     tag_step = next(
         s for s in tag_job["steps"] if s.get("name") == "Tag release from PR title"
     )
+    assert tag_step["id"] == "bump"
     assert "scripts/cd_bump.py" in tag_step["run"]
     assert "github.sha" in tag_step["run"]
+    assert "GITHUB_OUTPUT" in tag_step["run"]
+
+    for name in (
+        "Install uv",
+        "Build",
+        "Create GitHub Release",
+        "Move major version tag",
+    ):
+        step = next(s for s in tag_job["steps"] if s.get("name") == name)
+        assert "steps.bump.outputs.tag" in step["if"]
+    build = next(s for s in tag_job["steps"] if s.get("name") == "Build")
+    assert "uv build" in build["run"]
+    release = next(
+        s for s in tag_job["steps"] if s.get("name") == "Create GitHub Release"
+    )
+    assert "dist/" in release["run"]
+    move = next(
+        s for s in tag_job["steps"] if s.get("name") == "Move major version tag"
+    )
+    assert "git tag -f" in move["run"]
+    assert "git push" in move["run"] and "--force" in move["run"]
 
     job = workflow["jobs"]["release"]
     assert "refs/tags/v" in job["if"]
     assert job["permissions"]["contents"] == "write"
-    step_names = [s.get("name") for s in job["steps"]]
-    assert step_names.index("Build") < step_names.index("Create GitHub Release")
-    assert step_names.index("Create GitHub Release") < step_names.index(
-        "Move major version tag"
-    )
-    build = next(s for s in job["steps"] if s.get("name") == "Build")
-    assert "uv build" in build["run"]
-    release = next(s for s in job["steps"] if s.get("name") == "Create GitHub Release")
-    assert "dist/" in release["run"]
-    move = next(s for s in job["steps"] if s.get("name") == "Move major version tag")
-    assert "git tag -f" in move["run"]
-    assert "git push" in move["run"] and "--force" in move["run"]
 
 
 def test_package_version_is_dynamic_from_git():
