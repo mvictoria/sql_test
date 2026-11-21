@@ -720,7 +720,7 @@ Actual is read-only and expected is editable.
   - [ENG-15](#eng-15)
 
 <a id="app-11"></a>
-#### APP-11 Accept actual as expected
+#### APP-11 Accept actual as expected (done)
 
 In the expected/actual view:
 
@@ -728,6 +728,8 @@ In the expected/actual view:
 - accept an actual row as expected
 - accept the whole actual result as expected
 - remove an obsolete expected row
+
+Accepting rewrites the Expected grid and compares it again with the run on screen, without running the engine again. Saving the case writes it to `expected.csv`.
 
 - **Done when:** accepting the whole actual result makes the case pass.
 - **Depends on:** [APP-10](#app-10)

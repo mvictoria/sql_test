@@ -161,7 +161,7 @@ class Workbench:
     def refresh_result(self) -> None:
         self.result.clear()
         with self.result:
-            result_view(self.state, self.show_result_view)
+            result_view(self.state, self.show_result_view, self.accept_expected)
 
     def refresh_editor(self) -> None:
         self.editor.clear()
@@ -237,6 +237,22 @@ class Workbench:
         except Exception as error:  # noqa: BLE001 — show failures in the page
             state.message = Message(f"Could not run: {error}", ok=False)
         self.refresh()
+
+    def accept_expected(self, rows: list[dict[str, str | None]]) -> None:
+        state = self.state
+        state.grid_rows["expected"] = rows
+        if state.run_result is not None:
+            state.panel = compare_section(
+                state.catalog,
+                state.target,
+                rows,
+                state.run_result.rows,
+                ordered=state.run_result.ordered,
+            )
+        state.message = Message("Accepted actual as expected", ok=True)
+        self.refresh_editor()
+        self.refresh_result()
+        self.refresh_status()
 
     def save(self) -> None:
         state = self.state

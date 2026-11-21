@@ -2,20 +2,32 @@ from collections.abc import Callable
 
 from nicegui import ui
 
-from sql_test.engine import Row, RunResult
-from sql_test.integrations.app.compare_view import DiffPanel
+from sql_test.engine import Row, RunResult, Schema
+from sql_test.integrations.app.accept import (
+    ExpectedRows,
+    accept_all,
+    accept_cell,
+    accept_row,
+    remove_row,
+)
+from sql_test.integrations.app.compare_view import DiffPanel, target_schema
 from sql_test.integrations.app.state import RESULT_VIEWS, WorkbenchState
 
 _REMOVED = "background:#ffeef0"
 _ADDED = "background:#e6ffed"
 _DIFFERING = "background:#fff3cd;font-weight:600"
 
+type OnAccept = Callable[[ExpectedRows], None]
 
-def result_view(state: WorkbenchState, on_switch: Callable[[str], None]) -> None:
+
+def result_view(
+    state: WorkbenchState, on_switch: Callable[[str], None], on_accept: OnAccept
+) -> None:
     result, panel = state.run_result, state.panel
     if result is None or panel is None:
         return
     view = state.result_view if state.result_view in RESULT_VIEWS else "output"
+    schema = target_schema(state.catalog, state.target)
     with ui.column().classes("w-full").mark(f"result result-view-{view}"):
         _verdict(panel)
         with ui.row():
@@ -24,10 +36,38 @@ def result_view(state: WorkbenchState, on_switch: Callable[[str], None]) -> None
                     label, on_click=lambda _, name=name: on_switch(name)
                 ).mark(f"result-{name}")
                 button.props("unelevated" if name == view else "outline")
+            if schema is not None and result.rows and not panel.passed:
+                ui.button(
+                    "Accept all actual",
+                    on_click=lambda: on_accept(accept_all(schema, result.rows)),
+                ).props("outline color=positive").mark("accept-all")
         if view == "output":
             _output(result)
+        elif schema is None:
+            _diff(panel, None)
         else:
-            _diff(panel)
+            expected = state.grid_rows.get("expected", [{}])
+            _diff(panel, _Acceptor(schema, expected, on_accept))
+
+
+class _Acceptor:
+    """Turns a click on a diff row into new expected rows."""
+
+    def __init__(
+        self, schema: Schema, expected: ExpectedRows, on_accept: OnAccept
+    ) -> None:
+        self.schema, self.expected, self.on_accept = schema, expected, on_accept
+
+    def row(self, actual: Row, replacing: Row | None = None) -> None:
+        self.on_accept(
+            accept_row(self.expected, self.schema, actual, replacing=replacing)
+        )
+
+    def cell(self, expected: Row, column: str, value: object) -> None:
+        self.on_accept(accept_cell(self.expected, self.schema, expected, column, value))
+
+    def remove(self, expected: Row) -> None:
+        self.on_accept(remove_row(self.expected, self.schema, expected))
 
 
 def _verdict(panel: DiffPanel) -> None:
@@ -58,7 +98,7 @@ def _output(result: RunResult) -> None:
                 ui.label(_text(row.get(name)))
 
 
-def _diff(panel: DiffPanel) -> None:
+def _diff(panel: DiffPanel, acceptor: _Acceptor | None) -> None:
     ui.label("Diff").classes("text-subtitle1")
     comparison = panel.comparison
     if comparison is None:
@@ -71,26 +111,66 @@ def _diff(panel: DiffPanel) -> None:
         return
     columns = panel.columns
     ui.label(
-        "− missing / old · + added / new — expected is editable in the Expected grid"
+        "− missing / old · + added / new — click a highlighted cell to accept it,"
+        " or edit expected in the Expected grid"
     ).classes("text-caption text-grey-8")
-    with ui.grid(columns=f"2rem repeat({len(columns)}, 10rem)").classes(
-        "gap-0 font-mono"
+    with ui.grid(columns=f"2rem repeat({len(columns)}, 10rem) auto").classes(
+        "gap-0 font-mono items-center"
     ):
         ui.label("")
         for name in columns:
             ui.label(name).classes("text-caption text-weight-bold")
-        for change in comparison.changed:
+        ui.label("")
+        for index, change in enumerate(comparison.changed):
             ui.label("@@ changed @@").classes("text-indigo-9 text-weight-bold").style(
                 "grid-column: 1 / -1"
             ).mark("diff-hunk diff-changed")
             _diff_row(
                 "-", change.expected, columns, change.differing_columns, "changed"
             )
-            _diff_row("+", change.actual, columns, change.differing_columns, "changed")
-        for row in comparison.missing:
+            ui.label("")
+            cells = _diff_row(
+                "+", change.actual, columns, change.differing_columns, "changed"
+            )
+            if acceptor is None:
+                ui.label("")
+                continue
+            for name in change.differing_columns:
+                cells[name].on(
+                    "click",
+                    lambda _, old=change.expected, name=name, new=change.actual: (
+                        acceptor.cell(old, name, new.get(name))
+                    ),
+                ).classes("cursor-pointer").tooltip("Accept this cell").mark(
+                    f"diff-row diff-changed diff-added accept-cell-changed-{index}-{name}"
+                )
+            _action(
+                "Accept row",
+                f"accept-row-changed-{index}",
+                lambda _, old=change.expected, new=change.actual: acceptor.row(
+                    new, replacing=old
+                ),
+            )
+        for index, row in enumerate(comparison.missing):
             _diff_row("-", row, columns, (), "missing")
-        for row in comparison.unexpected:
+            if acceptor is None:
+                ui.label("")
+                continue
+            _action(
+                "Remove",
+                f"remove-row-missing-{index}",
+                lambda _, row=row: acceptor.remove(row),
+            )
+        for index, row in enumerate(comparison.unexpected):
             _diff_row("+", row, columns, (), "added")
+            if acceptor is None:
+                ui.label("")
+                continue
+            _action(
+                "Accept row",
+                f"accept-row-added-{index}",
+                lambda _, row=row: acceptor.row(row),
+            )
 
 
 def _diff_row(
@@ -99,14 +179,20 @@ def _diff_row(
     columns: tuple[str, ...],
     differing: tuple[str, ...],
     outcome: str,
-) -> None:
+) -> dict[str, ui.label]:
     side = "diff-removed" if marker == "-" else "diff-added"
     background = _REMOVED if marker == "-" else _ADDED
     markers = f"diff-row diff-{outcome} {side}"
     ui.label(marker).style(background).mark(markers)
+    cells: dict[str, ui.label] = {}
     for name in columns:
         style = background + (";" + _DIFFERING if name in differing else "")
-        ui.label(_text(row.get(name))).style(style).mark(markers)
+        cells[name] = ui.label(_text(row.get(name))).style(style).mark(markers)
+    return cells
+
+
+def _action(label: str, marker: str, on_click: Callable) -> None:
+    ui.button(label, on_click=on_click).props("flat dense no-caps").mark(marker)
 
 
 def _text(value: object) -> str:
