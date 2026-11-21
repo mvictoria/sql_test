@@ -71,3 +71,19 @@ def test_a_cell_that_cannot_be_cast_fails_the_case(tmp_path: Path):
 
     assert not result.passed
     assert "expected.csv line 2 member_id" in result.report()
+
+
+def test_a_mock_the_run_never_reads_fails_the_case_naming_it(tmp_path: Path):
+    folder = _case(
+        tmp_path,
+        MOCKS
+        | {
+            "unrelated.csv": "id\n1\n",
+            "expected.csv": "member_id,member_name\n1,Ada\n",
+        },
+    )
+
+    result = run_case(folder, _engine())
+
+    assert not result.passed
+    assert result.problem == "mocks the run never reads: unrelated"

@@ -284,9 +284,9 @@ Behaviour-preserving cleanup of the engine, one commit per item:
 <a id="eng-25"></a>
 #### ENG-25 Report unused mocks
 
-The plan lists the given relations the run never reads, as `Plan.unused`: a mock upstream of another mock on every path to the target, or a mock outside the target's lineage. A mock that another path still reads is used. The app's mock frontier and the test layer both read this instead of working it out themselves.
+The plan lists the given relations the run never reads, as `Plan.unused`: a mock upstream of another mock on every path to the target, or a mock outside the target's lineage. A mock that another path still reads is used. The app's mock frontier and the test layer both read this instead of working it out themselves. A case with an unused mock fails, naming it.
 
-- **Done when:** given `medicaid_members` and `members` for `medicaid_members_named_alice`, the plan's unused relations are `{members}`; in a diamond where another path still reads the upstream mock, nothing is unused.
+- **Done when:** given `medicaid_members` and `members` for `medicaid_members_named_alice`, the plan's unused relations are `{members}`; in a diamond where another path still reads the upstream mock, nothing is unused; and a case folder with a mock outside the target's lineage fails naming it.
 - **Depends on:** [ENG-10](#eng-10)
 
 ### Comparison
@@ -525,7 +525,11 @@ The app reads its paths from `RepositoryConfig` instead of the `SQLS` and `MAPPI
 <a id="app-15"></a>
 #### APP-15 Use the layers' front doors
 
-The app imports engine, executor, and test-layer names from `sql_test.engine`, `sql_test.executors`, and `sql_test.testing`, not from their modules, and drops the `app` exemption from `tests/test_layers.py`. The grid and the compare view type rows with `Column.cast` instead of loading them into a `DuckDBExecutor` and reading them back; the engine then removes `DuckDBExecutor.read_relation`.
+The app imports engine, executor, and test-layer names from `sql_test.engine`, `sql_test.executors`, and `sql_test.testing`, not from their modules, and drops the `app` exemption from `tests/test_layers.py`. The grid and the compare view type rows with `Column.cast` instead of loading them into a `DuckDBExecutor` and reading them back; the engine then removes `DuckDBExecutor.read_relation`. Also:
+
+- `frontier_mocks` reads `Plan.unused` from [ENG-25](#eng-25) instead of walking the lineage itself. Today it drops a mock upstream of another mock even when another path still reads it.
+- The compare view passes `ordered=result.ordered`, so an ORDER BY target compares in order in the app as it does in pytest.
+- A request builds the catalog once instead of once per helper.
 
 - **Done when:** `tests/test_layers.py` checks the app with no exemption, and no app module creates an executor.
 - **Depends on:** [ENG-24](#eng-24)
