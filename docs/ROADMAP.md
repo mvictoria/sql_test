@@ -546,6 +546,16 @@ The app imports engine, executor, and test-layer names from `sql_test.engine`, `
 - **Done when:** `tests/test_layers.py` checks the app with no exemption, and no app module creates an executor.
 - **Depends on:** [ENG-24](#eng-24)
 
+<a id="app-16"></a>
+#### APP-16 Replace authoring UI with NiceGUI (done)
+
+The authoring app is built with [NiceGUI](https://nicegui.io) instead of a stdlib HTTP server and hand-written HTML strings. `register_app(repository)` registers the home and workbench pages; `serve` still binds to localhost only and then calls `ui.run`. The workbench keeps its state (mocks, grid rows, result) in one object and rebuilds its views on each action, instead of posting a form and re-rendering the whole page. The pure helpers (case load and save, engine access, `frontier_mocks`, grid typing, compare) stay free of UI code. Tests use NiceGUI's `User` fixture.
+
+- **Done when:** the existing app behaviors pass as NiceGUI `User` tests in `tests/test_app.py`; the stdlib router, HTTP server, and HTML builders are gone; `sql-test app` still binds to localhost only.
+- **Depends on:**
+  - [APP-2](#app-2)
+  - the shipped APP stories: [APP-3](#app-3), [APP-4](#app-4), [APP-5](#app-5), [APP-6](#app-6), [APP-9](#app-9), [APP-10](#app-10), [APP-12](#app-12), [APP-13](#app-13)
+
 ### Target browser
 
 <a id="app-3"></a>
@@ -933,4 +943,4 @@ After a run, open any executed table's rows and see at which table an input row 
 - **Other consumers** such as IDE integrations or change-impact tooling, when there is a demonstrated use case.
 - **pytest plugin.** Collect case folders without a test file in the repository. Deferred until the parametrized style has been used for a while, so the behaviour (how case folders are found, how the engine is built, opt-in or automatic) is chosen from experience. Depends on [CFG-1](#cfg-1).
 - **Undefined-relation checks.** Flag inferred relations with no schema, naming the SQL that reads them, with a did-you-mean against declared relations, and a strict mode with an allowlist of external sources. Mostly the repository's own linting's job; add only if users ask. Depends on [ENG-22](#eng-22).
-- **Browser E2E for the app.** Click-through coverage (for example Playwright) once the workbench is interactive enough that HTTP HTML assertions in `tests/test_app.py` are not enough. Not needed while the page is mostly server-rendered.
+- **Browser E2E for the app.** Click-through coverage (for example Playwright) once the workbench is interactive enough that the NiceGUI `User` tests in `tests/test_app.py`, which simulate the browser without rendering, are not enough.

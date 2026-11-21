@@ -1,3 +1,3 @@
-from sql_test.integrations.app.server import create_server, serve
+from sql_test.integrations.app.serve import register_app, serve
 
-__all__ = ["create_server", "serve"]
+__all__ = ["register_app", "serve"]

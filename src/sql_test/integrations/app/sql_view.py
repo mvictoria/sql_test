@@ -1,19 +1,16 @@
-import html
 from pathlib import Path
+
+from nicegui import ui
 
 from sql_test.integrations.app.engine_access import catalog
 
 
-def sql_section(repository: Path, target: str) -> str:
+def sql_view(repository: Path, target: str) -> None:
     repo_catalog = catalog(repository)
     operations = repo_catalog.producers(repo_catalog.resolve(target))
     if not operations:
-        return "<h2>SQL</h2><p class='empty'>No producer SQL</p>"
-    blocks = "".join(
-        (
-            f"<h2>{html.escape(operation.sql_file.name)}</h2>"
-            f"<pre><code>{html.escape(operation.sql)}</code></pre>"
-        )
-        for operation in operations
-    )
-    return blocks
+        ui.label("No producer SQL").classes("text-grey-7").mark("sql-empty")
+        return
+    for operation in operations:
+        ui.label(operation.sql_file.name).classes("text-subtitle1").mark("sql-file")
+        ui.code(operation.sql, language="sql").classes("w-full").mark("sql-code")

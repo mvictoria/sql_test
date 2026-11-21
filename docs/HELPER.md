@@ -518,7 +518,7 @@ Avoid one implementation per entry point. Separate app, pytest, and CI engines w
 
 **Authoring app.** The local web application QA uses. It contains presentation and interaction logic only and runs against the checked-out repository, for example `sql-test app .`.
 
-`sql-test app <repository-path>` starts a local HTTP server. The browser page talks only to that server. The server is given the repository path at startup and is the only process that reads or writes the repository. The page does not use the browser's folder-access APIs: the app must share discovery and execution with the CLI and pytest through the same engine, and a page that talked to the filesystem directly would re-implement or bypass that. Presentation stays in the page; all repository I/O stays behind the shared core.
+`sql-test app <repository-path>` starts a local [NiceGUI](https://nicegui.io) server (`register_app(repository)` registers the pages, `serve` runs them). The browser page talks only to that server, and the page's state (mocks, grid rows, last result) lives in the server process, one state object per open workbench. The server is given the repository path at startup and is the only process that reads or writes the repository. The page does not use the browser's folder-access APIs: the app must share discovery and execution with the CLI and pytest through the same engine, and a page that talked to the filesystem directly would re-implement or bypass that. Presentation stays in the page; all repository I/O stays behind the shared core.
 
 Safeguards for that server:
 
@@ -597,12 +597,15 @@ sql-test-tool/
 │   └── integrations/
 │       ├── cli.py              sql-test discover / app
 │       ├── discover.py
-│       └── app/                local authoring server
-│           ├── server.py       localhost bind + stdlib router
-│           ├── resources/      HTTP resources (home, workbench)
-│           ├── lineage.py
-│           ├── grid.py
-│           └── output.py
+│       └── app/                local authoring app (NiceGUI)
+│           ├── serve.py        localhost-only bind; register_app, serve
+│           ├── home.py         tables, coverage, cases, pipelines page
+│           ├── workbench.py    the workbench page: state, actions, deep links
+│           ├── state.py        WorkbenchState
+│           ├── lineage_view.py, grid_view.py, result_view.py, sql_view.py
+│           ├── mocks.py        frontier_mocks, mock toggling
+│           └── grid.py, compare_view.py, case_load.py, case_save.py,
+│               engine_access.py      the helpers that hold no UI code
 ├── .github/workflows/data-tests.yml
 ├── tests/
 └── pyproject.toml

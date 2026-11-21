@@ -44,6 +44,8 @@ uv run sql-test app tests/fixtures/repos/lineage-demo --port 9000
 
 ## Authoring app (so far)
 
+Built with [NiceGUI](https://nicegui.io); its tests use NiceGUI's `User` fixture (`tests/test_app.py`).
+
 - Browse models, sources, and cases
 - Open a target or an existing case in the workbench
 - Lineage graph with mock / will-execute / source states (pruned nodes hidden)
