@@ -474,7 +474,7 @@ Decide how the page reads and writes the checked-out repository, and record it i
 ### Target browser
 
 <a id="app-3"></a>
-#### APP-3 Browse and select a target
+#### APP-3 Browse and select a target (done)
 
 Search or browse tables, select one as the table under test, or select an existing case.
 
