@@ -5,6 +5,7 @@ from sql_test.engine.catalog import Catalog
 from sql_test.engine.executor import Executor, Row
 from sql_test.engine.planner.plan import Plan, plan_run
 from sql_test.engine.relation import Relation
+from sql_test.engine.schema import Column, Schema
 
 
 class Engine:
@@ -23,11 +24,21 @@ class Engine:
         plan = self.plan(table, rows)
         plan.check_rows()
         executor = self._executor()
+        executor.setup()
         try:
+            known = self._catalog.relations().keys()
             for name, table_rows in rows.items():
-                executor.load_rows(str(Relation.parse(name)), table_rows)
+                relation = Relation.parse(name).resolve(known)
+                schema = self._catalog.schemas.get(relation) or _schema_from_rows(
+                    table_rows
+                )
+                executor.create_relation(relation, schema, table_rows)
             for operation in plan.operations:
-                executor.create_table_as(str(operation.writes), operation.sql)
-            return executor.read_table(str(plan.lineage.target))
+                executor.execute(operation)
+            return executor.read_relation(plan.lineage.target)
         finally:
-            executor.close()
+            executor.teardown()
+
+
+def _schema_from_rows(rows: list[Row]) -> Schema:
+    return tuple(Column(name=name, type="VARCHAR") for name in rows[0])
