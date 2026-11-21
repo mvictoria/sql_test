@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import tomlkit
+
+from sql_test.integrations.config import PATH_NAMES, TABLE
+
 _RELATIVE = {
     "sqls": "admin/sqls",
     "mapping": "admin/config/lookup_sql_table_mapping.csv",
@@ -11,7 +15,7 @@ _RELATIVE = {
     "cases": "tests/cases",
 }
 
-_PYPROJECT = """\
+_NEW_PYPROJECT = """\
 [project]
 name = "sql-test-demo"
 version = "0.0.0"
@@ -23,12 +27,6 @@ dependencies = [
 
 [tool.uv]
 package = false
-
-[tool.sql-test]
-sqls = "admin/sqls"
-mapping = "admin/config/lookup_sql_table_mapping.csv"
-schemas = "admin/sqls"
-cases = "tests/cases"
 """
 
 _DDL = """\
@@ -95,30 +93,55 @@ class InitError(Exception):
 
 
 def init_repository(path: Path) -> Path:
-    """Create a consumer skeleton at `path`; raise InitError if unsafe to write."""
+    """Create a consumer skeleton at `path`; raise InitError if already configured."""
     root = path.resolve()
-    if (root / "pyproject.toml").is_file():
-        raise InitError(f"{root} already has a pyproject.toml")
     root.mkdir(parents=True, exist_ok=True)
+    pyproject = root / "pyproject.toml"
+    if pyproject.is_file() and _has_sql_test_table(pyproject):
+        raise InitError(f"{pyproject} already has a [tool.{TABLE}] table")
 
+    _write_layout(root)
+    _write_or_merge_pyproject(pyproject)
+    return root
+
+
+def _has_sql_test_table(pyproject: Path) -> bool:
+    document = tomlkit.parse(pyproject.read_text())
+    tool = document.get("tool")
+    return isinstance(tool, dict) and TABLE in tool
+
+
+def _write_or_merge_pyproject(pyproject: Path) -> None:
+    if pyproject.is_file():
+        document = tomlkit.parse(pyproject.read_text())
+    else:
+        document = tomlkit.parse(_NEW_PYPROJECT)
+    tool = document.setdefault("tool", tomlkit.table())
+    table = tool.setdefault(TABLE, tomlkit.table())
+    for name in PATH_NAMES:
+        table[name] = _RELATIVE[name]
+    pyproject.write_text(tomlkit.dumps(document))
+
+
+def _write_layout(root: Path) -> None:
     sqls = root / _RELATIVE["sqls"]
-    sqls.mkdir(parents=True, exist_ok=True)
-    (sqls / "ddl.sql").write_text(_DDL)
-    (sqls / "example.sql").write_text(_EXAMPLE_SQL)
+    _write_if_absent(sqls / "ddl.sql", _DDL)
+    _write_if_absent(sqls / "example.sql", _EXAMPLE_SQL)
 
     mapping = root / _RELATIVE["mapping"]
-    mapping.parent.mkdir(parents=True, exist_ok=True)
-    mapping.write_text(_MAPPING)
+    _write_if_absent(mapping, _MAPPING)
 
     case = root / _RELATIVE["cases"] / "example" / "passthrough"
-    case.mkdir(parents=True, exist_ok=True)
-    (case / "raw.csv").write_text(_RAW_CSV)
-    (case / "expected.csv").write_text(_EXPECTED_CSV)
+    _write_if_absent(case / "raw.csv", _RAW_CSV)
+    _write_if_absent(case / "expected.csv", _EXPECTED_CSV)
 
     tests = root / "tests"
-    tests.mkdir(parents=True, exist_ok=True)
-    (tests / "conftest.py").write_text(_CONFTEST)
-    (tests / "test_case_folders.py").write_text(_TEST_CASE_FOLDERS)
+    _write_if_absent(tests / "conftest.py", _CONFTEST)
+    _write_if_absent(tests / "test_case_folders.py", _TEST_CASE_FOLDERS)
 
-    (root / "pyproject.toml").write_text(_PYPROJECT)
-    return root
+
+def _write_if_absent(path: Path, text: str) -> None:
+    if path.exists():
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text)
