@@ -576,7 +576,7 @@ sql-test-tool/
 └── pyproject.toml
 ```
 
-An **executor** runs operations against rows in one SQL engine, such as DuckDB or Spark. The engine defines the executor interface and is handed an executor; it never imports one.
+An **executor** runs operations against rows in one SQL engine, such as DuckDB or Spark. The engine defines the executor interface and is handed an executor; it never imports one. The interface takes relations and operations, not lineage or cases: set up a run, create a relation from a schema and rows, execute an operation, read a relation, and tear down. How an operation's kind becomes SQL, for example a full-load `SELECT` becoming a table, is decided per executor. Each run gets a fresh executor so runs do not share relations.
 
 Dependencies point one way:
 

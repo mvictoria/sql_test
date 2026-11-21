@@ -38,10 +38,11 @@ Done:
 - [ENG-8](#eng-8)
 - [ENG-9](#eng-9)
 - [ENG-7](#eng-7)
+- [ENG-11](#eng-11)
 
 Can start now:
 
-- [ENG-11](#eng-11)
+- [ENG-12](#eng-12)
 - [ENG-14](#eng-14)
 
 ### Project skeleton
@@ -226,7 +227,7 @@ Order the executed operations so each runs after the relations it reads have bee
 ### Execution
 
 <a id="eng-11"></a>
-#### ENG-11 Executor interface with a DuckDB executor
+#### ENG-11 Executor interface with a DuckDB executor (done)
 
 An executor interface with a DuckDB implementation that uses a fresh in-memory database per run. The interface takes relations and operations, not lineage or cases, and is sized by this first implementation rather than designed for every engine up front. Roughly:
 
