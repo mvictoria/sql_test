@@ -559,7 +559,7 @@ The workflow checks out the calling repository, sets up Python, installs `sql-te
 
 Data-product repositories own their data products and test cases. The tool's repository owns the machinery that authors, validates, discovers, and executes them. No engine code is copied into a consuming repository.
 
-A consuming repository needs very little. The README adoption section is the copy-paste guide; the footprint is SQL, schemas, cases, `[tool.sql-test]` in `pyproject.toml`, a pytest test over case folders, and a workflow caller:
+A consuming repository needs very little. The README adoption section is the copy-paste guide; [examples/minimal-consumer/](../examples/minimal-consumer/) is the standalone sample that installs `sql-test` itself. The footprint is SQL, schemas, cases, a full consumer `pyproject.toml` (`[project]` with `requires-python = ">=3.13"`, usually `[tool.uv] package = false`, and `[tool.sql-test]` paths), a pytest test over case folders, and a workflow caller. `lakehouse-data-customer/` is monorepo-only — not that template.
 
 ```text
 customer-data/
@@ -567,11 +567,12 @@ customer-data/
 ├── schemas/
 ├── cases/
 │   └── <table under test>/<case name>/
-├── pyproject.toml                       [tool.sql-test] paths
+├── pyproject.toml                       [project] + [tool.uv] + [tool.sql-test]
 └── .github/workflows/data-tests.yml     calls the reusable workflow @v0
 ```
 
-This layout is illustrative. Where SQL, schemas, and cases live, and how SQL files map to tables, can differ per repository. The sample repository keeps SQL in `admin/sqls/` and maps each table to its SQL file in `admin/config/lookup_sql_table_mapping.csv`, with columns `table_ref` and `sql_ref`. Extra columns such as `load_type` are ignored. A **mapping problem** is a mapping row whose SQL file does not exist. The catalog records it alongside schema problems and leaves out that row's operation, so deleting a mapped SQL file removes its model even before the mapping row is removed.
+This layout is illustrative. Where SQL, schemas, and cases live, and how SQL files map to tables, can differ per repository. The sample and minimal example keep SQL in `admin/sqls/` and map each table to its SQL file in `admin/config/lookup_sql_table_mapping.csv`, with required columns `table_ref` and `sql_ref`. Extra columns such as `load_type` are ignored. A **mapping problem** is a mapping row whose SQL file does not exist. The catalog records it alongside schema problems and leaves out that row's operation, so deleting a mapped SQL file removes its model even before the mapping row is removed.
+
 
 ## Versioning
 

@@ -1,0 +1,14 @@
+from pathlib import Path
+
+import pytest
+
+from sql_test.integrations.config import RepositoryConfig
+from sql_test.testing import case_folders, case_id, run_case
+
+CASES = RepositoryConfig.load(Path(__file__).parent.parent).cases
+
+
+@pytest.mark.parametrize("case", case_folders(CASES), ids=case_id)
+def test_case(case, engine):
+    result = run_case(case, engine)
+    assert result.passed, result.report()

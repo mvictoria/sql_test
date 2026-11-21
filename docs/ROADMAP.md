@@ -62,7 +62,7 @@ Per-case performance is done: after [ENG-31](#eng-31), [ENG-34](#eng-34), and [E
 
 v0.5 CI is done: [CI-1](#ci-1), [CI-2](#ci-2), [CI-3](#ci-3), [CI-4](#ci-4), [CI-5](#ci-5), [CI-6](#ci-6). Authoring app v0.3 is done ([APP-8](#app-8), [APP-17](#app-17), [APP-19](#app-19), and the earlier APP stories). [APP-25](#app-25) is done. [APP-30](#app-30) is done. [APP-27](#app-27) is done. [APP-26](#app-26) is done. [CFG-1](#cfg-1) is done.
 
-**Before the next release** (from [UAT.md](UAT.md)): adoption first — [DOC-1](#doc-1), [CLI-7](#cli-7), [ENG-36](#eng-36), [APP-20](#app-20), [APP-21](#app-21). Massive-repo performance is done ([ENG-31](#eng-31), [ENG-33](#eng-33)–[ENG-35](#eng-35)); the rest is tabled. Workbench navigation track in parallel: [APP-30](#app-30) (done), [APP-27](#app-27) (done), [APP-26](#app-26) (done), then [APP-28](#app-28), [APP-29](#app-29). Keep [APP-18](#app-18) parked until UAT and front-end design say synthetic fill is next. Do not open Spark, incremental, or richer lineage until after the release. Further CLI commands ([CLI-2](#cli-2)–[CLI-6](#cli-6)) stay parked; the CLI's job today is `sql-test app` (plus [CLI-7](#cli-7) when built).
+**Before the next release** (from [UAT.md](UAT.md)): adoption first — [DOC-1](#doc-1) (done), [CLI-7](#cli-7) (done), [ENG-36](#eng-36), [APP-20](#app-20), [APP-21](#app-21) (done). Massive-repo performance is done ([ENG-31](#eng-31), [ENG-33](#eng-33)–[ENG-35](#eng-35)); the rest is tabled. Workbench navigation track in parallel: [APP-30](#app-30) (done), [APP-27](#app-27) (done), [APP-26](#app-26) (done), then [APP-28](#app-28), [APP-29](#app-29). Keep [APP-18](#app-18) parked until UAT and front-end design say synthetic fill is next. Do not open Spark, incremental, or richer lineage until after the release. Further CLI commands ([CLI-2](#cli-2)–[CLI-6](#cli-6)) stay parked; the CLI's job today is `sql-test app` and [CLI-7](#cli-7) `init`.
 
 ### Project skeleton
 
@@ -1065,7 +1065,7 @@ Findings and method: [UAT.md](UAT.md). Happy path after install is strong; getti
 - **Depends on:** [CI-2](#ci-2), [CI-3](#ci-3)
 
 <a id="doc-1"></a>
-#### DOC-1 Copy-pasteable consumer project
+#### DOC-1 Copy-pasteable consumer project (done)
 
 [UAT.md](UAT.md) #2, #3, #10, #11: the sample's `pyproject.toml` is only `[tool.sql-test]`, so literal README `uv add` fails without a `[project]` table (and usually `[tool.uv] package = false`). Adopt docs must include a full minimal consumer `pyproject.toml`, mapping CSV headers (`table_ref`, `sql_ref`), Python version floor, and either a standalone sample that installs `sql-test` itself or a clear “this folder is monorepo-only” warning.
 
