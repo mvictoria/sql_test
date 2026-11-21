@@ -204,7 +204,7 @@ The UI shows the live frontier only:
 
 **Pruned** relations are hidden. They reappear when the mock that pruned them is removed.
 
-Every table that will be read but is not produced by executed SQL needs test data (`needs_rows`). Those tables are shown grey until data is added, and colored once they have data. **A case is ready to run only when `needs_rows` is empty** — every leaf that still needs rows is covered. Running otherwise fails naming them.
+Every table that will be read but is not produced by executed SQL needs test data (`needs_rows`). Those tables are shown grey until data is added, and colored once they have data. **A case is ready to run only when `needs_rows` is empty** — every leaf that still needs rows is covered. Running otherwise fails naming them. A case with an unused mock also fails, naming it: the run would ignore its rows, and a reader of the case folder would think they matter.
 
 ---
 
