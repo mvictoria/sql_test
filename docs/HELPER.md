@@ -611,7 +611,7 @@ sql-test-tool/
 └── pyproject.toml
 ```
 
-An **executor** runs operations against rows in one SQL engine, such as DuckDB or Spark. The engine defines the executor interface and is handed an executor; it never imports one. The interface takes relations and operations, not lineage or cases, and is one call: `run(given, operations)` loads each given relation from its schema and rows, executes the operations in order, and returns the rows of every given and written relation. How an operation's kind becomes SQL, for example a full-load `SELECT` becoming a table, and how a run is kept apart from other runs, are decided per executor; DuckDB uses a fresh in-memory database per call.
+An **executor** runs operations against rows in one SQL engine, such as DuckDB or Spark. The engine defines the executor interface and is handed an executor; it never imports one. The interface takes relations and operations, not lineage or cases, and is one call: `run(given, operations)` loads each given relation from its schema and rows, executes the operations in order, and returns the rows of every given and written relation. How an operation's kind becomes SQL, for example a full-load `SELECT` becoming a table, and how a run is kept apart from other runs, are decided per executor; DuckDB keeps one instance per executor, and each call attaches its own in-memory database and drops it afterwards, even when the call fails. Opening a new DuckDB database costs more than a small run, so runs share the instance; concurrent calls each get their own cursor and database, so none sees another's relations.
 
 Dependencies point one way:
 

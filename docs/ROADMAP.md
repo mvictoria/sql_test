@@ -50,7 +50,7 @@ Done:
 - [ENG-25](#eng-25)
 - [ENG-26](#eng-26)
 
-In progress: [ENG-24](#eng-24) engine cleanup.
+In progress: [ENG-24](#eng-24) engine cleanup, [ENG-27](#eng-27) share one DuckDB instance across runs.
 
 Next, now unblocked: [CI-1](#ci-1), and app stories that are not done. [CFG-1](#cfg-1) is done. Further CLI commands ([CLI-2](#cli-2)–[CLI-6](#cli-6)) are parked until a demonstrated need; the CLI's job today is `sql-test app`.
 
@@ -300,6 +300,14 @@ The plan lists the given relations the run never reads, as `Plan.unused`: a mock
 Planning a run parsed every SQL file in the repository once per name it resolved, so a plan at 200 files took most of a second. Parsing is memoized on the SQL text, so an unchanged file is parsed once per process and an edited file is parsed again the next time it is read, with no invalidation step. DDL files are memoized the same way. A catalog is a frozen snapshot that works out its relations once; a long-running caller such as the app sees edits by building a new catalog.
 
 - **Done when:** resolving several names in one catalog parses each SQL once; a second catalog over the same unchanged files parses nothing; and a catalog built after a SQL file is edited sees the new tables it reads.
+- **Depends on:** [ENG-24](#eng-24)
+
+<a id="eng-27"></a>
+#### ENG-27 Share one DuckDB instance across runs
+
+Each run opened and closed its own DuckDB database, which cost more than the run itself: a sample-repository case took 58 ms, most of it opening the database. The DuckDB executor keeps one instance; each run attaches its own in-memory database through its own cursor and detaches it at the end, even when the run fails.
+
+- **Done when:** concurrent runs on one executor each see only their own rows; a failed run leaves nothing a later run can read; and two runs still do not share relations.
 - **Depends on:** [ENG-24](#eng-24)
 
 ### Comparison
