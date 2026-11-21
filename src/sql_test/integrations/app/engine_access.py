@@ -48,7 +48,9 @@ def plan(
     mocks: tuple[str, ...],
     grid_rows: dict[str, list[dict[str, str | None]]],
 ) -> Plan:
-    return _engine(repo_catalog).plan(target, rows=filled_rows(mocks, grid_rows))
+    return _engine(repo_catalog).plan(
+        target, rows=filled_rows(mocks, grid_rows), with_pruned=True
+    )
 
 
 def run(

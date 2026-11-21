@@ -24,13 +24,20 @@ class Engine:
     def catalog(self) -> Catalog:
         return self._catalog
 
-    def plan(self, table: str, rows: dict[str, list[Row]]) -> Plan:
+    def plan(
+        self, table: str, rows: dict[str, list[Row]], *, with_pruned: bool = False
+    ) -> Plan:
         given = {
             self._catalog.resolve(name): len(table_rows)
             for name, table_rows in rows.items()
         }
         known = self._catalog.relations() | given.keys()
-        return plan_run(Relation.parse(table).resolve(known), self._catalog, given)
+        return plan_run(
+            Relation.parse(table).resolve(known),
+            self._catalog,
+            given,
+            with_pruned=with_pruned,
+        )
 
     def execute(self, plan: Plan, rows: dict[str, list[Row]]) -> RunResult:
         if plan.needs_rows:

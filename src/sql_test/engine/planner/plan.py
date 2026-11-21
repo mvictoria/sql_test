@@ -31,9 +31,18 @@ class Plan:
     operations: list[Operation]
 
 
-def plan_run(target: Relation, catalog: Catalog, given: Mapping[Relation, int]) -> Plan:
-    """Plan building `target`; `given` maps each given relation to its row count."""
-    lineage = upstream_lineage(target, catalog)
+def plan_run(
+    target: Relation,
+    catalog: Catalog,
+    given: Mapping[Relation, int],
+    *,
+    with_pruned: bool = False,
+) -> Plan:
+    """Plan building `target`; `given` maps each given relation to its row count.
+
+    The walk stops at given relations unless `with_pruned` asks for what lies past them.
+    """
+    lineage = upstream_lineage(target, catalog, () if with_pruned else given.keys())
     projection = lineage.projection()
     states: dict[Relation, State] = {}
     built_from: dict[Relation, set[Relation]] = {}

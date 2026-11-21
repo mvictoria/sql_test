@@ -5,6 +5,7 @@ import pytest
 from sql_test.engine import Engine
 from sql_test.engine.catalog.adapters import mapped_sql_folder
 from sql_test.engine.lineage.graph import SourceReason
+from sql_test.engine.operation import Operation
 from sql_test.engine.planner.plan import MissingRows, State, plan_run
 from sql_test.engine.relation import Relation
 from sql_test.executors.duckdb import DuckDBExecutor
@@ -20,7 +21,7 @@ def test_giving_an_upstream_model_prunes_what_is_behind_it():
     medicaid = Relation(name="medicaid_members")
     alice = Relation(name="medicaid_members_named_alice")
 
-    plan = plan_run(alice, catalog, given={medicaid: 1})
+    plan = plan_run(alice, catalog, given={medicaid: 1}, with_pruned=True)
 
     assert plan.states == {
         alice: State.EXECUTED,
@@ -32,6 +33,38 @@ def test_giving_an_upstream_model_prunes_what_is_behind_it():
         "medicaid_members_named_alice.sql"
     ]
     assert plan.needs_rows == set()
+
+
+def test_a_plan_stops_its_walk_at_the_given_relations(tmp_path: Path, monkeypatch):
+    models = [f"t_{i}" for i in range(1, 1001)]
+    (tmp_path / "ddl.sql").write_text(
+        "create table raw (id int);\n"
+        + "".join(f"create table {name} (id int);\n" for name in models)
+    )
+    (tmp_path / "t_1.sql").write_text("select id from raw")
+    for i in range(2, 1001):
+        (tmp_path / f"t_{i}.sql").write_text(f"select id from t_{i - 1}")
+    mapping = tmp_path / "mapping.csv"
+    mapping.write_text(
+        "table_ref,sql_ref\n" + "".join(f"{name},{name}.sql\n" for name in models)
+    )
+    catalog = mapped_sql_folder(sqls=tmp_path, mapping=mapping)
+    catalog.relations()
+    read: list[str] = []
+
+    def counting(operation: Operation) -> str:
+        read.append(operation.sql_file.name)
+        return operation.sql_file.read_text()
+
+    monkeypatch.setattr(Operation, "sql", property(counting))
+
+    plan = plan_run(Relation(name="t_1000"), catalog, given={Relation(name="t_999"): 1})
+
+    assert plan.states == {
+        Relation(name="t_1000"): State.EXECUTED,
+        Relation(name="t_999"): State.GIVEN,
+    }
+    assert read == ["t_1000.sql"]
 
 
 def test_a_diamond_keeps_what_another_path_still_needs(tmp_path: Path):
@@ -80,7 +113,7 @@ def test_a_source_behind_a_mock_stays_pruned_even_if_also_given():
     members = Relation(name="members")
     alice = Relation(name="medicaid_members_named_alice")
 
-    plan = plan_run(alice, catalog, given={medicaid: 1, members: 1})
+    plan = plan_run(alice, catalog, given={medicaid: 1, members: 1}, with_pruned=True)
 
     # Mocking medicaid prunes members; a given on a pruned leaf is unused.
     assert plan.states[members] is State.PRUNED

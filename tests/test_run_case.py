@@ -28,9 +28,11 @@ class _CountingEngine(Engine):
         super().__init__(*args, **kwargs)
         self.plan_calls = 0
 
-    def plan(self, table: str, rows: dict[str, list[Row]]) -> Plan:
+    def plan(
+        self, table: str, rows: dict[str, list[Row]], *, with_pruned: bool = False
+    ) -> Plan:
         self.plan_calls += 1
-        return super().plan(table, rows)
+        return super().plan(table, rows, with_pruned=with_pruned)
 
 
 def _case(root: Path, files: dict[str, str]) -> Path:
