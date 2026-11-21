@@ -1,3 +1,5 @@
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -82,3 +84,37 @@ def test_coverage_lists_untested_tables_before_tested_ones(
     assert tables.index("lob") < tables.index("medicaid_members_named_alice")
     members = next(line for line in body if line.startswith("members"))
     assert members.split()[1:] == ["0", "0"]
+
+
+def test_init_writes_a_consumer_skeleton_that_discovers_and_passes_pytest(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+):
+    root = tmp_path / "demo"
+    assert main(["init", str(root)]) == 0
+    assert "Initialized" in capsys.readouterr().out
+    assert (root / "pyproject.toml").is_file()
+    assert (root / "admin/sqls/example.sql").is_file()
+    assert (root / "admin/config/lookup_sql_table_mapping.csv").is_file()
+    assert (root / "tests/conftest.py").is_file()
+    assert (root / "tests/test_case_folders.py").is_file()
+    assert main(["discover", str(root)]) == 0
+    out = capsys.readouterr().out
+    assert "example" in out
+    assert "cases:" in out
+    # Run the generated suite with this env's installed sql-test (no uv sync).
+    result = subprocess.run(
+        [sys.executable, "-m", "pytest", "-q", "--tb=short"],
+        check=False,
+        cwd=root,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_init_refuses_an_existing_pyproject(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+):
+    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'x'\n")
+    assert main(["init", str(tmp_path)]) == 1
+    assert "already has" in capsys.readouterr().err

@@ -1067,7 +1067,7 @@ Findings and method: [UAT.md](UAT.md). Happy path after install is strong; getti
 - **Depends on:** [CI-6](#ci-6), [CI-3](#ci-3)
 
 <a id="cli-7"></a>
-#### CLI-7 `sql-test init`
+#### CLI-7 `sql-test init` (done)
 
 [UAT.md](UAT.md) #4 and #13: adopters invent mapping shape, DDL layout, case folders, `conftest.py`, and `test_case_folders.py`. `sql-test init [path]` writes a minimal consumer skeleton (config, mapping stub, sqls stub, one empty case layout, pytest wiring) so `discover` and pytest work before any product SQL exists.
 
