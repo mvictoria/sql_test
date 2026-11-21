@@ -361,6 +361,16 @@ QA should be able to:
 
 This interaction is central to the product.
 
+### Comparison defaults
+
+These rules are part of the case format; changing one means migrating every case.
+
+- **Row order** is ignored, unless the target's SQL ends in a top-level `ORDER BY`; then expected rows must appear in that order. The executor must return the target's rows in the order its SQL produced them.
+- **Duplicates count.** Rows are compared as a multiset: if expected has a row once and actual has it twice, the case fails.
+- **NULL** is an empty, unquoted cell. A quoted empty cell (`""`) is an empty string. Spreadsheets do not quote empty cells, so pasted blanks are NULL.
+- **Columns:** only the columns listed in `expected.csv` are checked; other output columns are ignored. A listed column the target does not have fails the case.
+- **Values** are compared after typing the expected cells with the target's schema, so `1` and `1.0` in an integer column are equal.
+
 ## Saving
 
 Saving writes the case folder (see Saved format) into the repository's working tree.
@@ -1060,18 +1070,13 @@ How frequently do multiple SQL operations produce the same relation, and are the
 
 ## Comparison semantics
 
-Expected-vs-actual comparison needs defined behavior for:
+Row order, duplicates, NULL, and column subsets are decided in [Comparison defaults](#comparison-defaults). Still open:
 
-- unordered rows
-- duplicate rows
-- NULL
-- decimals
-- timestamps
+- decimals: exact, or within a tolerance
+- timestamps: time zones and precision
 - nested Spark types
 
 The POC should establish sensible defaults without exposing unnecessary configuration to QA.
-
-CSV also needs a NULL convention, because an empty cell could mean NULL or an empty string.
 
 ## Incremental semantics
 

@@ -41,10 +41,12 @@ Done:
 - [ENG-11](#eng-11)
 - [ENG-12](#eng-12)
 - [ENG-13](#eng-13)
+- [ENG-14](#eng-14)
 
 Can start now:
 
-- [ENG-14](#eng-14)
+- [ENG-15](#eng-15)
+- [ENG-16](#eng-16)
 
 ### Project skeleton
 
@@ -265,7 +267,7 @@ The executor runs a plan's ordered operations against the given rows and returns
 ### Comparison
 
 <a id="eng-14"></a>
-#### ENG-14 Decide comparison defaults
+#### ENG-14 Decide comparison defaults (done)
 
 Decide:
 
