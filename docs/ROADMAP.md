@@ -1096,9 +1096,11 @@ Findings and method: [UAT.md](UAT.md). Happy path after install is strong; getti
 - **Depends on:** [APP-16](#app-16), [APP-14](#app-14)
 
 <a id="app-21"></a>
-#### APP-21 Accept actual as expected in the workbench
+#### APP-21 Accept actual as expected in the workbench (done)
 
 [UAT.md](UAT.md) #20: [APP-11](#app-11) is marked done, but the adopt README still said accept was missing and a greenfield Run still left expected hand-built. Wire (or restore) accept cell / row / all in the NiceGUI expected view so a good Run can become a passing case without editing CSV by hand.
+
+Accept was already wired: [APP-11](#app-11) shipped accept cell, row, and all in the NiceGUI workbench, and the UAT pass followed the README, which still said accept was to come. The README now lists it, and a test covers the greenfield path UAT took: a new case, mocks filled, expected left blank, Run, then Accept all actual passes.
 
 - **Done when:** after Run, accepting the whole actual result fills expected and the case passes; README no longer says accept is unimplemented.
 - **Depends on:** [APP-11](#app-11), [APP-16](#app-16)
