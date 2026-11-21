@@ -363,6 +363,30 @@ Planning a run walks the target's whole upstream lineage, then prunes everything
 - **Done when:** planning several runs from one catalog reads each SQL file once; and a catalog built after a SQL file is edited sees the new text.
 - **Depends on:** [ENG-26](#eng-26), [APP-17](#app-17)
 
+<a id="eng-34"></a>
+#### ENG-34 Parse each column type once when typing cells (done)
+
+Typing a case CSV cell with its column's type parsed the type name with sqlglot every time, for every cell of every mock and expected file. That cost 43–113 µs per cell and made reading a case's CSVs cost more than running its SQL. Each type name is now parsed once per process, and typing a cell takes under 1 µs. Measured on a case whose two mocks and expected file each have 10 columns of mixed types, median of 7–25 runs:
+
+| Rows per file | Per case |
+| --- | --- |
+| 4 | 48.5 ms → 26.5 ms |
+| 100 | 728 ms → 441 ms |
+| 1,000 | 7.41 s → 3.86 s |
+
+The saving applies to every case, on every run. What remains is almost all loading mocks into DuckDB ([ENG-35](#eng-35)).
+
+- **Done when:** typing 1,000 cells of one column parses its type at most once.
+- **Depends on:** [ENG-14](#eng-14)
+
+<a id="eng-35"></a>
+#### ENG-35 Load each mock in one insert
+
+The DuckDB executor loads a mock with `executemany`, which runs one `INSERT` per row. In the [ENG-34](#eng-34) measurement, after that fix, this was 96% of a case with 100-row mocks: about 207 ms per mock. A single multi-row `INSERT` loads the same rows two to three and a half times faster in a micro-benchmark.
+
+- **Done when:** loading a mock of many rows runs one insert; and a 100-row mock of 10 columns loads at least twice as fast as with `executemany`.
+- **Depends on:** [ENG-27](#eng-27)
+
 ### Comparison
 
 <a id="eng-14"></a>
