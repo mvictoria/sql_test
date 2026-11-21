@@ -84,3 +84,49 @@ def test_a_failed_run_leaves_nothing_behind(tmp_path):
 
     with pytest.raises(Exception, match="(?i)members|Catalog Error|does not exist"):
         executor.run({}, [_medicaid(tmp_path)])
+
+
+LAKEHOUSE_MEMBERS = Relation(catalog="lakehouse", schema="claims", name="members")
+LAKEHOUSE_OUT = Relation(catalog="lakehouse", schema="claims", name="out")
+ID_SCHEMA = (Column(name="id", type="INT"),)
+
+
+def _lakehouse_out(tmp_path) -> Operation:
+    sql_file = tmp_path / "out.sql"
+    sql_file.write_text("select id from lakehouse.claims.members where id > 1")
+    return Operation(sql_file=sql_file, writes=LAKEHOUSE_OUT, kind=Kind.FULL_LOAD)
+
+
+def test_a_three_level_mock_loads_and_reads_back():
+    given = {LAKEHOUSE_MEMBERS: Given(schema=ID_SCHEMA, rows=[{"id": 1}])}
+
+    assert DuckDBExecutor().run(given, []) == {LAKEHOUSE_MEMBERS: [{"id": 1}]}
+
+
+def test_sql_reads_and_writes_three_level_names(tmp_path):
+    given = {LAKEHOUSE_MEMBERS: Given(schema=ID_SCHEMA, rows=[{"id": 1}, {"id": 2}])}
+
+    written = DuckDBExecutor().run(given, [_lakehouse_out(tmp_path)])
+
+    assert written[LAKEHOUSE_OUT] == [{"id": 2}]
+
+
+def test_concurrent_three_level_runs_each_see_only_their_own_rows():
+    executor = DuckDBExecutor()
+
+    def run(member_id: int) -> list:
+        given = {LAKEHOUSE_MEMBERS: Given(schema=ID_SCHEMA, rows=[{"id": member_id}])}
+        return executor.run(given, [])[LAKEHOUSE_MEMBERS]
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        results = list(pool.map(run, range(32)))
+
+    assert results == [[{"id": member_id}] for member_id in range(32)]
+
+
+@pytest.mark.parametrize("catalog", ["memory", "system", "temp", "Memory"])
+def test_a_relation_in_a_duckdb_database_name_is_an_error(catalog):
+    relation = Relation(catalog=catalog, schema="claims", name="members")
+
+    with pytest.raises(ValueError, match=f"{catalog}.claims.members"):
+        DuckDBExecutor().run({relation: Given(schema=ID_SCHEMA, rows=[])}, [])
