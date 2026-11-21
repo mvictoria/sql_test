@@ -1,10 +1,15 @@
+import shutil
 import threading
 from http.client import HTTPConnection
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import quote, urlencode
 
+from sql_test.engine import Engine
+from sql_test.executors.duckdb import DuckDBExecutor
 from sql_test.integrations.app import create_server
+from sql_test.integrations.config import RepositoryConfig
+from sql_test.testing.run import run_case
 
 FIXTURE = Path(__file__).parent / "fixtures" / "repos" / "lakehouse-data-customer"
 DEMO = Path(__file__).parent / "fixtures" / "repos" / "lineage-demo"
@@ -449,3 +454,84 @@ def test_opening_a_case_loads_mocks_grids_and_expected():
     assert 'data-table="expected"' in body
     assert 'name="expected.0.member_name" value="Ada"' in body
     assert 'name="expected.0.member_id" value="1"' in body
+
+
+def _copy_fixture(tmp_path: Path) -> Path:
+    repo = tmp_path / "repo"
+    shutil.copytree(FIXTURE, repo)
+    return repo
+
+
+def _medicaid_only_fields(
+    case: str | None = "only_medicaid_members",
+) -> list[tuple[str, str]]:
+    fields: list[tuple[str, str]] = [
+        ("view", "lineage"),
+        ("mock", "members"),
+        ("mock", "lob"),
+        ("members.0.member_id", "1"),
+        ("members.0.member_name", "Ada"),
+        ("members.0.lob", "30"),
+        ("members.1.member_id", "2"),
+        ("members.1.member_name", "Bea"),
+        ("members.1.lob", "10"),
+        ("lob.0.lob", "30"),
+        ("lob.0.lob_name", "Medicaid"),
+        ("lob.1.lob", "10"),
+        ("lob.1.lob_name", "Commercial"),
+        ("expected.0.member_id", "1"),
+        ("expected.0.member_name", "Ada"),
+    ]
+    if case is not None:
+        fields.insert(0, ("case", f"medicaid_members/{case}"))
+    else:
+        fields.insert(0, ("target", "medicaid_members"))
+    return fields
+
+
+def test_saving_a_loaded_case_writes_identical_files(tmp_path):
+    repo = _copy_fixture(tmp_path)
+    case_dir = repo / "tests" / "cases" / "medicaid_members" / "only_medicaid_members"
+    before = {path.name: path.read_text() for path in sorted(case_dir.glob("*.csv"))}
+
+    server = _with_server(repo)
+    try:
+        body = _post(
+            server,
+            "/workbench",
+            [*_medicaid_only_fields(), ("action", "save")],
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert "Saved case" in body
+    assert 'data-saved="' in body
+    after = {path.name: path.read_text() for path in sorted(case_dir.glob("*.csv"))}
+    assert after == before
+
+
+def test_case_saved_from_the_page_passes_without_the_app(tmp_path):
+    repo = _copy_fixture(tmp_path)
+    server = _with_server(repo)
+    try:
+        body = _post(
+            server,
+            "/workbench",
+            [
+                *_medicaid_only_fields(case=None),
+                ("case_name", "from_the_app"),
+                ("action", "save"),
+            ],
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert "Saved case" in body
+    assert "medicaid_members/from_the_app" in body
+    folder = repo / "tests" / "cases" / "medicaid_members" / "from_the_app"
+    assert folder.is_dir()
+    config = RepositoryConfig.load(repo)
+    result = run_case(folder, Engine(catalog=config.catalog(), executor=DuckDBExecutor))
+    assert result.passed, result.report()

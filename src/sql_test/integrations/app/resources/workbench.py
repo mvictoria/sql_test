@@ -3,6 +3,7 @@ from pathlib import Path
 
 from sql_test.engine import RunResult
 from sql_test.integrations.app.case_load import case_grid_rows, load_case
+from sql_test.integrations.app.case_save import SaveError, save_case
 from sql_test.integrations.app.compare_view import compare_section, expected_editor
 from sql_test.integrations.app.engine_access import run as run_case
 from sql_test.integrations.app.grid import (
@@ -98,6 +99,25 @@ def _workbench(
             reached = '<p class="ready">Run complete</p>'
         except Exception as error:  # noqa: BLE001 — show engine failures in the page
             reached = f'<p class="blocked">Could not run: {html.escape(str(error))}</p>'
+    elif action == "save":
+        name = case_name or (query.get("case_name") or [""])[0].strip()
+        try:
+            folder = save_case(repository, target, name, mocks, grid_rows)
+            case_name = name
+            base_query = {"case": f"{target}/{case_name}"}
+            reached = (
+                f'<p class="ready" data-saved="{html.escape(str(folder))}">'
+                f"Saved case <code>{html.escape(target)}/{html.escape(case_name)}</code>"
+                "</p>"
+            )
+        except SaveError as error:
+            reached = (
+                f'<p class="blocked">Could not save: {html.escape(str(error))}</p>'
+            )
+        except Exception as error:  # noqa: BLE001 — show engine failures in the page
+            reached = (
+                f'<p class="blocked">Could not save: {html.escape(str(error))}</p>'
+            )
 
     counts = run_result.counts if run_result is not None else None
     expected_rows = grid_rows.get("expected", [{}])
@@ -124,7 +144,14 @@ def _workbench(
     output = output_section(run_result) if run_result is not None else ""
     expected = expected_editor(repository, target, expected_rows)
     editor = mock_editor(
-        repository, mocks, base_query, view, grid_rows, engine_types, expected
+        repository,
+        mocks,
+        base_query,
+        view,
+        grid_rows,
+        engine_types,
+        expected,
+        case_name=case_name,
     )
     return f"""<!DOCTYPE html>
 <html lang="en">

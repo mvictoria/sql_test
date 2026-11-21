@@ -628,7 +628,7 @@ In the expected/actual view:
 ### Save and load
 
 <a id="app-12"></a>
-#### APP-12 Save a case
+#### APP-12 Save a case (done)
 
 Write the case folder into the working tree. Nothing is committed.
 
