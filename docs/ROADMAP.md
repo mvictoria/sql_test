@@ -52,6 +52,7 @@ Done:
 - [ENG-24](#eng-24)
 - [ENG-27](#eng-27)
 - [ENG-28](#eng-28)
+- [ENG-29](#eng-29)
 
 
 Next, now unblocked: [CI-1](#ci-1), and app stories that are not done. [CFG-1](#cfg-1) is done. Further CLI commands ([CLI-2](#cli-2)–[CLI-6](#cli-6)) are parked until a demonstrated need; the CLI's job today is `sql-test app`.
@@ -319,6 +320,14 @@ Gap: the catalog handles `catalog.schema.table` names ([ENG-21](#eng-21)), but t
 
 - **Done when:** a mock named `lakehouse.claims.members` loads and reads back; SQL reading `lakehouse.claims.members` and writing `lakehouse.claims.out` runs; concurrent three-level runs on one executor each see only their own rows; and a relation in catalog `memory` is an error naming it.
 - **Depends on:** [ENG-21](#eng-21), [ENG-27](#eng-27)
+
+<a id="eng-29"></a>
+#### ENG-29 Look up relations and producers by index (done)
+
+Resolving a name compared it with every relation in the catalog, and finding a relation's producers scanned every operation, so planning a chain of n tables did about n² comparisons: 5,202 for 50 tables. A frozen catalog now keeps two indexes, built once: relations by name, since a reference can only match relations of its name, and operations by the relation they write. Lineage and coverage resolve names through the catalog instead of against the whole relation set. `Relation.parse` is memoized on the name text.
+
+- **Done when:** resolving a name compares it only with relations of that name; planning a 50-table chain makes fewer than 250 relation comparisons; and parsing the same name twice parses it once.
+- **Depends on:** [ENG-26](#eng-26)
 
 ### Comparison
 

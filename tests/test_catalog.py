@@ -3,10 +3,12 @@ from pathlib import Path
 import pytest
 import sqlglot
 
+from sql_test.engine import Engine
 from sql_test.engine.catalog.adapters import mapped_sql_folder
 from sql_test.engine.catalog.mapping import read_operations
 from sql_test.engine.operation import Kind, Operation
 from sql_test.engine.relation import AmbiguousRelation, Relation
+from sql_test.executors import DuckDBExecutor
 
 REPOSITORY = Path(__file__).parent / "fixtures" / "repos" / "lakehouse-data-customer"
 
@@ -201,3 +203,56 @@ def test_a_catalog_built_after_an_edit_sees_the_new_sql(tmp_path):
     (tmp_path / "sqls" / "a.sql").write_text("select * from claims")
 
     assert Relation(name="claims") in build().relations()
+
+
+def _chain(folder, length):
+    (folder / "ddl.sql").write_text(
+        "".join(f"create table t{i} (id integer);\n" for i in range(length + 1))
+    )
+    rows = ["table_ref,sql_ref"]
+    for i in range(1, length + 1):
+        (folder / f"t{i}.sql").write_text(f"select id from t{i - 1}")
+        rows.append(f"t{i},t{i}.sql")
+    (folder / "mapping.csv").write_text("\n".join(rows) + "\n")
+    return mapped_sql_folder(sqls=folder, mapping=folder / "mapping.csv")
+
+
+def _counting(monkeypatch, owner, method):
+    calls = []
+    original = getattr(owner, method)
+
+    def counting(*args, **kwargs):
+        calls.append(args)
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(owner, method, counting)
+    return calls
+
+
+def test_resolving_a_name_checks_only_relations_with_that_name(tmp_path, monkeypatch):
+    catalog = _chain(tmp_path, 50)
+    catalog.relations()
+    matched = _counting(monkeypatch, Relation, "matches")
+
+    assert catalog.resolve("t7") == Relation(name="t7")
+    assert len(matched) == 1
+
+
+def test_planning_a_chain_grows_linearly_with_its_length(tmp_path, monkeypatch):
+    catalog = _chain(tmp_path, 50)
+    matched = _counting(monkeypatch, Relation, "matches")
+    compared = _counting(monkeypatch, Relation, "__eq__")
+
+    Engine(catalog, DuckDBExecutor()).plan("t50", {"t0": [{"id": 1}]})
+
+    assert len(matched) < 5 * 50
+    assert len(compared) < 5 * 50
+
+
+def test_parsing_a_name_twice_parses_it_once(monkeypatch):
+    parsed = _counting(monkeypatch, sqlglot.exp, "to_table")
+
+    Relation.parse("claims.memoized_once")
+    Relation.parse("claims.memoized_once")
+
+    assert len(parsed) == 1

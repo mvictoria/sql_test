@@ -38,7 +38,6 @@ class Lineage:
 
 
 def upstream_lineage(target: Relation, catalog: Catalog) -> Lineage:
-    known = catalog.relations()
     reached: dict[Relation, tuple[Operation, ...]] = {}
     reads: dict[Operation, set[Relation]] = {}
     source_reasons: dict[Relation, SourceReason] = {}
@@ -57,7 +56,8 @@ def upstream_lineage(target: Relation, catalog: Catalog) -> Lineage:
         try:
             current_reads = {
                 operation: {
-                    reference.resolve(known) for reference in tables_read(operation.sql)
+                    catalog.resolve(reference)
+                    for reference in tables_read(operation.sql)
                 }
                 for operation in producers
             }
