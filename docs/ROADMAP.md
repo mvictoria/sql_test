@@ -50,7 +50,7 @@ Done:
 - [ENG-25](#eng-25)
 - [ENG-26](#eng-26)
 
-In progress: [ENG-24](#eng-24) engine cleanup, [ENG-27](#eng-27) share one DuckDB instance across runs.
+In progress: [ENG-24](#eng-24) engine cleanup.
 
 Next, now unblocked: [CI-1](#ci-1), and app stories that are not done. [CFG-1](#cfg-1) is done. Further CLI commands ([CLI-2](#cli-2)–[CLI-6](#cli-6)) are parked until a demonstrated need; the CLI's job today is `sql-test app`.
 
@@ -303,7 +303,7 @@ Planning a run parsed every SQL file in the repository once per name it resolved
 - **Depends on:** [ENG-24](#eng-24)
 
 <a id="eng-27"></a>
-#### ENG-27 Share one DuckDB instance across runs
+#### ENG-27 Share one DuckDB instance across runs (done)
 
 Each run opened and closed its own DuckDB database, which cost more than the run itself: a sample-repository case took 58 ms, most of it opening the database. The DuckDB executor keeps one instance; each run attaches its own in-memory database through its own cursor and detaches it at the end, even when the run fails.
 
