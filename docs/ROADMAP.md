@@ -36,10 +36,11 @@ Done:
 - [ENG-5](#eng-5)
 - [ENG-6](#eng-6)
 - [ENG-8](#eng-8)
+- [ENG-9](#eng-9)
 
 Can start now:
 
-- [ENG-9](#eng-9)
+- [ENG-7](#eng-7)
 - [ENG-11](#eng-11)
 - [ENG-14](#eng-14)
 
@@ -207,7 +208,7 @@ A relation upstream of a given relation is pruned unless another executed path s
 - **Depends on:** [ENG-6](#eng-6). Source reasons from unparseable or schemaless models appear once [ENG-7](#eng-7) lands.
 
 <a id="eng-9"></a>
-#### ENG-9 Report relations that still need rows
+#### ENG-9 Report relations that still need rows (done)
 
 List every relation the plan will read that no executed operation produces and that has no given rows. Running such a plan fails with a message naming them. The test layer words this as tables that still need mock data.
 

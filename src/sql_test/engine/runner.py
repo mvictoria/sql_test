@@ -21,6 +21,7 @@ class Engine:
 
     def run(self, table: str, rows: dict[str, list[Row]]) -> list[tuple[Any, ...]]:
         plan = self.plan(table, rows)
+        plan.check_rows()
         executor = self._executor()
         try:
             for name, table_rows in rows.items():

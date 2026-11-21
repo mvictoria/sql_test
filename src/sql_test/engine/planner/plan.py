@@ -16,11 +16,21 @@ class State(StrEnum):
     SOURCE = "source"
 
 
+class MissingRows(Exception):
+    pass
+
+
 @dataclass(frozen=True)
 class Plan:
     lineage: Lineage
     states: dict[Relation, State]
     operations: list[Operation]
+    needs_rows: set[Relation]
+
+    def check_rows(self) -> None:
+        if self.needs_rows:
+            names = ", ".join(sorted(map(str, self.needs_rows)))
+            raise MissingRows(f"These relations still need rows: {names}")
 
 
 def plan_run(target: Relation, catalog: Catalog, given: Mapping[Relation, int]) -> Plan:
@@ -49,4 +59,11 @@ def plan_run(target: Relation, catalog: Catalog, given: Mapping[Relation, int]) 
         if relation in built_from
         for operation in lineage.producers[relation]
     ]
-    return Plan(lineage=lineage, states=states, operations=operations)
+    needs_rows = {
+        relation
+        for relation, state in states.items()
+        if state is State.SOURCE or (state is State.GIVEN and not given[relation])
+    }
+    return Plan(
+        lineage=lineage, states=states, operations=operations, needs_rows=needs_rows
+    )
