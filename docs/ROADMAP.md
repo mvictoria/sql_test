@@ -910,9 +910,9 @@ Support Python 3.13 through 3.15. CI runs the suite on each version; lint and ty
 <a id="ci-5"></a>
 #### CI-5 Tool CI on pull requests only (done)
 
-Run the tool's CI workflow on pull requests only, not on pushes to `main`. Releases still run via CD on `main`.
+Run the tool's CI workflow on pull requests only, not on pushes to `main`. Skip the run when the PR only changes Markdown. Releases still run via CD on `main`.
 
-- **Done when:** merging to `main` does not start the tool CI workflow.
+- **Done when:** merging to `main` does not start the tool CI workflow, and a Markdown-only PR does not start it either.
 - **Depends on:** [CI-1](#ci-1)
 
 ---

@@ -59,8 +59,9 @@ def test_tool_ci_calls_reusable_workflow_for_sample():
 
 def test_tool_ci_runs_on_pull_requests_only():
     ci = _load(WORKFLOWS / "ci.yml")
-    assert "pull_request" in _on(ci)
     assert "push" not in _on(ci)
+    pull_request = _on(ci)["pull_request"]
+    assert pull_request["paths-ignore"] == ["**/*.md"]
 
 
 def test_tool_ci_tests_python_313_through_315():
