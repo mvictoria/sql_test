@@ -190,6 +190,9 @@ def _workbench(
     .graph .state {{ font: 10px system-ui, sans-serif; fill: #555; text-transform: uppercase; }}
     .ready {{ color: #1b7a45; }}
     .blocked {{ color: #a60; }}
+    .verdict {{ font-size: 1.1rem; font-weight: 700; margin: 0.75rem 0; }}
+    .verdict.passed {{ color: #1b7a45; }}
+    .verdict.failed {{ color: #b31d28; }}
     .grid {{ border-collapse: collapse; margin: 0.5rem 0 1rem; }}
     .grid th, .grid td {{ border: 1px solid #ccc; padding: 0.25rem 0.4rem; }}
     .grid th {{ background: #f4f4f4; font-size: 0.85rem; }}

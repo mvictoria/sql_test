@@ -1,4 +1,5 @@
 import html
+from dataclasses import dataclass
 from pathlib import Path
 
 from sql_test.engine.executor import Given, Row
@@ -7,6 +8,19 @@ from sql_test.executors.duckdb import DuckDBExecutor
 from sql_test.integrations.app.engine_access import catalog
 from sql_test.testing.cases import CaseTable
 from sql_test.testing.comparison import Comparison, compare
+
+
+@dataclass(frozen=True)
+class DiffPanel:
+    html: str
+    has_expected: bool
+    comparison: Comparison | None
+
+    @property
+    def passed(self) -> bool:
+        return (
+            self.has_expected and self.comparison is not None and self.comparison.passed
+        )
 
 
 def expected_editor(
@@ -54,22 +68,30 @@ def compare_section(
     target: str,
     expected_rows: list[dict[str, str]],
     actual: list[Row],
-) -> str:
+) -> DiffPanel:
     schema = _target_schema(repository, target)
-    if schema is None:
-        return ""
-    columns = tuple(column.name for column in schema)
     filled = [
-        {column.name: row.get(column.name, "") for column in schema}
+        row
         for row in expected_rows
         if any(str(value).strip() for value in row.values())
     ]
-    if not filled and not actual:
-        return ""
-    typed_rows = _load_typed_rows(repository, target, schema, filled)
+    has_expected = bool(filled)
+    if schema is None:
+        return DiffPanel(html="", has_expected=has_expected, comparison=None)
+    columns = tuple(column.name for column in schema)
+    aligned = [
+        {column.name: row.get(column.name, "") for column in schema} for row in filled
+    ]
+    if not aligned and not actual:
+        return DiffPanel(html="", has_expected=False, comparison=None)
+    typed_rows = _load_typed_rows(repository, target, schema, aligned)
     expected = CaseTable(columns=columns, rows=typed_rows)
     comparison = compare(expected, actual)
-    return _render_diff(comparison, columns)
+    return DiffPanel(
+        html=_render_diff(comparison, columns),
+        has_expected=has_expected,
+        comparison=comparison,
+    )
 
 
 def _load_typed_rows(

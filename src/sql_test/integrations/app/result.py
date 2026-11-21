@@ -2,7 +2,7 @@ import html
 from pathlib import Path
 
 from sql_test.engine import RunResult
-from sql_test.integrations.app.compare_view import compare_section
+from sql_test.integrations.app.compare_view import DiffPanel, compare_section
 from sql_test.integrations.app.output import output_section
 
 RESULT_VIEWS = frozenset({"output", "diff"})
@@ -18,12 +18,13 @@ def result_section(
 ) -> str:
     if result_view not in RESULT_VIEWS:
         result_view = DEFAULT_RESULT_VIEW
+    panel = compare_section(repository, target, expected_rows, run_result.rows)
     output = output_section(run_result)
-    diff = compare_section(repository, target, expected_rows, run_result.rows)
-    if not diff:
-        diff = '<p class="empty">Add expected rows to see a diff</p>'
+    diff = panel.html or '<p class="empty">Add expected rows to see a diff</p>'
     return (
-        f'<section class="result" data-result-view="{html.escape(result_view)}">'
+        f'<section class="result" data-result-view="{html.escape(result_view)}" '
+        f'data-passed="{"true" if panel.passed else "false"}">'
+        f"{_verdict(panel)}"
         f"{_result_nav(result_view)}"
         f'<div class="result-panel" data-panel="output"'
         f"{' hidden' if result_view != 'output' else ''}>{output}</div>"
@@ -32,6 +33,17 @@ def result_section(
         "</section>"
         f"{_toggle_script()}"
     )
+
+
+def _verdict(panel: DiffPanel) -> str:
+    if panel.passed:
+        return '<p class="verdict passed" data-passed="true">Passed</p>'
+    if not panel.has_expected:
+        return (
+            '<p class="verdict failed" data-passed="false">'
+            "Failed — add expected rows</p>"
+        )
+    return '<p class="verdict failed" data-passed="false">Failed</p>'
 
 
 def _result_nav(current: str) -> str:
