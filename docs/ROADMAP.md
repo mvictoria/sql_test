@@ -1184,6 +1184,16 @@ Do not use Hypothesis for DuckDB execution, the app UI, or N-table scale shapes.
   - [ENG-21](#eng-21) for relations
   - [ENG-8](#eng-8) and [ENG-25](#eng-25) for plan properties
 
+<a id="test-2"></a>
+#### TEST-2 Engine-only case volume (done)
+
+A regression guard for catalog + coverage planning at repository scale, without DuckDB. 1000 independent models × 100 in-memory cases each (100k `plan_run`s via `pipeline_counts`). Complements `tests/test_scale.py`, which exercises lineage shapes through the executor.
+
+- **Done when:** `tests/test_engine_perf.py` builds a 1000-model catalog, runs `case_counts` and `pipeline_counts` over 100k cases, and fails if catalog or pipeline phases blow a fixed wall-clock budget.
+- **Depends on:**
+  - [COV-1](#cov-1)
+  - [COV-2](#cov-2)
+
 ---
 
 ## Later — not yet planned
