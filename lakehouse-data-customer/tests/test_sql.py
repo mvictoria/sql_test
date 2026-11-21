@@ -4,6 +4,7 @@ import duckdb
 import pytest
 
 from sql_test.engine import Engine
+from sql_test.engine.catalog.adapters import mapped_sql_folder
 from sql_test.executors.duckdb import DuckDBExecutor
 
 
@@ -18,8 +19,10 @@ def db():
 def engine():
     admin = Path(__file__).parent.parent / "admin"
     return Engine(
-        sqls=admin / "sqls",
-        mapping=admin / "config" / "lookup_sql_table_mapping.csv",
+        catalog=mapped_sql_folder(
+            sqls=admin / "sqls",
+            mapping=admin / "config" / "lookup_sql_table_mapping.csv",
+        ),
         executor=DuckDBExecutor,
     )
 

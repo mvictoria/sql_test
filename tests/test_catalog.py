@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from sql_test.engine.catalog import Evidence
+from sql_test.engine.catalog.adapters import mapped_sql_folder
 from sql_test.engine.catalog.mapping import read_operations
 from sql_test.engine.operation import Kind, Operation
 from sql_test.engine.relation import Relation
@@ -49,4 +51,45 @@ def test_a_relation_mapped_to_two_files_has_two_operations(tmp_path):
     ]
     assert {operation.writes for operation in operations} == {
         Relation(schema="claims", name="ids")
+    }
+
+
+def test_every_relation_in_the_sample_repository_is_declared():
+    catalog = mapped_sql_folder(
+        sqls=REPOSITORY / "admin" / "sqls",
+        mapping=REPOSITORY / "admin" / "config" / "lookup_sql_table_mapping.csv",
+    )
+
+    assert catalog.relations() == {
+        Relation(name="members"): Evidence.DECLARED,
+        Relation(name="lob"): Evidence.DECLARED,
+        Relation(name="medicaid_members"): Evidence.DECLARED,
+        Relation(name="medicaid_members_named_alice"): Evidence.DECLARED,
+    }
+
+
+def test_a_relation_only_read_by_sql_is_inferred(tmp_path):
+    (tmp_path / "a.sql").write_text("select * from claims.memebrs")
+    mapping = tmp_path / "mapping.csv"
+    mapping.write_text("load_type,table_ref,sql_ref\nhistoric,a,a.sql\n")
+
+    catalog = mapped_sql_folder(sqls=tmp_path, mapping=mapping)
+
+    assert catalog.relations() == {
+        Relation(name="a"): Evidence.DECLARED,
+        Relation(schema="claims", name="memebrs"): Evidence.INFERRED,
+    }
+
+
+def test_a_bare_reference_resolves_to_a_declared_relation(tmp_path):
+    (tmp_path / "ddl.sql").write_text("create table claims.members (id integer)")
+    (tmp_path / "a.sql").write_text("select * from members")
+    mapping = tmp_path / "mapping.csv"
+    mapping.write_text("load_type,table_ref,sql_ref\nhistoric,a,a.sql\n")
+
+    catalog = mapped_sql_folder(sqls=tmp_path, mapping=mapping)
+
+    assert catalog.relations() == {
+        Relation(name="a"): Evidence.DECLARED,
+        Relation(schema="claims", name="members"): Evidence.DECLARED,
     }

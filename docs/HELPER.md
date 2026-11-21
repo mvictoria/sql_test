@@ -202,6 +202,17 @@ sqlglot parses names and normalizes their case for the configured dialect. The e
 
 A name written with fewer levels, such as a bare `members`, resolves to the one known relation whose trailing parts match. If several match, the name is ambiguous, and resolving it is an error that lists the candidates. If none match, the name stays as written, for example a source the repository does not produce.
 
+## Catalog
+
+The **catalog** is what the engine knows about a repository: its operations, its schemas, and every relation either of them mentions. The engine reads a catalog, never files. A **repository adapter** builds the catalog from one repository's conventions, choosing the readers for its mapping and schemas. The first adapter reads a folder of SQL plus a mapping CSV, with schemas from the DDL in that folder.
+
+Each relation in the catalog records how it is known:
+
+- **Declared** — written by an operation, or given a schema. Something in the repository says it exists.
+- **Inferred** — only read by SQL. `select * from members` implies `members` exists, so it is in the graph, as a source.
+
+A reference resolves to a declared relation when it matches one; otherwise it is inferred as written. Inferred relations keep lineage complete, including sources owned elsewhere, but a typo such as `memebrs` is also inferred. The tool does not validate that a repository's SQL reads real tables; that belongs to the repository's own linting. It does show inferred relations distinctly, so a typo is not mocked into a case by accident.
+
 ## Schemas
 
 A relation's **schema** is its ordered columns, each a name and a type. Repositories store schemas in different ways: SQL DDL, YAML, or JSON. Each format has a reader, and every reader returns the same thing: schemas keyed by relation, plus any problems found. Which reader a repository uses is one of its conventions. The DDL reader comes first; YAML and JSON readers are added when a repository needs them.
@@ -539,7 +550,7 @@ The package has one subpackage per layer:
 sql-test-tool/
 ├── src/sql_test/
 │   ├── engine/                 relations, operations, rows; no test vocabulary
-│   │   ├── catalog/            what the SQL folder holds: producers, later schemas
+│   │   ├── catalog/            the catalog, its readers, and repository adapters
 │   │   ├── lineage/            what depends on what
 │   │   ├── planner/            what runs, and in what order
 │   │   └── executor.py         the executor interface
