@@ -29,9 +29,14 @@ class Comparison:
 def compare(
     expected: CaseTable, actual: list[Row], ordered: bool = False
 ) -> Comparison:
-    output_columns = set().union(*actual) if actual else set()
     checked = expected.columns
-    missing_columns = tuple(name for name in checked if name not in output_columns)
+    # No actual rows means no output columns to inspect — empty vs empty passes;
+    # missing expected rows are reported as missing, not as missing_columns.
+    if actual:
+        output_columns = set().union(*(row.keys() for row in actual))
+        missing_columns = tuple(name for name in checked if name not in output_columns)
+    else:
+        missing_columns = ()
     comparison = Comparison(missing_columns=missing_columns)
     wanted = [_project(row, checked) for row in expected.rows]
     got = [_project(row, checked) for row in actual]

@@ -397,7 +397,7 @@ These rules are part of the case format; changing one means migrating every case
 - **Row order** is ignored, unless the target's SQL ends in a top-level `ORDER BY`; then expected rows must appear in that order. The executor must return the target's rows in the order its SQL produced them.
 - **Duplicates count.** Rows are compared as a multiset: if expected has a row once and actual has it twice, the case fails.
 - **NULL** is an empty, unquoted cell. A quoted empty cell (`""`) is an empty string. Spreadsheets do not quote empty cells, so pasted blanks are NULL.
-- **Columns:** only the columns listed in `expected.csv` are checked; other output columns are ignored. A listed column the target does not have fails the case.
+- **Columns:** only the columns listed in `expected.csv` are checked; other output columns are ignored. A listed column the target does not have fails the case. If both expected and actual have no rows, the case passes — an empty result does not count as missing columns.
 - **Values** are compared after typing the expected cells with the target's schema, so `1` and `1.0` in an integer column are equal. An expected cell that cannot be cast to its column's type fails the case, naming the cell.
 - **Outcomes:** each expected row is matched, changed, or missing, and each actual row left over is unexpected. An expected row and an actual row that differ but agree on at least half of the checked columns (with two or more columns) are reported as one changed row, naming the columns that differ; otherwise they are a missing row and an unexpected row.
 

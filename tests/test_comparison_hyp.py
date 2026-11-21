@@ -17,10 +17,8 @@ row = st.fixed_dictionaries({"a": st.integers(0, 5), "b": st.integers(0, 5)})
 rows = st.lists(row, max_size=8)
 
 
-@given(st.lists(row, min_size=1, max_size=8))
+@given(rows)
 def test_the_same_multiset_passes_in_any_order(bag: list[dict[str, int]]):
-    # Empty actual has no output columns, so an empty expected still listing
-    # columns fails on missing_columns — only non-empty bags exercise the multiset rule.
     shuffled = list(reversed(bag))
     assert compare(_table(bag), shuffled).passed
 
