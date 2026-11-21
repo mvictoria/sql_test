@@ -285,7 +285,7 @@ Behaviour-preserving cleanup of the engine, one commit per item:
 - **Depends on:** none
 
 <a id="eng-25"></a>
-#### ENG-25 Report unused mocks
+#### ENG-25 Report unused mocks (done)
 
 The plan lists the given relations the run never reads, as `Plan.unused`: a mock upstream of another mock on every path to the target, or a mock outside the target's lineage. A mock that another path still reads is used. The app's mock frontier and the test layer both read this instead of working it out themselves. A case with an unused mock fails, naming it.
 
