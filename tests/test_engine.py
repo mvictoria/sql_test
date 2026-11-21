@@ -197,3 +197,23 @@ def test_run_says_whether_the_target_sql_orders_its_rows(tmp_path):
 
     assert engine.run("ordered", rows={}).ordered
     assert not engine.run("unordered", rows={}).ordered
+
+
+def test_a_repository_with_three_level_names_runs(tmp_path):
+    (tmp_path / "ddl.sql").write_text(
+        "create table lakehouse.claims.members (id integer);\n"
+        "create table lakehouse.claims.adults (id integer);\n"
+    )
+    (tmp_path / "adults.sql").write_text(
+        "select id from lakehouse.claims.members where id > 1"
+    )
+    mapping = tmp_path / "mapping.csv"
+    mapping.write_text("table_ref,sql_ref\nlakehouse.claims.adults,adults.sql\n")
+    engine = Engine(
+        catalog=mapped_sql_folder(sqls=tmp_path, mapping=mapping),
+        executor=DuckDBExecutor(),
+    )
+
+    result = engine.run("adults", {"members": [{"id": 1}, {"id": 2}]})
+
+    assert result.rows == [{"id": 2}]
