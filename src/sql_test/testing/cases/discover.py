@@ -27,3 +27,17 @@ def discover_cases(cases_root: Path) -> list[CaseSummary]:
                 )
             )
     return found
+
+
+def case_folders(root: Path) -> list[Path]:
+    return sorted(
+        case
+        for target in root.iterdir()
+        if target.is_dir()
+        for case in target.iterdir()
+        if case.is_dir()
+    )
+
+
+def case_id(folder: Path) -> str:
+    return f"{folder.parent.name}/{folder.name}"
