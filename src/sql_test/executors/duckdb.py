@@ -1,4 +1,5 @@
 from collections.abc import Mapping, Sequence
+from uuid import uuid4
 
 import duckdb
 
@@ -6,16 +7,28 @@ from sql_test.engine.executor import Given, Kind, Operation, Relation, Row
 
 
 class DuckDBExecutor:
+    """Runs share one DuckDB instance; each attaches and drops its own database."""
+
+    def __init__(self) -> None:
+        self._instance = duckdb.connect()
+
     def run(
         self, given: Mapping[Relation, Given], operations: Sequence[Operation]
     ) -> dict[Relation, list[Row]]:
-        with duckdb.connect() as connection:
-            for relation, table in given.items():
-                _create(connection, relation, table)
-            for operation in operations:
-                _execute(connection, operation)
-            touched = dict.fromkeys([*given, *(op.writes for op in operations)])
-            return {relation: _read(connection, relation) for relation in touched}
+        database = f"run_{uuid4().hex}"
+        with self._instance.cursor() as connection:
+            connection.execute(f"attach ':memory:' as {database}")
+            try:
+                connection.execute(f"use {database}")
+                for relation, table in given.items():
+                    _create(connection, relation, table)
+                for operation in operations:
+                    _execute(connection, operation)
+                touched = dict.fromkeys([*given, *(op.writes for op in operations)])
+                return {relation: _read(connection, relation) for relation in touched}
+            finally:
+                connection.execute("use memory")
+                connection.execute(f"detach {database}")
 
 
 def _create(
