@@ -91,6 +91,18 @@ def test_null_matches_null():
     assert compare(_expected(row), [row]).passed
 
 
+def test_empty_expected_and_empty_actual_passes():
+    assert compare(_expected(), []).passed
+
+
+def test_empty_actual_with_expected_rows_is_missing_not_missing_columns():
+    comparison = compare(_expected(ADA), [])
+
+    assert comparison.missing == [ADA]
+    assert comparison.missing_columns == ()
+    assert not comparison.passed
+
+
 def test_ordered_rows_must_appear_in_order():
     comparison = compare(_expected(ADA, BEA), [BEA, ADA], ordered=True)
 
