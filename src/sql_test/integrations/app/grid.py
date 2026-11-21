@@ -19,6 +19,7 @@ def mock_editor(
     engine_types: dict[str, dict[str, str]],
     expected_section: str = "",
     case_name: str | None = None,
+    result_view: str = "output",
 ) -> str:
     if not mocks and not expected_section:
         return ""
@@ -28,6 +29,9 @@ def mock_editor(
         for key, value in base_query.items()
     )
     hidden += f'<input type="hidden" name="view" value="{html.escape(view)}">'
+    hidden += (
+        f'<input type="hidden" name="result_view" value="{html.escape(result_view)}">'
+    )
     hidden += "".join(
         f'<input type="hidden" name="mock" value="{html.escape(name)}">'
         for name in mocks

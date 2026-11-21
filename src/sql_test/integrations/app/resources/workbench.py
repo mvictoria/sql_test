@@ -4,7 +4,7 @@ from pathlib import Path
 from sql_test.engine import RunResult
 from sql_test.integrations.app.case_load import case_grid_rows, load_case
 from sql_test.integrations.app.case_save import SaveError, save_case
-from sql_test.integrations.app.compare_view import compare_section, expected_editor
+from sql_test.integrations.app.compare_view import expected_editor
 from sql_test.integrations.app.engine_access import run as run_case
 from sql_test.integrations.app.grid import (
     apply_grid_action,
@@ -17,7 +17,11 @@ from sql_test.integrations.app.lineage import (
     lineage_section,
     workbench_query,
 )
-from sql_test.integrations.app.output import output_section
+from sql_test.integrations.app.result import (
+    DEFAULT_RESULT_VIEW,
+    RESULT_VIEWS,
+    result_section,
+)
 from sql_test.integrations.app.router import Request, Response
 from sql_test.integrations.app.sql_view import sql_section
 from sql_test.integrations.discover import Discovery, discover
@@ -121,8 +125,11 @@ def _workbench(
 
     counts = run_result.counts if run_result is not None else None
     expected_rows = grid_rows.get("expected", [{}])
-    comparison = (
-        compare_section(repository, target, expected_rows, run_result.rows)
+    result_view = query.get("result_view", [DEFAULT_RESULT_VIEW])[0]
+    if result_view not in RESULT_VIEWS:
+        result_view = DEFAULT_RESULT_VIEW
+    results = (
+        result_section(repository, target, expected_rows, run_result, result_view)
         if run_result is not None
         else ""
     )
@@ -141,7 +148,6 @@ def _workbench(
         if view == "lineage"
         else sql_section(repository, target)
     )
-    output = output_section(run_result) if run_result is not None else ""
     expected = expected_editor(repository, target, expected_rows)
     editor = mock_editor(
         repository,
@@ -152,6 +158,7 @@ def _workbench(
         engine_types,
         expected,
         case_name=case_name,
+        result_view=result_view,
     )
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -192,6 +199,13 @@ def _workbench(
     .output {{ border-collapse: collapse; margin: 0.5rem 0 1rem; }}
     .output th, .output td {{ border: 1px solid #ccc; padding: 0.25rem 0.5rem; }}
     .output th {{ background: #f4f4f4; font-size: 0.85rem; }}
+    .result {{ margin-top: 1rem; }}
+    nav.result-views {{ margin: 0.5rem 0 1rem; }}
+    nav.result-views button {{
+      margin-right: 0.5rem; font: inherit; background: none; border: 1px solid #ccc;
+      padding: 0.2rem 0.6rem; cursor: pointer;
+    }}
+    nav.result-views button.current {{ font-weight: 700; border-color: #333; }}
     .compare {{ border-collapse: collapse; margin: 0.5rem 0 1rem; }}
     .compare th, .compare td {{ border: 1px solid #ccc; padding: 0.25rem 0.4rem; }}
     .compare th {{ background: #f4f4f4; font-size: 0.85rem; }}
@@ -213,8 +227,7 @@ def _workbench(
   {_view_nav(base_query, view, mocks)}
   {body}
   {reached}
-  {output}
-  {comparison}
+  {results}
   {editor}
 </body>
 </html>
