@@ -3,7 +3,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, quote, urlparse
 
-from sql_test.integrations.discover import Discovery, discover
+from sql_test.engine.catalog.mapping import read_operations
+from sql_test.engine.relation import Relation
+from sql_test.integrations.discover import MAPPING, SQLS, Discovery, discover
 
 
 def create_server(
@@ -19,7 +21,9 @@ def create_server(
             if parsed.path in {"/", "/index.html"}:
                 body = _home(discover(repository)).encode()
             elif parsed.path == "/workbench":
-                page = _workbench(discover(repository), parse_qs(parsed.query))
+                page = _workbench(
+                    repository, discover(repository), parse_qs(parsed.query)
+                )
                 if page is None:
                     self.send_error(404)
                     return
@@ -77,7 +81,9 @@ def _home(result: Discovery) -> str:
 """
 
 
-def _workbench(result: Discovery, query: dict[str, list[str]]) -> str | None:
+def _workbench(
+    repository: Path, result: Discovery, query: dict[str, list[str]]
+) -> str | None:
     case_name: str | None = None
     if query.get("case"):
         raw = query["case"][0]
@@ -104,7 +110,10 @@ def _workbench(result: Discovery, query: dict[str, list[str]]) -> str | None:
   <style>
     body {{ font-family: system-ui, sans-serif; margin: 2rem; }}
     h1 {{ font-size: 1.25rem; }}
+    h2 {{ font-size: 1rem; margin-top: 1.5rem; }}
     a {{ color: inherit; }}
+    pre {{ background: #f4f4f4; padding: 1rem; overflow: auto; }}
+    .empty {{ color: #666; }}
   </style>
 </head>
 <body>
@@ -112,9 +121,29 @@ def _workbench(result: Discovery, query: dict[str, list[str]]) -> str | None:
   <h1>Workbench</h1>
   <p>Table under test: <strong>{html.escape(target)}</strong></p>
   {case_line}
+  {_sql_section(repository, target)}
 </body>
 </html>
 """
+
+
+def _sql_section(repository: Path, target: str) -> str:
+    relation = Relation.parse(target)
+    operations = [
+        operation
+        for operation in read_operations(repository / MAPPING, repository / SQLS)
+        if operation.writes == relation
+    ]
+    if not operations:
+        return "<h2>SQL</h2><p class='empty'>No producer SQL</p>"
+    blocks = "".join(
+        (
+            f"<h2>{html.escape(operation.sql_file.name)}</h2>"
+            f"<pre><code>{html.escape(operation.sql)}</code></pre>"
+        )
+        for operation in operations
+    )
+    return blocks
 
 
 def _model_section(names: tuple[str, ...]) -> str:
