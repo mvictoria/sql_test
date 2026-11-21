@@ -44,7 +44,7 @@ def test_plan_invariants_on_a_chain(length: int, cut: int, rows: int):
         given_rel = Relation(name=given_name)
         given = {given_rel: rows}
 
-        plan = plan_run(tip, catalog, given=given)
+        plan = plan_run(tip, catalog, given=given, with_pruned=True)
 
         assert plan.unused <= set(given)
         executed = {op.writes for op in plan.operations}
@@ -68,3 +68,30 @@ def test_plan_invariants_on_a_chain(length: int, cut: int, rows: int):
             assert plan.states[Relation(name="raw")] is State.PRUNED
             for i in range(1, cut):
                 assert plan.states[Relation(name=models[i - 1])] is State.PRUNED
+
+
+@given(
+    st.integers(min_value=1, max_value=6),
+    st.sets(st.integers(min_value=0, max_value=6), max_size=4),
+    st.integers(min_value=0, max_value=2),
+)
+def test_stopping_at_given_relations_plans_what_the_full_walk_keeps(
+    length: int, cuts: set[int], rows: int
+):
+    with tempfile.TemporaryDirectory() as tmp:
+        catalog, models = _chain_catalog(Path(tmp), length)
+        tip = Relation(name=models[-1])
+        names = ["raw", *models]
+        given = {Relation(name=names[min(cut, length)]): rows for cut in cuts}
+
+        full = plan_run(tip, catalog, given=given, with_pruned=True)
+        stopped = plan_run(tip, catalog, given=given)
+
+        assert stopped.states == {
+            rel: state
+            for rel, state in full.states.items()
+            if state is not State.PRUNED
+        }
+        assert stopped.operations == full.operations
+        assert stopped.needs_rows == full.needs_rows
+        assert stopped.unused == full.unused

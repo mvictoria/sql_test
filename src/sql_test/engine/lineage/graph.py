@@ -1,3 +1,4 @@
+from collections.abc import Collection
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -37,14 +38,17 @@ class Lineage:
         return built_from
 
 
-def upstream_lineage(target: Relation, catalog: Catalog) -> Lineage:
+def upstream_lineage(
+    target: Relation, catalog: Catalog, boundaries: Collection[Relation] = ()
+) -> Lineage:
+    """Walk up from `target`, not past an execution boundary in `boundaries`."""
     reached: dict[Relation, tuple[Operation, ...]] = {}
     reads: dict[Operation, set[Relation]] = {}
     source_reasons: dict[Relation, SourceReason] = {}
     pending = [target]
     while pending:
         current = pending.pop()
-        if current in reached or current in source_reasons:
+        if current in reached or current in source_reasons or current in boundaries:
             continue
         producers = catalog.producers(current)
         if not producers:
