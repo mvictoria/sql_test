@@ -48,3 +48,49 @@ def test_missing_settings_are_named(tmp_path: Path):
 
     with pytest.raises(ConfigError, match="missing: cases, mapping, schemas"):
         RepositoryConfig.load(tmp_path)
+
+
+def test_saving_cases_leaves_the_rest_of_pyproject_byte_for_byte_unchanged(
+    tmp_path: Path,
+):
+    import shutil
+
+    repo = tmp_path / "repo"
+    shutil.copytree(FIXTURE, repo)
+    (repo / "tests" / "cases").rename(repo / "other_cases")
+    pyproject = repo / "pyproject.toml"
+    before = (
+        "# keep me\n"
+        "[project]\n"
+        'name = "demo"\n'
+        "\n"
+        "[tool.ruff]\n"
+        "line-length = 88\n"
+        "\n"
+        "[tool.sql-test]\n"
+        'sqls = "admin/sqls"\n'
+        'mapping = "admin/config/lookup_sql_table_mapping.csv"\n'
+        'schemas = "admin/sqls"\n'
+        'cases = "tests/cases"\n'
+        "\n"
+        "# trailing\n"
+    )
+    pyproject.write_text(before)
+
+    RepositoryConfig.write(
+        repo,
+        {
+            "sqls": "admin/sqls",
+            "mapping": "admin/config/lookup_sql_table_mapping.csv",
+            "schemas": "admin/sqls",
+            "cases": "other_cases",
+        },
+    )
+
+    after = pyproject.read_text()
+    assert 'cases = "other_cases"' in after
+    without_cases = lambda text: "\n".join(
+        line for line in text.splitlines() if not line.startswith("cases =")
+    )
+    assert without_cases(before) == without_cases(after)
+    assert RepositoryConfig.load(repo).cases == repo / "other_cases"

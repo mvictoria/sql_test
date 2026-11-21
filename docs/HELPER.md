@@ -291,7 +291,7 @@ schemas = "admin/sqls"
 cases = "tests/cases"
 ```
 
-Every setting is required. A repository with no `pyproject.toml`, no `[tool.sql-test]` table, or a missing setting is an error that names what is missing; the tool assumes no layout. The CLI and the app read the config; a repository's own pytest tests may read it too, or pass paths directly.
+Every setting is required. A repository with no `pyproject.toml`, no `[tool.sql-test]` table, or a missing setting is an error that names what is missing; the tool assumes no layout. The CLI (`discover`, `coverage`) and a repository's own pytest tests read the config that way. The authoring app instead opens a settings page so QA can create or edit the table. Saving uses [tomlkit](https://github.com/python-poetry/tomlkit): only `[tool.sql-test]` keys are written, and the rest of `pyproject.toml` (including comments) is left unchanged. Paths are checked before save (they exist; with them the catalog still discovers SQL, the mapping, and schemas).
 
 ## Upstream lineage
 
@@ -607,6 +607,7 @@ sql-test-tool/
 │       ├── discover.py
 │       └── app/                local authoring app (NiceGUI)
 │           ├── serve.py        localhost-only bind; register_app, serve
+│           ├── settings.py     edit/create [tool.sql-test] paths
 │           ├── home.py         tables, coverage, cases, pipelines page
 │           ├── workbench.py    the workbench page: state, actions, deep links
 │           ├── state.py        WorkbenchState

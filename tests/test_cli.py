@@ -8,11 +8,27 @@ FIXTURE = Path(__file__).parent / "fixtures/repos/lineage-demo"
 LAKEHOUSE = Path(__file__).parent / "fixtures/repos/lakehouse-data-customer"
 
 
-def test_a_repository_without_config_is_reported(
+def test_discover_reports_a_repository_without_config(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ):
-    assert main(["app", str(tmp_path)]) == 1
+    assert main(["discover", str(tmp_path)]) == 1
     assert "has no pyproject.toml" in capsys.readouterr().err
+
+
+def test_app_starts_when_the_repository_has_no_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    calls: list[Path] = []
+
+    def fake_serve(
+        repository: Path, *, executor, host: str = "127.0.0.1", port: int = 8765
+    ) -> None:
+        calls.append(repository)
+
+    monkeypatch.setattr("sql_test.integrations.cli.serve", fake_serve)
+
+    assert main(["app", str(tmp_path)]) == 0
+    assert calls == [tmp_path.resolve()]
 
 
 def test_a_missing_repository_is_reported(capsys: pytest.CaptureFixture[str]):

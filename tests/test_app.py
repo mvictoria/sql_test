@@ -127,6 +127,58 @@ async def test_the_app_reads_paths_from_the_repository_config(
     await user.should_see(marker="node-medicaid_members")
 
 
+async def test_changing_cases_in_the_app_updates_pyproject_and_lists_the_new_folder(
+    user: User, tmp_path: Path
+):
+    repo = _copy_fixture(tmp_path)
+    (repo / "tests" / "cases").rename(repo / "cases_v2")
+    before = (
+        "# keep me\n"
+        "[project]\n"
+        'name = "demo"\n'
+        "\n"
+        "[tool.ruff]\n"
+        "line-length = 88\n"
+        "\n"
+        "[tool.sql-test]\n"
+        'sqls = "admin/sqls"\n'
+        'mapping = "admin/config/lookup_sql_table_mapping.csv"\n'
+        'schemas = "admin/sqls"\n'
+        'cases = "tests/cases"\n'
+        "\n"
+        "# trailing\n"
+    )
+    (repo / "pyproject.toml").write_text(before)
+
+    _register(repo)
+    await user.open("/settings")
+    await user.should_see(marker="settings")
+    (cases_field,) = user.find(kind=ui.input, marker="path-cases").elements
+    cases_field.set_value("cases_v2")
+    user.find(marker="save-settings").click()
+
+    await user.should_see(marker="settings-saved")
+    after = (repo / "pyproject.toml").read_text()
+    assert 'cases = "cases_v2"' in after
+    without_cases = lambda text: "\n".join(
+        line for line in text.splitlines() if not line.startswith("cases =")
+    )
+    assert without_cases(before) == without_cases(after)
+
+    await user.open("/")
+    await user.should_see(marker=f"case-{ALICE}/only_medicaid_alices")
+
+
+async def test_a_repository_without_config_opens_settings(user: User, tmp_path: Path):
+    (tmp_path / "pyproject.toml").write_text('[project]\nname = "x"\n')
+
+    _register(tmp_path)
+    await user.open("/")
+
+    await user.should_see(marker="settings")
+    await user.should_see(marker="path-sqls")
+
+
 async def test_lineage_view_shows_grey_sources_that_need_rows(user: User):
     _register(FIXTURE)
     await user.open(f"/workbench?target={ALICE}&view=lineage")

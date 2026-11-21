@@ -7,7 +7,9 @@ from starlette.requests import Request
 from sql_test.engine import Executor
 from sql_test.integrations.app.engine_access import bind_executor
 from sql_test.integrations.app.home import home_page
+from sql_test.integrations.app.settings import settings_page
 from sql_test.integrations.app.workbench import Workbench, open_workbench
+from sql_test.integrations.config import ConfigError, RepositoryConfig
 
 LOCAL_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
 
@@ -19,7 +21,11 @@ def register_app(repository: Path, executor: Executor) -> None:
 
     @ui.page("/", title="sql-test")
     def home(pipelines: str | None = None) -> None:
-        _guarded(lambda: home_page(repository, pipelines))
+        _guarded(lambda: _home_or_settings(repository, pipelines))
+
+    @ui.page("/settings", title="Settings — sql-test")
+    def settings() -> None:
+        _guarded(lambda: settings_page(repository))
 
     @ui.page("/workbench", title="Workbench — sql-test")
     def workbench(request: Request) -> None:
@@ -41,7 +47,21 @@ def serve(
     ui.run(host=host, port=port, reload=False, show=False, title="sql-test")
 
 
+def _home_or_settings(repository: Path, pipelines: str | None) -> None:
+    try:
+        RepositoryConfig.load(repository)
+    except ConfigError:
+        settings_page(repository, creating=True)
+        return
+    home_page(repository, pipelines)
+
+
 def _workbench_page(repository: Path, query: dict[str, list[str]]) -> None:
+    try:
+        RepositoryConfig.load(repository)
+    except ConfigError:
+        settings_page(repository, creating=True)
+        return
     state = open_workbench(repository, query)
     if state is None:
         ui.link("← sql-test", "/").mark("home-link")
