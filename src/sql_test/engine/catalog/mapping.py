@@ -11,7 +11,7 @@ def read_operations(mapping: Path, sqls: Path) -> list[Operation]:
             Operation(
                 sql_file=sqls / row["sql_ref"],
                 writes=Relation.parse(row["table_ref"]),
-                kind=Kind.FULL_LOAD,
+                kind=Kind.from_load_type(row.get("load_type")),
             )
             for row in csv.DictReader(file)
         ]

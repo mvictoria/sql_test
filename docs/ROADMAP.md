@@ -881,9 +881,9 @@ Models that read their own target, tested as target before and target after rath
 <a id="inc-1"></a>
 #### INC-1 Recognize incremental models (done)
 
-Detect SQL that reads the table it writes, and show it as before and after rather than as a cycle. The lineage leaves the self-reference out of what the model is built from, and the plan lists the model in `Plan.incremental` for the app to draw as before and after. Running one is refused, naming it, until [INC-3](#inc-3).
+Detect SQL that reads the table it writes, and show it as before and after rather than as a cycle. A model is incremental when its mapping `load_type` is `incremental`, `append`, or `merge`, or its SQL reads its own target. The lineage leaves any self-reference out of what the model is built from, and the plan lists the model in `Plan.incremental` for the app to draw as before and after. Running one is refused, naming it, until [INC-3](#inc-3).
 
-- **Done when:** a self-referencing model is detected and its lineage has no cycle.
+- **Done when:** a self-referencing model is detected and its lineage has no cycle; and a model mapped with load type `incremental`, `append`, or `merge` is incremental.
 - **Depends on:**
   - [ENG-5](#eng-5)
   - [ENG-6](#eng-6)

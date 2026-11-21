@@ -256,3 +256,34 @@ def test_parsing_a_name_twice_parses_it_once(monkeypatch):
     Relation.parse("claims.memoized_once")
 
     assert len(parsed) == 1
+
+
+def test_load_type_marks_incremental_append_and_merge_operations(tmp_path):
+    mapping = tmp_path / "mapping.csv"
+    mapping.write_text(
+        "load_type,table_ref,sql_ref\n"
+        "incremental,a,a.sql\n"
+        "append,b,b.sql\n"
+        " Merge ,c,c.sql\n"
+        "historic,d,d.sql\n"
+        ",e,e.sql\n"
+    )
+
+    operations = read_operations(mapping=mapping, sqls=tmp_path)
+
+    assert [operation.kind for operation in operations] == [
+        Kind.INCREMENTAL,
+        Kind.APPEND,
+        Kind.MERGE,
+        Kind.FULL_LOAD,
+        Kind.FULL_LOAD,
+    ]
+
+
+def test_a_mapping_without_load_type_is_all_full_loads(tmp_path):
+    mapping = tmp_path / "mapping.csv"
+    mapping.write_text("table_ref,sql_ref\na,a.sql\n")
+
+    [operation] = read_operations(mapping=mapping, sqls=tmp_path)
+
+    assert operation.kind is Kind.FULL_LOAD

@@ -262,3 +262,19 @@ def test_running_an_incremental_model_says_it_is_not_supported_yet(tmp_path):
 
     with pytest.raises(NotImplementedError, match="seen"):
         engine.run("seen", {"events": [{"id": 1}]})
+
+
+def test_a_model_whose_load_type_is_append_is_incremental(tmp_path):
+    (tmp_path / "ddl.sql").write_text(
+        "create table events (id int);\ncreate table log (id int);\n"
+    )
+    (tmp_path / "log.sql").write_text("select id from events")
+    mapping = tmp_path / "mapping.csv"
+    mapping.write_text("load_type,table_ref,sql_ref\nappend,log,log.sql\n")
+    catalog = mapped_sql_folder(sqls=tmp_path, mapping=mapping)
+    log, events = Relation(name="log"), Relation(name="events")
+
+    plan = plan_run(log, catalog, given={events: 1})
+
+    assert plan.incremental == {log}
+    assert plan.built_from[log] == {events}
