@@ -65,6 +65,9 @@ def test_runs_upstream_sql_before_the_table():
 
 
 def test_reports_a_cycle(tmp_path):
+    (tmp_path / "ddl.sql").write_text(
+        "create table a (id int);\ncreate table b (id int);\n"
+    )
     (tmp_path / "a.sql").write_text("select * from b")
     (tmp_path / "b.sql").write_text("select * from a")
     mapping = tmp_path / "mapping.csv"

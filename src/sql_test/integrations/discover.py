@@ -1,10 +1,8 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from sqlglot.errors import ParseError
-
 from sql_test.engine.catalog.mapping import read_operations
-from sql_test.engine.lineage.references import tables_read
+from sql_test.engine.lineage.references import UnparseableSql, tables_read
 from sql_test.engine.relation import Relation
 from sql_test.testing.cases import CaseSummary, discover_cases
 
@@ -30,7 +28,7 @@ def discover(repository: Path) -> Discovery:
     for operation in operations:
         try:
             referenced |= tables_read(operation.sql)
-        except ParseError:
+        except UnparseableSql:
             sources.add(operation.writes)
     sources |= {relation for relation in referenced if relation not in produced}
     return Discovery(

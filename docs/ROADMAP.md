@@ -37,10 +37,10 @@ Done:
 - [ENG-6](#eng-6)
 - [ENG-8](#eng-8)
 - [ENG-9](#eng-9)
+- [ENG-7](#eng-7)
 
 Can start now:
 
-- [ENG-7](#eng-7)
 - [ENG-11](#eng-11)
 - [ENG-14](#eng-14)
 
@@ -181,7 +181,7 @@ The graph can be projected to relation → relation for the default lineage view
   - [ENG-5](#eng-5)
 
 <a id="eng-7"></a>
-#### ENG-7 Sources that stop lineage
+#### ENG-7 Sources that stop lineage (done)
 
 A model whose SQL cannot be parsed, or that has no schema, is classified as a **source**. Traversal stops there, and the reason is recorded for drill-down.
 

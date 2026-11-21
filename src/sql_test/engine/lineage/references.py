@@ -4,8 +4,15 @@ from sqlglot import exp
 from sql_test.engine.relation import Relation
 
 
+class UnparseableSql(Exception):
+    pass
+
+
 def tables_read(sql: str, dialect: str = "duckdb") -> set[Relation]:
-    tree = sqlglot.parse_one(sql, read=dialect)
+    try:
+        tree = sqlglot.parse_one(sql, read=dialect)
+    except sqlglot.errors.SqlglotError as error:
+        raise UnparseableSql(str(error)) from error
     ctes = {cte.alias_or_name for cte in tree.find_all(exp.CTE)}
     return {
         Relation.from_table(table, dialect)
