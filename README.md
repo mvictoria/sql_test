@@ -65,7 +65,7 @@ Copy [lakehouse-data-customer/.github/workflows/data-tests.yml](lakehouse-data-c
 
 **Releases** — the git tag is the version (`dynamic` via hatchling / `uv-dynamic-versioning`).
 
-1. Start the **PR title** with `(major)`, `(minor)`, or `(patch)` as the first word when that PR should release (example: `(patch) CI-2: versioned releases`). Later mentions are ignored. Skip the token if it should not release.
+1. Start the **PR title** with `(major)`, `(minor)`, or `(patch)` as the first word when that PR should release (case-insensitive; example: `(patch) CI-2: versioned releases`). Later mentions are ignored. Skip the token if it should not release.
 2. Merge with linear history (rebase). CD runs on `main`, finds the merged PR, and tags **`main`'s new tip** — not the old branch commits.
 3. The tag push builds the wheel/sdist, creates/updates the GitHub Release, and moves floating `vX` (for example `v0`).
 
