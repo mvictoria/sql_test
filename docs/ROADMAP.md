@@ -30,14 +30,15 @@ Done:
 - [ENG-23](#eng-23)
 - [ENG-21](#eng-21)
 - [ENG-2](#eng-2)
+- [ENG-3](#eng-3)
 
 Can start now:
 
-- [ENG-3](#eng-3)
 - [ENG-4](#eng-4)
 - [ENG-5](#eng-5)
 - [ENG-11](#eng-11)
 - [ENG-14](#eng-14)
+- [ENG-22](#eng-22)
 
 ### Project skeleton
 
@@ -110,23 +111,25 @@ The relation an operation writes comes from the repository's mapping file when i
 - **Depends on:** [ENG-21](#eng-21)
 
 <a id="eng-3"></a>
-#### ENG-3 Discover schemas
+#### ENG-3 Discover schemas (done)
 
-Read every `CREATE TABLE` statement in the SQL folder into its relation's columns and types, whichever file it is in. One file can define several relations, and DDL can sit beside DML. Read the DDL text with sqlglot rather than DuckDB, because DuckDB drops `varchar` lengths. Report, without stopping discovery:
+A relation's schema is its ordered columns, each a name and a type normalized by sqlglot. Repositories may store schemas as SQL DDL, YAML, or JSON; each format has a reader, and every reader returns schemas keyed by relation plus any problems. Start with the DDL reader: every `CREATE TABLE` with a column list in the SQL folder, whichever file it is in. One file can define several relations, and DDL can sit beside DML. Parse in the DDL's own dialect, defaulting to sqlglot's generic dialect, because both DuckDB and sqlglot's DuckDB dialect drop `varchar` lengths. Report, without stopping discovery:
 
 - a statement that cannot be parsed
 - a relation defined more than once
 
-- **Done when:** the sample repository's `members_ddl.sql` yields each of its four relations, with `members` as the following, replacing `test_medicaid_members_types`:
-  - `member_id integer`
-  - `member_name varchar(30)`
-  - `lob varchar(2)`
+YAML and JSON readers come later, in [CFG-2](#cfg-2).
+
+- **Done when:** the sample repository's `members_ddl.sql` yields each of its four relations, with `members` as the following:
+  - `member_id INT`
+  - `member_name VARCHAR(30)`
+  - `lob VARCHAR(2)`
 - **Depends on:** none
 
 <a id="eng-22"></a>
 #### ENG-22 Catalog from a repository convention
 
-The engine reads a catalog of relations, operations, and schemas, not files. A repository adapter builds the catalog from one repository's conventions. The first adapter is the convention the engine already reads: a folder of SQL plus a mapping CSV. A different repository layout is a new adapter, with no change to lineage, the planner, or the test layer. Define *catalog* and *repository adapter* in [HELPER.md](HELPER.md).
+The engine reads a catalog of relations, operations, and schemas, not files. A repository adapter builds the catalog from one repository's conventions. The first adapter is the convention the engine already reads: a folder of SQL plus a mapping CSV. The adapter chooses which readers to use for the repository's mapping and schemas, for example the mapping CSV and the DDL reader. A different repository layout is a new adapter, with no change to lineage, the planner, or the test layer. Define *catalog* and *repository adapter* in [HELPER.md](HELPER.md).
 
 - **Done when:** the engine is built from a catalog that the folder-and-mapping adapter produces, and the engine's tests change only in how the engine is constructed.
 - **Depends on:**
@@ -236,7 +239,7 @@ How an operation's kind becomes SQL, for example a full-load `SELECT` becoming a
 
 Create each relation whose rows are given from its discovered schema, and insert the rows. A boundary relation with no schema takes its columns from the rows; how it is typed is an open question in [HELPER.md](HELPER.md).
 
-- **Done when:** given `members` rows with `member_id` as the string `"1"`, `members` loads with `member_id` as the integer `1`.
+- **Done when:** given `members` rows with `member_id` as the string `"1"`, `members` loads with `member_id` as the integer `1`, replacing the sample repository's `test_medicaid_members_types`.
 - **Depends on:**
   - [ENG-11](#eng-11)
   - [ENG-3](#eng-3)
@@ -345,6 +348,16 @@ Define a config file in the consuming repository that says where its SQL, schema
 - **Depends on:**
   - [ENG-20](#eng-20)
   - [ENG-22](#eng-22): the config describes the conventions a repository adapter reads
+
+<a id="cfg-2"></a>
+#### CFG-2 YAML and JSON readers
+
+Readers for schemas and SQL-to-table mappings stored as YAML or JSON, returning the same results as the DDL reader and the mapping CSV reader. Types are written as text and normalized by sqlglot, so `varchar(30)` means the same in every format. YAML needs PyYAML; JSON needs nothing new. Build them when a repository needs them.
+
+- **Done when:** a YAML schema and a JSON schema for `members` each yield the same columns as `members_ddl.sql`, and a YAML mapping yields the same operations as the mapping CSV.
+- **Depends on:**
+  - [ENG-3](#eng-3)
+  - [ENG-22](#eng-22)
 
 ### CLI
 

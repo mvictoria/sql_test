@@ -203,6 +203,14 @@ sqlglot parses names and normalizes their case for the configured dialect. The e
 
 A name written with fewer levels, such as a bare `members`, resolves to the one known relation whose trailing parts match. If several match, the name is ambiguous, and resolving it is an error that lists the candidates. If none match, the name stays as written, for example a source the repository does not produce.
 
+## Schemas
+
+A relation's **schema** is its ordered columns, each a name and a type. Repositories store schemas in different ways: SQL DDL, YAML, or JSON. Each format has a reader, and every reader returns the same thing: schemas keyed by relation, plus any problems found. Which reader a repository uses is one of its conventions. The DDL reader comes first; YAML and JSON readers are added when a repository needs them.
+
+Types are parsed and normalized by sqlglot, so `integer` and `INT` are the same type whatever format they were written in. Schemas are read in the dialect they were written in, defaulting to sqlglot's generic dialect, never DuckDB's: sqlglot's DuckDB dialect drops `varchar` lengths, as DuckDB does.
+
+The DDL reader reads every `CREATE TABLE` with a column list, in any file under the SQL folder; one file may define several relations. Other statements, including `CREATE TABLE AS`, are skipped. A statement that cannot be parsed, or a relation defined twice, is reported as a problem and discovery continues. sqlglot is lenient, so some malformed DDL parses without a problem.
+
 ## Operations and producers
 
 An **operation** is a SQL statement that writes one relation. It records its SQL file, the relation it writes, its kind, and its `load_type`. The relations it reads come from parsing its SQL. A bare `SELECT` is a full load: its result becomes the relation. `CREATE TABLE AS`, `INSERT`, `INSERT OVERWRITE`, and `MERGE` come later.
