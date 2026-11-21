@@ -17,7 +17,6 @@ import pytest
         "sql_test.testing",
         "sql_test.testing.cases",
         "sql_test.testing.comparison",
-        "sql_test.testing.validation",
         "sql_test.integrations",
         "sql_test.integrations.pytest_plugin",
     ],

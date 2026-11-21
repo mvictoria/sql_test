@@ -239,7 +239,7 @@ The DDL reader reads every `CREATE TABLE` with a column list, in any file under 
 
 ## Operations and producers
 
-An **operation** is a SQL statement that writes one relation. It records its SQL file, the relation it writes, its kind, and its `load_type`. The relations it reads come from parsing its SQL. A bare `SELECT` is a full load: its result becomes the relation. `CREATE TABLE AS`, `INSERT`, `INSERT OVERWRITE`, and `MERGE` come later.
+An **operation** is a SQL statement that writes one relation. It records its SQL file, the relation it writes, and its kind. The relations it reads come from parsing its SQL. A bare `SELECT` is a full load: its result becomes the relation. `CREATE TABLE AS`, `INSERT`, `INSERT OVERWRITE`, and `MERGE` come later.
 
 SQL has a relation, not the other way round. A relation exists without any SQL; a source has none. The operations that write a relation are its **producers**, and a relation may have several.
 
@@ -509,7 +509,6 @@ The test layer owns:
 - test-case discovery and loading
 - mock-boundary resolution
 - expected/actual comparison
-- validation
 
 Avoid one implementation per entry point. Separate app, pytest, and CI engines would drift, and a case could pass in the app and fail in CI.
 
@@ -566,7 +565,7 @@ customer-data/
 └── .github/workflows/data-tests.yml     calls the reusable workflow
 ```
 
-This layout is illustrative. Where SQL, schemas, and cases live, and how SQL files map to tables, can differ per repository. The sample repository keeps SQL in `admin/sqls/` and maps each table to its SQL file in `admin/config/lookup_sql_table_mapping.csv`, with columns `load_type`, `table_ref`, and `sql_ref`.
+This layout is illustrative. Where SQL, schemas, and cases live, and how SQL files map to tables, can differ per repository. The sample repository keeps SQL in `admin/sqls/` and maps each table to its SQL file in `admin/config/lookup_sql_table_mapping.csv`, with columns `table_ref` and `sql_ref`. Extra columns such as `load_type` are ignored.
 
 ## Versioning
 
@@ -592,8 +591,7 @@ sql-test-tool/
 │   │   └── duckdb.py           an executor; Spark later
 │   ├── testing/                the test layer
 │   │   ├── cases/
-│   │   ├── comparison/
-│   │   └── validation/
+│   │   └── comparison/
 │   └── integrations/
 │       ├── pytest_plugin/
 │       ├── cli.py              sql-test discover / app

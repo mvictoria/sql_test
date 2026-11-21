@@ -63,7 +63,6 @@ Create the pip-installable `sql_test` package under `src/` with empty `engine/` 
 - lineage
 - execution
 - comparison
-- validation
 
 - **Done when:** the package installs in the dev environment and the v0 tests still pass.
 - **Depends on:** none
@@ -75,7 +74,7 @@ Replace ENG-1's layout with one package per layer, so dependencies point one way
 
 - the engine: catalog, lineage, planner
 - executors: DuckDB, later Spark
-- the test layer: cases, comparison, validation
+- the test layer: cases, comparison
 - integrations: the pytest plugin, later the CLI and app server
 
 The engine depends on the executor interface, not on an executor. The test layer depends on the engine. Integrations depend on the test layer. Record the layout and the package names in [HELPER.md](HELPER.md).
@@ -115,7 +114,6 @@ An operation is a SQL statement that writes a relation. Lineage runs relation â†
 - its SQL file
 - the relation it writes
 - its kind: a bare `SELECT` is a full load; `CREATE TABLE AS`, `INSERT`, `INSERT OVERWRITE`, and `MERGE` come later
-- its `load_type`, whose values are not yet defined
 
 The relation an operation writes comes from the repository's mapping file when it has one. The sample repository's `admin/config/lookup_sql_table_mapping.csv` maps `table_ref` to `sql_ref`. Otherwise, a `CREATE TABLE AS`, `INSERT`, or `MERGE` names its own target. Define *operation* in [HELPER.md](HELPER.md).
 
