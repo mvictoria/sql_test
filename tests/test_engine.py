@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 
 from sql_test.engine import Engine
+from sql_test.engine.relation import AmbiguousRelation
 from sql_test.executors.duckdb import DuckDBExecutor
 
 REPOSITORY = Path(__file__).parent / "fixtures" / "repos" / "lakehouse-data-customer"
@@ -69,4 +70,21 @@ def test_reports_a_cycle(tmp_path):
     with pytest.raises(CycleError):
         Engine(sqls=tmp_path, mapping=mapping, executor=DuckDBExecutor).run(
             "a", rows={}
+        )
+
+
+def test_reports_an_ambiguous_table():
+    engine = Engine(
+        sqls=REPOSITORY / "admin" / "sqls",
+        mapping=REPOSITORY / "admin" / "config" / "lookup_sql_table_mapping.csv",
+        executor=DuckDBExecutor,
+    )
+
+    with pytest.raises(AmbiguousRelation, match="billing.members.*claims.members"):
+        engine.run(
+            "members",
+            rows={
+                "claims.members": [{"member_id": 1}],
+                "billing.members": [{"member_id": 2}],
+            },
         )
