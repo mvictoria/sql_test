@@ -91,6 +91,33 @@ def test_selecting_a_model_opens_the_workbench():
     assert "Alice" in sql
 
 
+def test_the_app_reads_paths_from_the_repository_config(tmp_path):
+    repo = _copy_fixture(tmp_path)
+    (repo / "admin" / "sqls").rename(repo / "sql")
+    (repo / "admin" / "config" / "lookup_sql_table_mapping.csv").rename(
+        repo / "mapping.csv"
+    )
+    (repo / "pyproject.toml").write_text(
+        "[tool.sql-test]\n"
+        'sqls = "sql"\n'
+        'mapping = "mapping.csv"\n'
+        'schemas = "sql"\n'
+        'cases = "tests/cases"\n'
+    )
+    server = _with_server(repo)
+    try:
+        sql = _get(server, "/workbench?target=medicaid_members_named_alice&view=sql")
+        lineage = _get(
+            server, "/workbench?target=medicaid_members_named_alice&view=lineage"
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert "from medicaid_members" in sql
+    assert ">medicaid_members</text>" in lineage
+
+
 def test_lineage_view_shows_grey_sources_that_need_rows():
     server = _with_server(FIXTURE)
     try:
