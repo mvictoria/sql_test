@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 
 from sql_test.engine import Engine
+from sql_test.engine.catalog.adapters import mapped_sql_folder
 from sql_test.engine.relation import AmbiguousRelation
 from sql_test.executors.duckdb import DuckDBExecutor
 
@@ -12,8 +13,10 @@ REPOSITORY = Path(__file__).parent / "fixtures" / "repos" / "lakehouse-data-cust
 
 def test_runs_a_tables_sql_over_given_rows():
     engine = Engine(
-        sqls=REPOSITORY / "admin" / "sqls",
-        mapping=REPOSITORY / "admin" / "config" / "lookup_sql_table_mapping.csv",
+        catalog=mapped_sql_folder(
+            sqls=REPOSITORY / "admin" / "sqls",
+            mapping=REPOSITORY / "admin" / "config" / "lookup_sql_table_mapping.csv",
+        ),
         executor=DuckDBExecutor,
     )
 
@@ -36,8 +39,10 @@ def test_runs_a_tables_sql_over_given_rows():
 
 def test_runs_upstream_sql_before_the_table():
     engine = Engine(
-        sqls=REPOSITORY / "admin" / "sqls",
-        mapping=REPOSITORY / "admin" / "config" / "lookup_sql_table_mapping.csv",
+        catalog=mapped_sql_folder(
+            sqls=REPOSITORY / "admin" / "sqls",
+            mapping=REPOSITORY / "admin" / "config" / "lookup_sql_table_mapping.csv",
+        ),
         executor=DuckDBExecutor,
     )
 
@@ -68,15 +73,18 @@ def test_reports_a_cycle(tmp_path):
     )
 
     with pytest.raises(CycleError):
-        Engine(sqls=tmp_path, mapping=mapping, executor=DuckDBExecutor).run(
-            "a", rows={}
-        )
+        Engine(
+            catalog=mapped_sql_folder(sqls=tmp_path, mapping=mapping),
+            executor=DuckDBExecutor,
+        ).run("a", rows={})
 
 
 def test_reports_an_ambiguous_table():
     engine = Engine(
-        sqls=REPOSITORY / "admin" / "sqls",
-        mapping=REPOSITORY / "admin" / "config" / "lookup_sql_table_mapping.csv",
+        catalog=mapped_sql_folder(
+            sqls=REPOSITORY / "admin" / "sqls",
+            mapping=REPOSITORY / "admin" / "config" / "lookup_sql_table_mapping.csv",
+        ),
         executor=DuckDBExecutor,
     )
 

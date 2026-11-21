@@ -32,13 +32,13 @@ Done:
 - [ENG-2](#eng-2)
 - [ENG-3](#eng-3)
 - [ENG-4](#eng-4)
+- [ENG-22](#eng-22)
 
 Can start now:
 
 - [ENG-5](#eng-5)
 - [ENG-11](#eng-11)
 - [ENG-14](#eng-14)
-- [ENG-22](#eng-22)
 
 ### Project skeleton
 
@@ -127,11 +127,14 @@ YAML and JSON readers come later, in [CFG-2](#cfg-2).
 - **Depends on:** none
 
 <a id="eng-22"></a>
-#### ENG-22 Catalog from a repository convention
+#### ENG-22 Catalog from a repository convention (done)
 
-The engine reads a catalog of relations, operations, and schemas, not files. A repository adapter builds the catalog from one repository's conventions. The first adapter is the convention the engine already reads: a folder of SQL plus a mapping CSV. The adapter chooses which readers to use for the repository's mapping and schemas, for example the mapping CSV and the DDL reader. A different repository layout is a new adapter, with no change to lineage, the planner, or the test layer. Define *catalog* and *repository adapter* in [HELPER.md](HELPER.md).
+The engine reads a catalog of relations, operations, and schemas, not files. The catalog's relations are everything its operations and schemas mention: a relation written by an operation or given a schema is declared; one only read by SQL is inferred, as a source. A repository adapter builds the catalog from one repository's conventions. The first adapter is the convention the engine already reads: a folder of SQL plus a mapping CSV. The adapter chooses which readers to use for the repository's mapping and schemas, for example the mapping CSV and the DDL reader. A different repository layout is a new adapter, with no change to lineage, the planner, or the test layer. Define *catalog* and *repository adapter* in [HELPER.md](HELPER.md).
 
-- **Done when:** the engine is built from a catalog that the folder-and-mapping adapter produces, and the engine's tests change only in how the engine is constructed.
+- **Done when:**
+  - the engine is built from a catalog that the folder-and-mapping adapter produces, and the engine's tests change only in how the engine is constructed
+  - in the sample repository, all four relations are declared
+  - a relation read by SQL but written by no operation and given no schema is inferred
 - **Depends on:**
   - [ENG-2](#eng-2)
   - [ENG-3](#eng-3)
@@ -851,3 +854,4 @@ After a run, open any executed table's rows and see at which table an input row 
 - **Multi-repository workspaces.** Lineage across repositories, where the repository that owns the table under test owns the case. Depends on stable single-repository lineage from v0.1 and v0.8.
 - **CDC and change propagation.** What changes downstream when an upstream row is inserted, updated, or deleted. Depends on v0.7.
 - **Other consumers** such as IDE integrations or change-impact tooling, when there is a demonstrated use case.
+- **Undefined-relation checks.** Flag inferred relations with no schema, naming the SQL that reads them, with a did-you-mean against declared relations, and a strict mode with an allowlist of external sources. Mostly the repository's own linting's job; add only if users ask. Depends on [ENG-22](#eng-22).
