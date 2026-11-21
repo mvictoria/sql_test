@@ -5,6 +5,7 @@ import pytest
 from sql_test.integrations.cli import main
 
 FIXTURE = Path(__file__).parent / "fixtures/repos/lineage-demo"
+LAKEHOUSE = Path(__file__).parent / "fixtures/repos/lakehouse-data-customer"
 
 
 def test_a_repository_without_config_is_reported(
@@ -48,3 +49,20 @@ def test_app_defaults_to_cwd_and_port_8765(monkeypatch: pytest.MonkeyPatch):
 
     assert main(["app"]) == 0
     assert calls == [(FIXTURE.resolve(), 8765, "DuckDBExecutor")]
+
+
+def test_coverage_lists_untested_tables_before_tested_ones(
+    capsys: pytest.CaptureFixture[str],
+):
+    assert main(["coverage", str(LAKEHOUSE)]) == 0
+    out = capsys.readouterr().out
+    lines = [line for line in out.splitlines() if line.strip()]
+    # body lines after a header: table, tests, in-pipelines
+    body = [line for line in lines if not line.lower().startswith("table")]
+    tables = [line.split()[0] for line in body]
+    assert "members" in tables
+    assert "medicaid_members" in tables
+    assert tables.index("members") < tables.index("medicaid_members")
+    assert tables.index("lob") < tables.index("medicaid_members_named_alice")
+    members = next(line for line in body if line.startswith("members"))
+    assert members.split()[1:] == ["0", "0"]

@@ -6,7 +6,7 @@ from nicegui import ui
 from sql_test.engine import Catalog
 from sql_test.integrations.config import RepositoryConfig
 from sql_test.integrations.discover import Discovery, discover
-from sql_test.testing import case_counts, pipeline_cases, pipeline_counts
+from sql_test.testing import coverage_report, pipeline_cases
 
 
 def home_page(repository: Path, pipelines: str | None = None) -> None:
@@ -22,31 +22,30 @@ def home_page(repository: Path, pipelines: str | None = None) -> None:
 
 def _tables(result: Discovery, catalog: Catalog) -> None:
     tables = (*result.models, *result.sources)
-    tests = case_counts(tables, result.cases)
-    pipelines = pipeline_counts(tables, result.cases, catalog)
+    report = coverage_report(tables, result.cases, catalog)
     models = set(result.models)
     ui.label("Tables").classes("text-subtitle1")
-    if not tables:
+    if not report:
         ui.label("None").classes("text-grey-7")
         return
     with ui.grid(columns="minmax(16rem, auto) 6rem 9rem").classes("items-center"):
         for heading in ("Table", "Tests", "In pipelines"):
             ui.label(heading).classes("text-caption text-weight-bold")
-        for name in tables:
+        for row in report:
             with ui.row().classes("items-baseline gap-2"):
-                ui.link(name, f"/workbench?target={quote(name, safe='')}").mark(
-                    f"table-{name}"
-                )
-                ui.label("model" if name in models else "source").classes(
+                ui.link(
+                    row.table, f"/workbench?target={quote(row.table, safe='')}"
+                ).mark(f"table-{row.table}")
+                ui.label("model" if row.table in models else "source").classes(
                     "text-caption text-grey-7"
                 )
-            ui.label(str(tests[name])).mark(f"tests-{name}")
-            if pipelines[name]:
+            ui.label(str(row.tests)).mark(f"tests-{row.table}")
+            if row.pipelines:
                 ui.link(
-                    str(pipelines[name]), f"/?pipelines={quote(name, safe='')}"
-                ).mark(f"pipelines-{name}")
+                    str(row.pipelines), f"/?pipelines={quote(row.table, safe='')}"
+                ).mark(f"pipelines-{row.table}")
             else:
-                ui.label("0").mark(f"pipelines-{name}")
+                ui.label("0").mark(f"pipelines-{row.table}")
 
 
 def _cases(result: Discovery) -> None:

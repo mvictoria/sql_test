@@ -2,7 +2,7 @@ from pathlib import Path
 
 from sql_test.integrations.config import RepositoryConfig
 from sql_test.integrations.discover import discover
-from sql_test.testing.coverage import case_counts, pipeline_counts
+from sql_test.testing import case_counts, coverage_report, pipeline_counts
 
 FIXTURE = Path(__file__).parent / "fixtures" / "repos" / "lakehouse-data-customer"
 
@@ -30,3 +30,22 @@ def test_with_only_the_alice_case_medicaid_members_is_in_one_pipeline():
     assert pipeline_counts(tables, alice, catalog)["medicaid_members"] == 1
     assert pipeline_counts(tables, alice, catalog)["members"] == 0
     assert pipeline_counts(tables, alice, catalog)["lob"] == 0
+
+
+def test_coverage_report_lists_untested_tables_before_tested_ones():
+    result = discover(FIXTURE)
+    tables = (*result.models, *result.sources)
+    catalog = RepositoryConfig.load(FIXTURE).catalog()
+
+    report = coverage_report(tables, result.cases, catalog)
+
+    names = [row.table for row in report]
+    assert set(names) == set(tables)
+    tested_at = min(i for i, row in enumerate(report) if row.tests > 0)
+    assert all(row.tests == 0 for row in report[:tested_at])
+    assert all(row.tests > 0 for row in report[tested_at:])
+    by_name = {row.table: row for row in report}
+    assert by_name["members"].tests == 0
+    assert by_name["lob"].tests == 0
+    assert by_name["medicaid_members"].tests == 1
+    assert by_name["medicaid_members_named_alice"].tests == 2

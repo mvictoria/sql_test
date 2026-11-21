@@ -782,9 +782,9 @@ For each table, count the other cases whose plan executes its SQL, using lineage
   - [ENG-16](#eng-16)
 
 <a id="cov-3"></a>
-#### COV-3 `sql-test coverage`
+#### COV-3 `sql-test coverage` (done)
 
-Print tests and in-pipeline counts per table, untested tables first.
+Print tests and in-pipeline counts per table, untested tables first. The CLI and the app home both call `coverage_report` from the test layer (built on [COV-1](#cov-1) and [COV-2](#cov-2)).
 
 - **Done when:** the report lists untested tables before tested ones.
 - **Depends on:**
