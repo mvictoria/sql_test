@@ -29,7 +29,7 @@ def compare_section(
     filled = [
         row for row in expected_rows if any(_filled(value) for value in row.values())
     ]
-    has_expected = bool(filled)
+    has_expected = bool(filled) or expected_rows == []
     if schema is None:
         return DiffPanel(columns=(), has_expected=has_expected, comparison=None)
     columns = tuple(column.name for column in schema)
@@ -42,7 +42,7 @@ def compare_section(
         }
         for row in filled
     ]
-    if not aligned and not actual:
+    if not has_expected and not actual:
         return DiffPanel(columns=columns, has_expected=False, comparison=None)
     typed_rows = [typed_row(schema, row) for row in aligned]
     expected = CaseTable(columns=columns, rows=typed_rows)

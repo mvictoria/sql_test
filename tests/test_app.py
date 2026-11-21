@@ -489,6 +489,38 @@ async def test_accepting_the_whole_actual_result_makes_the_case_pass(user: User)
     await user.should_see(marker="verdict-passed")
 
 
+async def test_accepting_no_rows_expects_no_rows_through_save_and_load(
+    user: User, tmp_path: Path
+):
+    repo = _copy_fixture(tmp_path)
+    _register(repo)
+    await user.open(f"/workbench?target={ALICE}&view=lineage&mock=medicaid_members")
+    _fill(user, "medicaid_members", [{"member_id": "1", "member_name": "Ada"}])
+    user.find(marker="run").click()
+    await user.should_see(marker="verdict-failed")
+    await user.should_see(marker="diff-empty")
+
+    user.find(marker="accept-all").click()
+
+    await user.should_see(marker="verdict-passed")
+    await user.should_see(marker="expected-no-rows")
+    user.find(marker="case-name").type("no_alice")
+    user.find(marker="save").click()
+    await user.should_see("Saved case")
+    folder = repo / "tests" / "cases" / ALICE / "no_alice"
+    assert (folder / "expected.csv").read_text() == "member_id,member_name\n"
+    config = RepositoryConfig.load(repo)
+    result = run_case(
+        folder, Engine(catalog=config.catalog(), executor=DuckDBExecutor())
+    )
+    assert result.passed, result.report()
+
+    await user.open("/workbench?case=" + quote(f"{ALICE}/no_alice", safe=""))
+    await user.should_see(marker="expected-no-rows")
+    user.find(marker="run").click()
+    await user.should_see(marker="verdict-passed")
+
+
 async def test_accepting_a_changed_row_replaces_the_expected_row(user: User):
     await _run_a_failing_case(user)
 

@@ -31,8 +31,8 @@ def save_case(
     expected_schema = repo_catalog.schema(target_relation)
     expected = None
     if expected_schema is not None:
-        expected_rows = grid_rows.get("expected", [])
-        if any(
+        expected_rows = grid_rows.get("expected", [{}])
+        if expected_rows == [] or any(
             any(str(value).strip() for value in row.values()) for row in expected_rows
         ):
             expected = _table_from_grid(expected_schema, expected_rows)

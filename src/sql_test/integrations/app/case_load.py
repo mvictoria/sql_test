@@ -19,7 +19,7 @@ def case_grid_rows(case: Case) -> dict[str, list[dict[str, str | None]]]:
     if case.expected is not None:
         rows["expected"] = [
             display_row(row, case.expected.columns) for row in case.expected.rows
-        ] or [{}]
+        ]
     return rows
 
 

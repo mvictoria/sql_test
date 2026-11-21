@@ -36,7 +36,7 @@ def result_view(
                     label, on_click=lambda _, name=name: on_switch(name)
                 ).mark(f"result-{name}")
                 button.props("unelevated" if name == view else "outline")
-            if schema is not None and result.rows and not panel.passed:
+            if schema is not None and not panel.passed:
                 ui.button(
                     "Accept all actual",
                     on_click=lambda: on_accept(accept_all(schema, result.rows)),

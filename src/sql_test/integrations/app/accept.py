@@ -9,8 +9,8 @@ type ExpectedRows = list[dict[str, Cell]]
 
 
 def accept_all(schema: Schema, actual: list[Row]) -> ExpectedRows:
-    """Expected rows that are exactly the actual result."""
-    return [display_row(row, _columns(schema)) for row in actual] or [{}]
+    """Expected rows that are exactly the actual result; `[]` expects no rows."""
+    return [display_row(row, _columns(schema)) for row in actual]
 
 
 def accept_row(
@@ -36,7 +36,7 @@ def accept_cell(
 def remove_row(rows: ExpectedRows, schema: Schema, expected: Row) -> ExpectedRows:
     """Drop an expected row the actual result no longer has."""
     index = _index(rows, schema, expected)
-    return [*rows[:index], *rows[index + 1 :]] or [{}]
+    return [*rows[:index], *rows[index + 1 :]]
 
 
 def _index(rows: ExpectedRows, schema: Schema, expected: Row) -> int:

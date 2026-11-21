@@ -31,8 +31,8 @@ def test_accepting_all_makes_expected_the_actual_rows():
     ]
 
 
-def test_accepting_all_of_no_rows_leaves_one_blank_row():
-    assert accept_all(SCHEMA, []) == [{}]
+def test_accepting_all_of_no_rows_expects_no_rows():
+    assert accept_all(SCHEMA, []) == []
 
 
 def test_accepting_a_changed_row_replaces_the_expected_row():
@@ -69,8 +69,8 @@ def test_removing_a_missing_row_deletes_it():
     assert remove_row([ADA, BEA], SCHEMA, _typed(BEA)) == [ADA]
 
 
-def test_removing_the_last_row_leaves_one_blank_row():
-    assert remove_row([ADA], SCHEMA, _typed(ADA)) == [{}]
+def test_removing_the_last_row_expects_no_rows():
+    assert remove_row([ADA], SCHEMA, _typed(ADA)) == []
 
 
 def test_a_row_is_found_whatever_its_cells_are_written_as():
