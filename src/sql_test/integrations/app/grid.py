@@ -18,6 +18,7 @@ def mock_editor(
     rows: dict[str, list[dict[str, str]]],
     engine_types: dict[str, dict[str, str]],
     expected_section: str = "",
+    case_name: str | None = None,
 ) -> str:
     if not mocks and not expected_section:
         return ""
@@ -45,12 +46,19 @@ def mock_editor(
         table_rows = rows.get(name) or [{}]
         sections.append(grid(name, schema, table_rows, engine_types.get(name, {})))
     mocks_heading = "<h2>Mock editor</h2>" if mocks else ""
+    readonly = " readonly" if case_name else ""
+    name_field = (
+        '<p class="case-name"><label>Case name '
+        f'<input name="case_name" value="{html.escape(case_name or "")}"'
+        f"{readonly}></label></p>"
+    )
     return (
         '<form method="post" action="/workbench">'
-        f"{hidden}{mocks_heading}{''.join(sections)}{expected_section}"
+        f"{hidden}{name_field}{mocks_heading}{''.join(sections)}{expected_section}"
         '<p class="grid-actions">'
         '<button type="submit" name="action" value="apply">Apply to engine</button>'
         '<button type="submit" name="action" value="run">Run</button>'
+        '<button type="submit" name="action" value="save">Save case</button>'
         "</p>"
         "</form>"
     )
