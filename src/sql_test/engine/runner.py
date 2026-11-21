@@ -1,9 +1,9 @@
-from collections.abc import Callable, Sized
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
 
 from sql_test.engine.catalog import Catalog
 from sql_test.engine.executor import Executor, Row
+from sql_test.engine.lineage.references import ends_in_order_by
 from sql_test.engine.planner.plan import Plan, plan_run
 from sql_test.engine.relation import Relation
 from sql_test.engine.schema import Column, Schema
@@ -13,6 +13,7 @@ from sql_test.engine.schema import Column, Schema
 class RunResult:
     rows: list[Row]
     counts: dict[Relation, int]
+    ordered: bool
 
 
 class Engine:
@@ -31,27 +32,7 @@ class Engine:
         known = self._catalog.relations().keys() | given.keys()
         return plan_run(Relation.parse(table).resolve(known), self._catalog, given)
 
-    def run(self, table: str, rows: dict[str, list[Row]]) -> list[tuple[Any, ...]]:
-        target, _ = self._execute(
-            table, rows, lambda executor, target: executor.read_relation(target)
-        )
-        return target
-
-    def run_rows(self, table: str, rows: dict[str, list[Row]]) -> list[Row]:
-        return self.run_result(table, rows).rows
-
-    def run_result(self, table: str, rows: dict[str, list[Row]]) -> RunResult:
-        target, counts = self._execute(
-            table, rows, lambda executor, target: executor.read_rows(target)
-        )
-        return RunResult(rows=target, counts=counts)
-
-    def _execute[T: Sized](
-        self,
-        table: str,
-        rows: dict[str, list[Row]],
-        read: Callable[[Executor, Relation], T],
-    ) -> tuple[T, dict[Relation, int]]:
+    def run(self, table: str, rows: dict[str, list[Row]]) -> RunResult:
         plan = self.plan(table, rows)
         plan.check_rows()
         executor = self._executor()
@@ -70,11 +51,19 @@ class Engine:
                 executor.execute(operation)
                 counts[operation.writes] = len(executor.read_rows(operation.writes))
             target = plan.lineage.target
-            result = read(executor, target)
+            result = executor.read_rows(target)
             counts[target] = len(result)
-            return result, counts
         finally:
             executor.teardown()
+        return RunResult(
+            rows=result,
+            counts=counts,
+            ordered=any(
+                ends_in_order_by(operation.sql)
+                for operation in plan.operations
+                if operation.writes == target
+            ),
+        )
 
 
 def _schema_from_rows(rows: list[Row]) -> Schema:

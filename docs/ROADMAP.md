@@ -274,6 +274,7 @@ The executor runs a plan's ordered operations against the given rows and returns
 Behaviour-preserving cleanup of the engine, one commit per item:
 
 - [x] One run path: `run`, `run_rows`, and `run_result` share a single load-and-execute step.
+- [x] One run method: `Engine.run` returns a `RunResult` with the target's rows, row counts, and whether the target's SQL orders its rows. `run_rows` and `run_result` are gone, and `run_case` no longer parses SQL.
 
 - **Done when:** each item's commit lands with the existing tests passing unchanged.
 - **Depends on:** none

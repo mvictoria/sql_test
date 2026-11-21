@@ -45,4 +45,4 @@ def run(
     grid_rows: dict[str, list[dict[str, str]]],
 ) -> RunResult:
     engine = Engine(catalog=catalog(repository), executor=DuckDBExecutor)
-    return engine.run_result(target, rows=filled_rows(mocks, grid_rows))
+    return engine.run(target, rows=filled_rows(mocks, grid_rows))
