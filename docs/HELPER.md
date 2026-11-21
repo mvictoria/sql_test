@@ -181,14 +181,17 @@ customer_summary
 
 Everything upstream of a mocked relation that is no longer required by another executable path is pruned.
 
-The UI should distinguish at least:
+Mocks form a **frontier**: if `a → b → c`, you cannot mock both `a` and `b`. Mocking `b` prunes `a`. Unmocking `b` brings `a` back.
+
+The UI shows the live frontier only:
 
 - **Mocked** — supplied by the test
-- **Executed** — real repository SQL will execute
-- **Pruned** — no longer required because of a mock boundary
+- **Will execute** — real repository SQL will run for this relation (the plan's future). While a run is in progress this becomes *executing*, then *executed*.
 - **Source** — must be supplied by the test (not produced here, or produced but unusable for lineage); drill-down shows why
 
-Every table that will be read but is not produced by executed SQL needs test data. That includes unmocked sources and mocked tables with no rows yet. These tables are shown grey until data is added, and colored once they have data. Running with grey tables reports which tables still need data.
+**Pruned** relations are hidden. They reappear when the mock that pruned them is removed.
+
+Every table that will be read but is not produced by executed SQL needs test data (`needs_rows`). Those tables are shown grey until data is added, and colored once they have data. **A case is ready to run only when `needs_rows` is empty** — every leaf that still needs rows is covered. Running otherwise fails naming them.
 
 ---
 

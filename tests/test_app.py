@@ -7,6 +7,7 @@ from urllib.parse import quote
 from sql_test.integrations.app import create_server
 
 FIXTURE = Path(__file__).parent / "fixtures" / "repos" / "lakehouse-data-customer"
+DEMO = Path(__file__).parent / "fixtures" / "repos" / "lineage-demo"
 
 
 def _get(server: ThreadingHTTPServer, path: str) -> str:
@@ -48,6 +49,7 @@ def test_selecting_a_model_opens_the_workbench():
         home = _get(server, "/")
         assert 'href="/workbench?target=medicaid_members_named_alice"' in home
         body = _get(server, "/workbench?target=medicaid_members_named_alice")
+        sql = _get(server, "/workbench?target=medicaid_members_named_alice&view=sql")
     finally:
         server.shutdown()
         server.server_close()
@@ -55,9 +57,78 @@ def test_selecting_a_model_opens_the_workbench():
     assert "Workbench" in body
     assert "medicaid_members_named_alice" in body
     assert "table under test" in body.lower()
-    assert "from medicaid_members" in body
-    assert "medicaid_members_named_alice.sql" in body
-    assert "Alice" in body
+    assert 'aria-label="Upstream lineage graph"' in body
+    assert "view=sql" in body
+    assert "view=lineage" in body
+    assert "from medicaid_members" in sql
+    assert "medicaid_members_named_alice.sql" in sql
+    assert "Alice" in sql
+
+
+def test_lineage_view_shows_grey_sources_that_need_rows():
+    server = _with_server(FIXTURE)
+    try:
+        body = _get(
+            server,
+            "/workbench?target=medicaid_members_named_alice&view=lineage",
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert "Lineage" in body
+    assert 'aria-label="Upstream lineage graph"' in body
+    assert "<svg" in body
+    assert 'class="edge"' in body
+    assert "members" in body
+    assert "needs-rows" in body
+    assert "from medicaid_members" not in body
+
+
+def test_demo_tree_hides_pruned_and_keeps_frontier_mocks():
+    server = _with_server(DEMO)
+    try:
+        body = _get(
+            server,
+            "/workbench?target=customer_summary&view=lineage&mock=staged_claims",
+        )
+        both = _get(
+            server,
+            "/workbench?target=customer_summary&mock=staged_claims&mock=raw_claims",
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert "mocked" in body
+    assert "will execute" in body
+    assert "source" in body
+    assert "staged_claims" in body
+    assert "raw_members" in body
+    assert "customer_summary" in body
+    # raw_claims is pruned by mocking staged_claims — hidden until unmock.
+    assert "raw_claims" not in body
+    assert "pruned" not in body or "pruned hidden" in body
+    # Redundant upstream mock is dropped; still one mocked frontier node.
+    assert both.count('class="node mocked"') == 1
+    assert "raw_claims" not in both
+    assert "Blocked" in body
+    assert "raw_members" in body
+
+
+def test_covering_needs_rows_marks_ready_to_run():
+    server = _with_server(DEMO)
+    try:
+        body = _get(
+            server,
+            "/workbench?target=customer_summary&mock=staged_claims&mock=raw_members",
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert "Ready to run" in body
+    assert "Blocked" not in body
 
 
 def test_selecting_a_case_opens_the_workbench(tmp_path):

@@ -70,6 +70,23 @@ def test_a_diamond_keeps_what_another_path_still_needs(tmp_path: Path):
     ]
 
 
+def test_a_source_behind_a_mock_stays_pruned_even_if_also_given():
+    catalog = mapped_sql_folder(
+        sqls=REPOSITORY / "admin" / "sqls",
+        mapping=REPOSITORY / "admin" / "config" / "lookup_sql_table_mapping.csv",
+    )
+    medicaid = Relation(name="medicaid_members")
+    members = Relation(name="members")
+    alice = Relation(name="medicaid_members_named_alice")
+
+    plan = plan_run(alice, catalog, given={medicaid: 1, members: 1})
+
+    # Mocking medicaid prunes members; a given on a pruned leaf is unused.
+    assert plan.states[members] is State.PRUNED
+    assert plan.states[Relation(name="lob")] is State.PRUNED
+    assert plan.needs_rows == set()
+
+
 def test_reports_the_relations_that_still_need_rows():
     catalog = mapped_sql_folder(
         sqls=REPOSITORY / "admin" / "sqls",
