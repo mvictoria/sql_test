@@ -555,7 +555,7 @@ The workflow checks out the calling repository, sets up Python, installs `sql-te
 
 Data-product repositories own their data products and test cases. The tool's repository owns the machinery that authors, validates, discovers, and executes them. No engine code is copied into a consuming repository.
 
-A consuming repository needs very little:
+A consuming repository needs very little. The README adoption section is the copy-paste guide; the footprint is SQL, schemas, cases, `[tool.sql-test]` in `pyproject.toml`, a pytest test over case folders, and a workflow caller:
 
 ```text
 customer-data/
@@ -563,8 +563,8 @@ customer-data/
 ├── schemas/
 ├── cases/
 │   └── <table under test>/<case name>/
-├── data-test.yaml                       only if repo-specific config is needed
-└── .github/workflows/data-tests.yml     calls the reusable workflow
+├── pyproject.toml                       [tool.sql-test] paths
+└── .github/workflows/data-tests.yml     calls the reusable workflow @v0
 ```
 
 This layout is illustrative. Where SQL, schemas, and cases live, and how SQL files map to tables, can differ per repository. The sample repository keeps SQL in `admin/sqls/` and maps each table to its SQL file in `admin/config/lookup_sql_table_mapping.csv`, with columns `table_ref` and `sql_ref`. Extra columns such as `load_type` are ignored.

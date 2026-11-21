@@ -55,7 +55,7 @@ Done:
 - [ENG-29](#eng-29)
 
 
-Next, now unblocked: [CI-1](#ci-1), and app stories that are not done. [CFG-1](#cfg-1) is done. Further CLI commands ([CLI-2](#cli-2)–[CLI-6](#cli-6)) are parked until a demonstrated need; the CLI's job today is `sql-test app`.
+v0.5 CI is done: [CI-1](#ci-1), [CI-2](#ci-2), [CI-3](#ci-3). Next: app stories that are not done. [CFG-1](#cfg-1) is done. Further CLI commands ([CLI-2](#cli-2)–[CLI-6](#cli-6)) are parked until a demonstrated need; the CLI's job today is `sql-test app`.
 
 ### Project skeleton
 
@@ -772,33 +772,39 @@ Show TESTS and IN PIPELINES next to each table. Selecting the in-pipeline count 
 
 ---
 
-## v0.5 — CI
+## v0.5 — CI (done)
 
 Consuming repositories run their cases in GitHub Actions with a few lines of setup. This only needs v0.1 and can be pulled earlier.
 
+Done:
+
+- [CI-1](#ci-1)
+- [CI-2](#ci-2)
+- [CI-3](#ci-3)
+
 <a id="ci-1"></a>
-#### CI-1 Reusable GitHub Actions workflow
+#### CI-1 Reusable GitHub Actions workflow (done)
 
 A workflow in this repository that:
 
 1. checks out the calling repository
 2. sets up Python
-3. installs the package
+3. installs the package from the workflow's git SHA
 4. runs pytest
 
 - **Done when:** a test repository calling the workflow runs its cases in CI.
 - **Depends on:** [ENG-18](#eng-18)
 
 <a id="ci-2"></a>
-#### CI-2 Versioned releases
+#### CI-2 Versioned releases (done)
 
-Release the package and workflow together under tags such as `v1`, so consuming repositories pin a tag instead of `main`.
+Release the package and workflow together under tags such as `v0`, so consuming repositories pin a tag instead of `main`. Local installs use the same tags via `uv` and a git URL.
 
 - **Done when:** a consuming repository pinned to a tag is unaffected by a change on `main`.
 - **Depends on:** [CI-1](#ci-1)
 
 <a id="ci-3"></a>
-#### CI-3 Adoption guide
+#### CI-3 Adoption guide (done)
 
 Document the minimal footprint of a consuming repository:
 
