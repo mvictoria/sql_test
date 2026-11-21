@@ -401,6 +401,7 @@ def test_running_alice_shows_one_row_and_counts_on_the_graph():
         server.shutdown()
         server.server_close()
 
+    assert 'data-result-view="output"' in body
     assert "<h2>Output</h2>" in body
     assert 'data-output-rows="1"' in body
     assert "Alice" in body
@@ -420,6 +421,7 @@ def test_expected_vs_actual_shows_matching_changed_missing_and_unexpected():
                 ("target", "members"),
                 ("view", "lineage"),
                 ("mock", "members"),
+                ("result_view", "diff"),
                 ("action", "run"),
                 ("members.0.member_id", "1"),
                 ("members.0.member_name", "Ada"),
@@ -445,6 +447,10 @@ def test_expected_vs_actual_shows_matching_changed_missing_and_unexpected():
         server.shutdown()
         server.server_close()
 
+    assert 'data-result-view="diff"' in body
+    assert 'data-panel="output"' in body
+    assert 'data-panel="diff"' in body
+    assert "<h2>Output</h2>" in body
     assert "Expected vs actual" in body
     assert 'data-outcome="matching"' in body
     assert 'data-outcome="changed"' in body

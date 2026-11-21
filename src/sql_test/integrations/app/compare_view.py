@@ -99,7 +99,7 @@ def _render_comparison(comparison: Comparison, columns: tuple[str, ...]) -> str:
             '<p class="legend">'
             "<span>matching</span> <span>changed</span> "
             "<span>missing</span> <span>unexpected</span>"
-            " — expected is editable above; actual is read-only"
+            " — expected is editable in the Expected grid; actual is read-only"
             "</p>"
         ),
         _outcome_table(
