@@ -140,20 +140,20 @@ Referenced table
       │       │           │
       │       │           ├── Yes → model; continue upstream
       │       │           │
-      │       │           └── No  → boundary; stop
+      │       │           └── No  → source; stop
       │       │
-      │       └── No → source table; stop
+      │       └── No → source; stop
       │
       └── Mocked?
               │
               └── Yes → execution boundary; stop upstream traversal
 ```
 
-A table not defined by SQL in the current repository is considered an external/source table.
+QA reasons in **source → target** terms. A **source** is any relation the case must supply rows for because lineage cannot execute through it: it is not produced in this repository, or it is produced but its SQL cannot be parsed or it has no schema. Drill-down shows which. Sources remain mockable.
 
-Lineage goes as far back as the SQL can be parsed. Wherever parsing breaks, or a table has no schema, that table is a boundary: traversal stops there and the table is treated like a source. A parse failure shortens lineage rather than blocking the test.
+Lineage goes as far back as the SQL can be parsed. A parse failure or missing schema stops traversal and classifies that relation as a source; it shortens lineage rather than blocking the test.
 
-Source and boundary tables remain mockable.
+**Boundary** is not a relation type. An **execution boundary** is where upstream traversal stops — usually because a table is mocked. Keep that phrase for the stop, not for the table.
 
 ## Mocking and pruning
 
@@ -186,10 +186,9 @@ The UI should distinguish at least:
 - **Mocked** — supplied by the test
 - **Executed** — real repository SQL will execute
 - **Pruned** — no longer required because of a mock boundary
-- **Source** — referenced but not produced in the current repository
-- **Boundary** — produced in the repository, but its SQL cannot be parsed or it has no schema; drill-down shows which
+- **Source** — must be supplied by the test (not produced here, or produced but unusable for lineage); drill-down shows why
 
-Every table that will be read but is not produced by executed SQL needs test data. That includes unmocked source and boundary tables and mocked tables with no rows yet. These tables are shown grey until data is added, and colored once they have data. Running with grey tables reports which tables still need data.
+Every table that will be read but is not produced by executed SQL needs test data. That includes unmocked sources and mocked tables with no rows yet. These tables are shown grey until data is added, and colored once they have data. Running with grey tables reports which tables still need data.
 
 ---
 
@@ -551,7 +550,10 @@ sql-test-tool/
 │   │   ├── comparison/
 │   │   └── validation/
 │   └── integrations/
-│       └── pytest_plugin/      later the CLI and app server
+│       ├── pytest_plugin/
+│       ├── cli.py              sql-test discover / app
+│       ├── discover.py
+│       └── app.py              local authoring server
 ├── .github/workflows/data-tests.yml
 ├── tests/
 └── pyproject.toml
@@ -1000,7 +1002,7 @@ The current design assumes:
 - Models are generally full-load or incremental.
 - Incremental models may self-reference their existing target.
 - A relation referenced but not produced by SQL in the current repo can initially be treated as a source.
-- A table whose SQL cannot be parsed, or that has no schema, is a lineage boundary and is treated like a source.
+- A table whose SQL cannot be parsed, or that has no schema, is classified as a source; lineage stops there.
 - Source relations can be mocked.
 - Relationship integrity between fixture tables is not currently modeled.
 - QA primarily reasons about tables rather than individual SQL statements.
@@ -1030,7 +1032,7 @@ inputs → operation → outputs
 
 particularly for templated SQL, multi-statement files, merges, inserts, and multiple producers?
 
-SQL that fails to parse becomes a lineage boundary, so parse failures limit how far back lineage reaches rather than blocking a test. The remaining risk is SQL that parses but yields wrong dependencies, because QA chooses mock boundaries from that lineage.
+SQL that fails to parse becomes a source, so parse failures limit how far back lineage reaches rather than blocking a test. The remaining risk is SQL that parses but yields wrong dependencies, because QA chooses mock boundaries from that lineage.
 
 ## Multiple producers
 
