@@ -55,7 +55,7 @@ Done:
 - [ENG-29](#eng-29)
 
 
-v0.5 CI is done: [CI-1](#ci-1), [CI-2](#ci-2), [CI-3](#ci-3). Next: app stories that are not done, including [APP-19](#app-19) (Tab order in the mock grid). [CFG-1](#cfg-1) is done. Further CLI commands ([CLI-2](#cli-2)–[CLI-6](#cli-6)) are parked until a demonstrated need; the CLI's job today is `sql-test app`.
+v0.5 CI is done: [CI-1](#ci-1), [CI-2](#ci-2), [CI-3](#ci-3). [APP-17](#app-17) and [APP-19](#app-19) are done. [CFG-1](#cfg-1) is done. Further CLI commands ([CLI-2](#cli-2)–[CLI-6](#cli-6)) are parked until a demonstrated need; the CLI's job today is `sql-test app`.
 
 ### Project skeleton
 
@@ -671,7 +671,7 @@ Paste tabular data copied from Excel or Sheets into the grid, with a reminder th
 - **Depends on:** [APP-6](#app-6)
 
 <a id="app-19"></a>
-#### APP-19 Tab order follows cells in the mock grid
+#### APP-19 Tab order follows cells in the mock grid (done)
 
 Typing mock rows is awkward today because Tab leaves the cell and lands on row actions (duplicate, delete, and similar) beside the grid. Tab and Shift+Tab should move only between data cells, left to right then to the next row, the way a spreadsheet does. When focus is on the last cell of a row, Tab adds a new empty row (same shape as Add row) and moves into its first cell. Shift+Tab from the first cell of a row moves to the last cell of the previous row when there is one; it does not delete rows.
 
