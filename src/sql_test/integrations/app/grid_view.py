@@ -40,6 +40,10 @@ def editor_view(state: WorkbenchState, actions: EditorActions) -> None:
     if expected_schema is None:
         ui.label("No schema for the table under test").classes("text-grey-7")
     else:
+        if state.grid_rows.get("expected") == []:
+            ui.label("Expects no rows").classes("text-caption text-grey-8").mark(
+                "expected-no-rows"
+            )
         grid_view("expected", expected_schema, state, actions)
     with ui.row():
         ui.button("Apply to engine", on_click=actions.on_apply).mark("apply")
