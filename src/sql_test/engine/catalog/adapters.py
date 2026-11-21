@@ -10,7 +10,7 @@ def mapped_sql_folder(
 ) -> Catalog:
     discovered = read_ddl_schemas(schemas or sqls)
     return Catalog(
-        operations=read_operations(mapping, sqls),
+        operations=tuple(read_operations(mapping, sqls)),
         schemas=discovered.schemas,
-        problems=discovered.problems,
+        problems=tuple(discovered.problems),
     )

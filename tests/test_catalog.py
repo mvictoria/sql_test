@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pytest
+import sqlglot
 
 from sql_test.engine.catalog.adapters import mapped_sql_folder
 from sql_test.engine.catalog.mapping import read_operations
@@ -142,3 +143,61 @@ def test_producers_are_the_operations_that_write_a_relation():
         for operation in catalog.producers(Relation(name="medicaid_members"))
     ] == ["medicaid_members.sql"]
     assert catalog.producers(Relation(name="members")) == ()
+
+
+def _counting_parses(monkeypatch, marker):
+    parsed = []
+    parse_one = sqlglot.parse_one
+
+    def counting(sql, *args, **kwargs):
+        if marker in sql:
+            parsed.append(sql)
+        return parse_one(sql, *args, **kwargs)
+
+    monkeypatch.setattr(sqlglot, "parse_one", counting)
+    return parsed
+
+
+def _models(folder, marker):
+    sqls = folder / "sqls"
+    sqls.mkdir()
+    (sqls / "a.sql").write_text(f"-- {marker}\nselect * from members")
+    (sqls / "b.sql").write_text(f"-- {marker}\nselect * from a join lob using (id)")
+    (sqls / "broken.sql").write_text(f"-- {marker}\nselect from (")
+    ddl = folder / "ddl"
+    ddl.mkdir()
+    (ddl / "members.sql").write_text(
+        f"-- {marker}\ncreate table claims.members (id integer)"
+    )
+    mapping = folder / "mapping.csv"
+    mapping.write_text("table_ref,sql_ref\na,a.sql\nb,b.sql\nc,broken.sql\n")
+    return lambda: mapped_sql_folder(sqls=sqls, mapping=mapping, schemas=ddl)
+
+
+def test_resolving_several_names_parses_each_sql_once(tmp_path, monkeypatch):
+    catalog = _models(tmp_path, tmp_path.name)()
+    parsed = _counting_parses(monkeypatch, tmp_path.name)
+
+    for name in ["members", "a", "b", "lob", "members"]:
+        catalog.resolve(name)
+
+    assert len(parsed) == 3
+
+
+def test_a_new_catalog_over_unchanged_files_parses_nothing(tmp_path, monkeypatch):
+    build = _models(tmp_path, tmp_path.name)
+    build().resolve("members")
+    parsed = _counting_parses(monkeypatch, tmp_path.name)
+
+    build().resolve("members")
+
+    assert parsed == []
+
+
+def test_a_catalog_built_after_an_edit_sees_the_new_sql(tmp_path):
+    build = _models(tmp_path, tmp_path.name)
+    assert Relation(name="claims") not in build().relations()
+
+    (tmp_path / "sqls" / "a.sql").write_text("select * from claims")
+
+    assert Relation(name="claims") in build().relations()
