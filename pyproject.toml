@@ -3,7 +3,7 @@ name = "sql-test"
 dynamic = ["version"]
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.12"
 dependencies = [
     "duckdb>=2.0.1",
     "nicegui>=4.0.0",
@@ -43,7 +43,7 @@ main_file = ""
 asyncio_default_fixture_loop_scope = "function"
 
 [tool.ruff]
-target-version = "py314"
+target-version = "py312"
 
 [tool.ruff.lint]
 extend-select = ["I", "B", "UP", "SIM"]

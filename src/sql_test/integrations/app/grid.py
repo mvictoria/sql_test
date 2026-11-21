@@ -43,7 +43,7 @@ def cell_error(column: Column, value: Cell) -> str | None:
         return None
     try:
         column.cast(value)
-    except TypeError, ValueError:
+    except (TypeError, ValueError):
         return f"not {column.type}"
     return None
 
