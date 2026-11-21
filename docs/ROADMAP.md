@@ -879,9 +879,9 @@ Using SPK-3, decide what the app and CI run on, and record it in [HELPER.md](HEL
 Models that read their own target, tested as target before and target after rather than as a cycle.
 
 <a id="inc-1"></a>
-#### INC-1 Recognize incremental models
+#### INC-1 Recognize incremental models (done)
 
-Detect SQL that reads the table it writes, and show it as before and after rather than as a cycle.
+Detect SQL that reads the table it writes, and show it as before and after rather than as a cycle. The lineage leaves the self-reference out of what the model is built from, and the plan lists the model in `Plan.incremental` for the app to draw as before and after. Running one is refused, naming it, until [INC-3](#inc-3).
 
 - **Done when:** a self-referencing model is detected and its lineage has no cycle.
 - **Depends on:**

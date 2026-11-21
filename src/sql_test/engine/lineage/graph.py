@@ -28,12 +28,21 @@ class Lineage:
     def sources(self) -> set[Relation]:
         return set(self.source_reasons)
 
+    @property
+    def incremental(self) -> set[Relation]:
+        """Models with an operation that reads the relation it writes."""
+        return {
+            operation.writes
+            for operation, reads in self.reads.items()
+            if operation.writes in reads
+        }
+
     def projection(self) -> dict[Relation, set[Relation]]:
         built_from: dict[Relation, set[Relation]] = {
             relation: set() for relation in self.models | self.sources
         }
         for operation, reads in self.reads.items():
-            built_from[operation.writes] |= reads
+            built_from[operation.writes] |= reads - {operation.writes}
         return built_from
 
 

@@ -205,3 +205,60 @@ def test_a_plan_says_what_each_relation_is_built_from_and_why_sources_are_source
         members: SourceReason.NOT_PRODUCED,
         lob: SourceReason.NOT_PRODUCED,
     }
+
+
+def _incremental(folder: Path):
+    (folder / "ddl.sql").write_text(
+        "create table events (id int);\ncreate table seen (id int);\n"
+        "create table report (id int);\n"
+    )
+    (folder / "seen.sql").write_text(
+        "select id from seen union select id from events"
+        " where id not in (select id from seen)"
+    )
+    (folder / "report.sql").write_text("select id from seen")
+    mapping = folder / "mapping.csv"
+    mapping.write_text("table_ref,sql_ref\nseen,seen.sql\nreport,report.sql\n")
+    return mapped_sql_folder(sqls=folder, mapping=mapping)
+
+
+def test_a_model_reading_its_own_target_is_incremental_not_a_cycle(tmp_path):
+    seen, events = Relation(name="seen"), Relation(name="events")
+
+    plan = plan_run(seen, _incremental(tmp_path), given={events: 1})
+
+    assert plan.incremental == {seen}
+    assert plan.built_from[seen] == {events}
+    assert plan.states == {seen: State.EXECUTED, events: State.GIVEN}
+    assert [operation.sql_file.name for operation in plan.operations] == ["seen.sql"]
+
+
+def test_an_incremental_model_upstream_of_the_target_is_incremental(tmp_path):
+    seen, report = Relation(name="seen"), Relation(name="report")
+
+    plan = plan_run(report, _incremental(tmp_path), given={Relation(name="events"): 1})
+
+    assert plan.incremental == {seen}
+    assert plan.built_from[report] == {seen}
+    assert [operation.sql_file.name for operation in plan.operations] == [
+        "seen.sql",
+        "report.sql",
+    ]
+
+
+def test_a_model_without_a_self_reference_is_not_incremental():
+    catalog = mapped_sql_folder(
+        sqls=REPOSITORY / "admin" / "sqls",
+        mapping=REPOSITORY / "admin" / "config" / "lookup_sql_table_mapping.csv",
+    )
+
+    plan = plan_run(Relation(name="medicaid_members_named_alice"), catalog, given={})
+
+    assert plan.incremental == set()
+
+
+def test_running_an_incremental_model_says_it_is_not_supported_yet(tmp_path):
+    engine = Engine(_incremental(tmp_path), DuckDBExecutor())
+
+    with pytest.raises(NotImplementedError, match="seen"):
+        engine.run("seen", {"events": [{"id": 1}]})

@@ -33,6 +33,11 @@ class Engine:
         return plan_run(Relation.parse(table).resolve(known), self._catalog, given)
 
     def execute(self, plan: Plan, rows: dict[str, list[Row]]) -> RunResult:
+        if plan.incremental:
+            names = ", ".join(sorted(map(str, plan.incremental)))
+            raise NotImplementedError(
+                f"Running incremental models is not supported yet: {names}"
+            )
         if plan.needs_rows:
             names = ", ".join(sorted(map(str, plan.needs_rows)))
             raise MissingRows(f"These relations still need rows: {names}")
