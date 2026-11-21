@@ -433,20 +433,22 @@ async def test_null_is_distinct_from_an_empty_string(user: User):
     assert _value(user, "cell-members.0.member_name") == ""
 
 
-async def test_grid_rows_reach_the_engine_with_schema_types(user: User):
+async def test_grid_rows_show_engine_types_after_run(user: User):
     _register(FIXTURE)
     await user.open("/workbench?target=members&view=lineage&mock=members")
-    _fill(user, "members", [{"member_id": "1", "member_name": "Ada", "lob": "30"}])
+    row = {"member_id": "1", "member_name": "Ada", "lob": "30"}
+    _fill(user, "members", [row])
+    _fill(user, "expected", [row])
 
-    user.find(marker="apply").click()
+    user.find(marker="run").click()
 
-    await user.should_see("Mock rows typed")
+    await user.should_see(marker="verdict-passed")
     await user.should_see(marker="grid-members")
     assert _text(user, "engine-type-members.member_id") == "int"
     assert _value(user, "cell-members.0.member_id") == "1"
 
 
-async def test_apply_with_bad_types_shows_an_error_not_a_blank_page(user: User):
+async def test_run_with_bad_types_shows_an_error_not_a_blank_page(user: User):
     _register(DEMO)
     await user.open(
         "/workbench?target=customer_summary&view=lineage"
@@ -455,10 +457,10 @@ async def test_apply_with_bad_types_shows_an_error_not_a_blank_page(user: User):
     _fill(user, "staged_claims", [{"claim_id": "a", "member_id": "1"}])
     _fill(user, "staged_members", [{"member_id": "1", "member_name": "Ada"}])
 
-    user.find(marker="apply").click()
+    user.find(marker="run").click()
 
     await user.should_see("Mock editor")
-    await user.should_see("Could not load mocks")
+    await user.should_see("Could not run")
     message = _text(user, "status-error")
     assert (
         "claim_id" in message
@@ -466,6 +468,23 @@ async def test_apply_with_bad_types_shows_an_error_not_a_blank_page(user: User):
         or "int" in message.lower()
     )
     assert _value(user, "cell-staged_claims.0.claim_id") == "a"
+
+
+async def test_alice_passes_with_run_only_and_no_apply_peer(user: User):
+    """APP-25: Passed via Run/Save only; engine types after Run; Apply is not a peer."""
+    _register(FIXTURE)
+    await user.open(
+        "/workbench?case=" + quote(f"{ALICE}/only_medicaid_alices", safe="")
+    )
+    await user.should_see(marker="run")
+    await user.should_see(marker="save")
+    await user.should_not_see(marker="apply")
+
+    user.find(marker="run").click()
+
+    await user.should_see(marker="verdict-passed")
+    assert _text(user, "verdict-passed") == "Passed"
+    assert _text(user, "engine-type-members.member_id") == "int"
 
 
 async def test_running_alice_shows_one_row_and_counts_on_the_graph(user: User):

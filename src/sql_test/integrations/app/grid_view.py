@@ -36,7 +36,6 @@ class EditorActions:
     on_add_row: Callable[[str], None]
     on_delete_row: Callable[[str, int], None]
     on_duplicate_row: Callable[[str, int], None]
-    on_apply: Callable[[], None]
     on_run: Callable[[], None]
     on_save: Callable[[], None]
 
@@ -69,7 +68,6 @@ def editor_view(state: WorkbenchState, actions: EditorActions) -> None:
             )
         grid_view("expected", expected_schema, state, actions)
     with ui.row():
-        ui.button("Apply to engine", on_click=actions.on_apply).mark("apply")
         ui.button("Run", on_click=actions.on_run).mark("run")
         ui.button("Save case", on_click=actions.on_save).mark("save")
 
