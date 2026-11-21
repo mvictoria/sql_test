@@ -32,3 +32,23 @@ def pipeline_counts(
                 continue
             counts[name] += 1
     return counts
+
+
+def pipeline_cases(
+    table: str,
+    cases: Iterable[CaseSummary],
+    catalog: Catalog,
+) -> list[CaseSummary]:
+    """Cases that execute `table`'s SQL without targeting it."""
+    known = catalog.relations()
+    relation = Relation.parse(table).resolve(known)
+    found: list[CaseSummary] = []
+    for case in cases:
+        if case.target == str(relation) or case.target == table:
+            continue
+        target = Relation.parse(case.target).resolve(known)
+        given = {Relation.parse(name).resolve(known): 1 for name in case.mocks}
+        plan = plan_run(target, catalog, given)
+        if plan.states.get(relation) is State.EXECUTED:
+            found.append(case)
+    return found

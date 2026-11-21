@@ -711,7 +711,7 @@ Print tests and in-pipeline counts per table, untested tables first.
   - [CLI-1](#cli-1)
 
 <a id="cov-4"></a>
-#### COV-4 Coverage in the target browser
+#### COV-4 Coverage in the target browser (done)
 
 Show TESTS and IN PIPELINES next to each table. Selecting the in-pipeline count lists those cases, and selecting one opens it.
 
