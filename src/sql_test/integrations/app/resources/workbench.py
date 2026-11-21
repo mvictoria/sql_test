@@ -206,16 +206,18 @@ def _workbench(
       padding: 0.2rem 0.6rem; cursor: pointer;
     }}
     nav.result-views button.current {{ font-weight: 700; border-color: #333; }}
-    .compare {{ border-collapse: collapse; margin: 0.5rem 0 1rem; }}
-    .compare th, .compare td {{ border: 1px solid #ccc; padding: 0.25rem 0.4rem; }}
-    .compare th {{ background: #f4f4f4; font-size: 0.85rem; }}
-    .compare input {{ width: 8rem; font: inherit; }}
-    .compare input[readonly] {{ background: #f8f8f8; border: 1px solid #ddd; }}
-    .compare .differing input {{ background: #fff3cd; }}
-    .compare-outcome[data-outcome="matching"] h3 {{ color: #1b7a45; }}
-    .compare-outcome[data-outcome="changed"] h3 {{ color: #a60; }}
-    .compare-outcome[data-outcome="missing"] h3 {{ color: #a33; }}
-    .compare-outcome[data-outcome="unexpected"] h3 {{ color: #3451b2; }}
+    .diff-table {{ border-collapse: collapse; margin: 0.5rem 0 1rem; font-family: ui-monospace, monospace; font-size: 0.9rem; }}
+    .diff-table th, .diff-table td {{ border: 1px solid #ddd; padding: 0.2rem 0.5rem; }}
+    .diff-table .diff-header th {{ background: #f4f4f4; font-weight: 600; }}
+    .diff-table .diff-marker {{ width: 1.5rem; text-align: center; color: #666; }}
+    .diff-table .diff-hunk td {{ background: #eef; color: #447; border-color: #ccd; font-weight: 600; }}
+    .diff-table .diff-removed td, .diff-table .diff-removed th {{ background: #ffeef0; }}
+    .diff-table .diff-added td, .diff-table .diff-added th {{ background: #e6ffed; }}
+    .diff-table .diff-removed .diff-marker {{ color: #b31d28; }}
+    .diff-table .diff-added .diff-marker {{ color: #22863a; }}
+    .diff-table .differing {{ background: #fff3cd; font-weight: 600; }}
+    .legend .diff-removed {{ color: #b31d28; margin-right: 1rem; }}
+    .legend .diff-added {{ color: #22863a; }}
   </style>
 </head>
 <body>
