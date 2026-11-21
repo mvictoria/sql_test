@@ -329,6 +329,22 @@ Resolving a name compared it with every relation in the catalog, and finding a r
 - **Done when:** resolving a name compares it only with relations of that name; planning a 50-table chain makes fewer than 250 relation comparisons; and parsing the same name twice parses it once.
 - **Depends on:** [ENG-26](#eng-26)
 
+<a id="eng-31"></a>
+#### ENG-31 Stop the plan's lineage walk at given relations
+
+Planning a run walks the target's whole upstream lineage, then prunes everything above the given relations. A case usually mocks the target's direct inputs and executes one SQL, but its plan still visits every table above them. On a 1,000-table chain with 2,000 case folders, a case took 55 ms for tables with about 100 upstream tables and 146 ms for tables with about 950, and planning was about 80% of that. The plan's walk stops at a relation the run is given rows for, so planning costs the same however deep the table sits. Unused mocks keep their meaning: a mock above another mock, or outside the lineage, is never reached and is reported as unused. A relation that another path still reads is still reached. The app's lineage view keeps the full walk, so it can show pruned tables.
+
+- **Done when:** planning a case that mocks its target's direct inputs reads no SQL above those inputs; the plan for the top of a 1,000-table chain with its input mocked visits two relations; a mock above another mock is still unused; and in a diamond where another path still reads an upstream mock, nothing is unused.
+- **Depends on:** [ENG-10](#eng-10), [ENG-29](#eng-29)
+
+<a id="eng-32"></a>
+#### ENG-32 Read each SQL file once per catalog
+
+`Operation.sql` reads its file from disk every time it is asked, so planning the 1,000 cases in the [ENG-31](#eng-31) measurement read about 950 files per case. A catalog is a frozen snapshot, so it reads each mapped SQL file once and keeps the text. A long-running caller still sees edits, because it builds a new catalog ([APP-17](#app-17)).
+
+- **Done when:** planning several runs from one catalog reads each SQL file once; and a catalog built after a SQL file is edited sees the new text.
+- **Depends on:** [ENG-26](#eng-26), [APP-17](#app-17)
+
 ### Comparison
 
 <a id="eng-14"></a>
