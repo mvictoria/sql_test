@@ -423,3 +423,29 @@ def test_selecting_a_case_opens_the_workbench(tmp_path):
     assert "Workbench" in body
     assert "medicaid_members" in body
     assert "alice" in body
+
+
+def test_opening_a_case_loads_mocks_grids_and_expected():
+    server = _with_server(FIXTURE)
+    try:
+        body = _get(
+            server,
+            "/workbench?case="
+            + quote("medicaid_members/only_medicaid_members", safe=""),
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert "only_medicaid_members" in body
+    assert 'data-relation="members"' in body or 'class="node mocked' in body
+    assert ">members</text>" in body
+    assert ">lob</text>" in body
+    assert 'data-table="members"' in body
+    assert 'name="members.0.member_name" value="Ada"' in body
+    assert 'name="members.1.member_name" value="Bea"' in body
+    assert 'data-table="lob"' in body
+    assert 'name="lob.0.lob_name" value="Medicaid"' in body
+    assert 'data-table="expected"' in body
+    assert 'name="expected.0.member_name" value="Ada"' in body
+    assert 'name="expected.0.member_id" value="1"' in body
