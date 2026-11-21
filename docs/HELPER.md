@@ -573,6 +573,8 @@ This layout is illustrative. Where SQL, schemas, and cases live, and how SQL fil
 
 The engine, CLI, app, and reusable workflow are released together as one version. Consuming repositories pin a floating major tag such as `@v0` (while the package is 0.x), never `main`, so a change on the tool's `main` branch cannot silently change CI in every consuming repository.
 
+A release is a version tag `vX.Y.Z` (matching `pyproject.toml`) pushed to the tool repository. The release workflow creates a GitHub Release and force-moves the floating major tag `vX` to that commit. Local and CI installs both use those git tags (for example `uv add "sql-test @ git+https://github.com/mvictoria/sql_test.git@v0"`).
+
 The case format carries its own format version if compatibility ever requires it. The tool's release version and the case format version are separate.
 
 ## Tool repository layout
