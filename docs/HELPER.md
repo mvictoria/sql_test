@@ -121,6 +121,17 @@ cases/
 
 Schemas are not stored in the case. Column types come from the schemas discovered in the repository, and CSV values are read with those types.
 
+### Case format, version 1
+
+The case format is a public contract: people and other tools write cases by hand. A change to it gets a new version here.
+
+- The folder names are the table under test and the case name. A mocked table's file is its relation name as written in the SQL, for example `members.csv` or `claims.members.csv`.
+- Each CSV is UTF-8, comma-separated, with a header row of column names and `\n` line endings.
+- Cells follow the [comparison defaults](#comparison-defaults): an empty, unquoted cell is NULL and `""` is an empty string. A cell is quoted only when it is empty or contains a comma, quote, or line break.
+- Each cell is read as its column's type from the discovered schema. A cell that cannot be read as that type is reported with its file, line, and column. Columns of a relation with no schema stay text.
+- Integers and decimals are written as digits, booleans as `true` or `false`, dates and timestamps in ISO 8601.
+- A mock file may list only some of its relation's columns; unlisted columns are NULL. `expected.csv` lists only the columns the case checks, and may be absent while a case is being written.
+
 pytest discovers the case folders and runs one parametrized test per case, so a saved case needs no Python.
 
 How target-before state is stored for incremental models is decided with incremental support.

@@ -117,3 +117,17 @@ def test_given_rows_load_with_their_schema_types():
 
     assert rows == [(1, "Ada", "30")]
     assert type(rows[0][0]) is int
+
+
+def test_columns_missing_from_given_rows_are_null():
+    engine = Engine(
+        catalog=mapped_sql_folder(
+            sqls=REPOSITORY / "admin" / "sqls",
+            mapping=REPOSITORY / "admin" / "config" / "lookup_sql_table_mapping.csv",
+        ),
+        executor=DuckDBExecutor,
+    )
+
+    rows = engine.run("members", rows={"members": [{"member_id": "1"}]})
+
+    assert rows == [(1, None, None)]
