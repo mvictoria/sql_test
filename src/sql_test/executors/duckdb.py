@@ -72,10 +72,10 @@ def _create(
     columns = ", ".join(f"{column.name} {column.type}" for column in table.schema)
     connection.execute(f"create table {relation} ({columns})")
     if table.rows:
-        placeholders = ", ".join("?" for _ in table.schema)
-        connection.executemany(
-            f"insert into {relation} values ({placeholders})",
-            [[row.get(column.name) for column in table.schema] for row in table.rows],
+        unnests = ", ".join(f"unnest(${i})" for i in range(1, len(table.schema) + 1))
+        connection.execute(
+            f"insert into {relation} select {unnests}",
+            [[row.get(column.name) for row in table.rows] for column in table.schema],
         )
 
 

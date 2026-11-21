@@ -6,6 +6,7 @@ from sql_test.engine.executor import Given
 from sql_test.engine.operation import Kind, Operation
 from sql_test.engine.relation import Relation
 from sql_test.engine.schema import Column
+from sql_test.executors import duckdb as duckdb_executor
 from sql_test.executors.duckdb import DuckDBExecutor
 
 MEMBERS = Relation(name="members")
@@ -41,6 +42,54 @@ def test_loads_given_rows_with_their_schema_types():
             {"member_id": 2, "member_name": "Bea", "lob": "10"},
         ]
     }
+
+
+class _Recording:
+    def __init__(self, connection, statements):
+        self._connection = connection
+        self._statements = statements
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return self._connection.__exit__(*exc)
+
+    def cursor(self):
+        return _Recording(self._connection.cursor(), self._statements)
+
+    def execute(self, sql, *args):
+        self._statements.append(sql)
+        return self._connection.execute(sql, *args)
+
+    def executemany(self, sql, rows):
+        self._statements.extend(sql for _ in rows)
+        return self._connection.executemany(sql, rows)
+
+
+def test_a_mock_of_many_rows_loads_in_one_insert(monkeypatch):
+    statements = []
+    connect = duckdb_executor.duckdb.connect
+    monkeypatch.setattr(
+        duckdb_executor.duckdb,
+        "connect",
+        lambda: _Recording(connect(), statements),
+    )
+    rows = [
+        {"member_id": str(i), "member_name": f"m{i}", "lob": "30"} for i in range(1_000)
+    ]
+
+    written = DuckDBExecutor().run(
+        {MEMBERS: Given(schema=MEMBERS_SCHEMA, rows=rows)}, []
+    )
+
+    assert len(written[MEMBERS]) == 1_000
+    assert written[MEMBERS][999] == {
+        "member_id": 999,
+        "member_name": "m999",
+        "lob": "30",
+    }
+    assert sum(s.lstrip().lower().startswith("insert") for s in statements) == 1
 
 
 def test_executes_operations_and_returns_what_they_write(tmp_path):
