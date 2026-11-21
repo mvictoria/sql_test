@@ -85,6 +85,36 @@ def test_lineage_view_shows_grey_sources_that_need_rows():
     assert "from medicaid_members" not in body
 
 
+def test_clicking_medicaid_members_mocks_it_and_prunes_members():
+    server = _with_server(FIXTURE)
+    try:
+        open_graph = _get(
+            server,
+            "/workbench?target=medicaid_members_named_alice&view=lineage",
+        )
+        mocked = _get(
+            server,
+            "/workbench?target=medicaid_members_named_alice&view=lineage"
+            "&mock=medicaid_members",
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert (
+        'href="/workbench?target=medicaid_members_named_alice'
+        '&amp;view=lineage&amp;mock=medicaid_members"'
+    ) in open_graph
+    assert 'class="node mocked"' in mocked
+    assert ">medicaid_members</text>" in mocked
+    # members is pruned by the mock — hidden until unmock.
+    assert ">members</text>" not in mocked
+    assert (
+        'href="/workbench?target=medicaid_members_named_alice&amp;view=lineage"'
+        in mocked
+    )
+
+
 def test_demo_tree_hides_pruned_and_keeps_frontier_mocks():
     server = _with_server(DEMO)
     try:

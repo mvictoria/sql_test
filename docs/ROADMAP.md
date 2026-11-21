@@ -507,7 +507,7 @@ Tables that still need data are grey and turn colored once they have data. A sou
   - [ENG-7](#eng-7)
 
 <a id="app-5"></a>
-#### APP-5 Mock and unmock from the graph
+#### APP-5 Mock and unmock from the graph (done)
 
 Click a table to mock or unmock it. The graph redraws with the new states.
 
@@ -859,3 +859,4 @@ After a run, open any executed table's rows and see at which table an input row 
 - **CDC and change propagation.** What changes downstream when an upstream row is inserted, updated, or deleted. Depends on v0.7.
 - **Other consumers** such as IDE integrations or change-impact tooling, when there is a demonstrated use case.
 - **Undefined-relation checks.** Flag inferred relations with no schema, naming the SQL that reads them, with a did-you-mean against declared relations, and a strict mode with an allowlist of external sources. Mostly the repository's own linting's job; add only if users ask. Depends on [ENG-22](#eng-22).
+- **Browser E2E for the app.** Click-through coverage (for example Playwright) once the workbench is interactive enough that HTTP HTML assertions in `tests/test_app.py` are not enough. Not needed while the page is mostly server-rendered.
