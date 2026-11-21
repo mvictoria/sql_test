@@ -31,23 +31,11 @@ def create_server(
         def do_GET(self) -> None:
             parsed = urlparse(self.path)
             if parsed.path in {"/", "/index.html"}:
-                body = _home(discover(repository)).encode()
+                self._send_html(_home(discover(repository)))
             elif parsed.path == "/workbench":
-                page = _workbench(
-                    repository, discover(repository), parse_qs(parsed.query)
-                )
-                if page is None:
-                    self.send_error(404)
-                    return
-                body = page.encode()
+                self._send_workbench(parse_qs(parsed.query))
             else:
                 self.send_error(404)
-                return
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html; charset=utf-8")
-            self.send_header("Content-Length", str(len(body)))
-            self.end_headers()
-            self.wfile.write(body)
 
         def do_POST(self) -> None:
             parsed = urlparse(self.path)
@@ -56,12 +44,22 @@ def create_server(
                 return
             length = int(self.headers.get("Content-Length", "0"))
             raw = self.rfile.read(length).decode()
-            page = _workbench(repository, discover(repository), parse_qs(raw))
+            self._send_workbench(parse_qs(raw))
+
+        def _send_workbench(self, query: dict[str, list[str]]) -> None:
+            try:
+                page = _workbench(repository, discover(repository), query)
+            except Exception as error:  # noqa: BLE001 — always answer the browser
+                self._send_html(_error_page(error), status=500)
+                return
             if page is None:
                 self.send_error(404)
                 return
+            self._send_html(page)
+
+        def _send_html(self, page: str, status: int = 200) -> None:
             body = page.encode()
-            self.send_response(200)
+            self.send_response(status)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
@@ -85,6 +83,19 @@ def serve(repository: Path, host: str = "127.0.0.1", port: int = 8765) -> None:
         print()
     finally:
         server.server_close()
+
+
+def _error_page(error: BaseException) -> str:
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>sql-test error</title></head>
+<body>
+  <h1>Something went wrong</h1>
+  <p>{html.escape(str(error))}</p>
+  <p><a href="/">← sql-test</a></p>
+</body>
+</html>
+"""
 
 
 def _home(result: Discovery) -> str:
@@ -141,10 +152,15 @@ def _workbench(
     engine_types: dict[str, dict[str, str]] = {}
     reached = ""
     if query.get("action", [""])[0] == "apply":
-        grid_rows, engine_types = _type_grid_rows(repository, grid_rows)
-        reached = (
-            '<p class="ready">Reached engine — mock rows loaded with schema types</p>'
-        )
+        mocked_rows = {name: grid_rows.get(name, []) for name in mocks}
+        try:
+            grid_rows, engine_types = _type_grid_rows(repository, mocked_rows)
+            reached = '<p class="ready">Reached engine — mock rows loaded with schema types</p>'
+        except Exception as error:  # noqa: BLE001 — show engine failures in the page
+            reached = (
+                '<p class="blocked">Could not load mocks: '
+                f"{html.escape(str(error))}</p>"
+            )
 
     case_line = (
         f"<p>Case: <strong>{html.escape(case_name)}</strong></p>" if case_name else ""
