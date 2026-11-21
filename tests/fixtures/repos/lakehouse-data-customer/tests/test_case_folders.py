@@ -2,10 +2,11 @@ from pathlib import Path
 
 import pytest
 
+from sql_test.integrations.config import RepositoryConfig
 from sql_test.testing.cases import case_folders, case_id
 from sql_test.testing.run import run_case
 
-CASES = Path(__file__).parent / "cases"
+CASES = RepositoryConfig.load(Path(__file__).parent.parent).cases
 
 
 @pytest.mark.parametrize("case", case_folders(CASES), ids=case_id)

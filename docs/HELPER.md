@@ -277,6 +277,20 @@ Producer-level execution semantics will become important for ordered DML, insert
 
 # Planned User Experience
 
+## Repository config
+
+A repository's **config** says where its SQL, SQL-to-table mapping, schemas, and case folders live. It is a `[tool.sql-test]` table in the repository's `pyproject.toml`, because a Python repository already keeps its pytest and lint settings there, and Python reads TOML without a new dependency. Paths are relative to the repository root.
+
+```toml
+[tool.sql-test]
+sqls = "admin/sqls"
+mapping = "admin/config/lookup_sql_table_mapping.csv"
+schemas = "admin/sqls"
+cases = "tests/cases"
+```
+
+Every setting is required. A repository with no `pyproject.toml`, no `[tool.sql-test]` table, or a missing setting is an error that names what is missing; the tool assumes no layout. The CLI and the app read the config; a repository's own pytest tests may read it too, or pass paths directly.
+
 ## Upstream lineage
 
 The **upstream lineage** of a target is the graph relation → operation → relation that leads to it. A relation with producers in the catalog is a **model**, and traversal continues through each of its operations; any other relation is a source, and traversal stops. Projected to relation → relation, it is the default lineage view. Lineage says only what depends on what; what runs is the plan's job.

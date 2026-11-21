@@ -12,6 +12,18 @@ uv sync
 
 Requires Python 3.14+.
 
+## Configure a repository
+
+A consuming repository says where its files live in a `[tool.sql-test]` table in its `pyproject.toml`. Paths are relative to the repository root, and all four are required:
+
+```toml
+[tool.sql-test]
+sqls = "admin/sqls"                                 # SQL files the mapping points at
+mapping = "admin/config/lookup_sql_table_mapping.csv"  # SQL file -> table it writes
+schemas = "admin/sqls"                              # CREATE TABLE DDL
+cases = "tests/cases"                               # case folders
+```
+
 ## CLI
 
 ```bash
@@ -49,7 +61,7 @@ Still to come: run and compare, save/load cases, coverage in the UI. Details in 
 
 `lakehouse-data-customer/` is a temporary sample consuming repository. The tool must not assume it is present; package tests use copies under `tests/fixtures/repos/`.
 
-Its early v0-style tests still load DuckDB by hand in places. Case folders and the shared engine are replacing that path.
+Its `tests/` show both ways a repository uses the library: `test_sql.py` calls the engine with rows written in Python, and `test_case_folders.py` runs one parametrized test per case folder under `tests/cases/`. Run them with `uv run pytest lakehouse-data-customer/tests`.
 
 ## Tests
 

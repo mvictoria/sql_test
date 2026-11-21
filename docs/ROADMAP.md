@@ -48,7 +48,7 @@ Done:
 - [ENG-18](#eng-18)
 - [ENG-19](#eng-19)
 
-Next, now unblocked: [CLI-2](#cli-2), [CLI-3](#cli-3), [CLI-4](#cli-4), [CLI-5](#cli-5), [CFG-1](#cfg-1), and [CI-1](#ci-1).
+Next, now unblocked: [CLI-2](#cli-2), [CLI-3](#cli-3), [CLI-4](#cli-4), [CLI-5](#cli-5), and [CI-1](#ci-1). [CFG-1](#cfg-1) is done.
 
 ### Project skeleton
 
@@ -358,9 +358,9 @@ A headless command-line interface over the engine, and checks that run without e
 ### Repository config
 
 <a id="cfg-1"></a>
-#### CFG-1 Define a repository config file
+#### CFG-1 Define a repository config file (done)
 
-Define a config file in the consuming repository that says where its SQL, schemas, cases, and SQL-to-table mapping live, so the CLI, app, and CI can find them without code. Until then the app and CLI look for cases in `<repository>/cases`. Decide its name and format, for example TOML, which Python reads without a new dependency, or YAML, which needs PyYAML. Record the decision in [HELPER.md](HELPER.md).
+Define a config file in the consuming repository that says where its SQL, schemas, cases, and SQL-to-table mapping live, so the CLI, app, and CI can find them without code. Decide its name and format, for example TOML, which Python reads without a new dependency, or YAML, which needs PyYAML. Record the decision in [HELPER.md](HELPER.md).
 
 - **Done when:** a repository's paths can be read from its config file, and the decision is written in HELPER.md.
 - **Depends on:**
