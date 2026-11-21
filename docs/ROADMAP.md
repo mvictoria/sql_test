@@ -310,6 +310,14 @@ Each run opened and closed its own DuckDB database, which cost more than the run
 - **Done when:** concurrent runs on one executor each see only their own rows; a failed run leaves nothing a later run can read; and two runs still do not share relations.
 - **Depends on:** [ENG-24](#eng-24)
 
+<a id="eng-28"></a>
+#### ENG-28 Run three-level names on DuckDB
+
+Gap: the catalog handles `catalog.schema.table` names ([ENG-21](#eng-21)), but the DuckDB executor never creates the catalog part, so a mock or model named `lakehouse.claims.members` fails with `Catalog Error: Schema with name lakehouse does not exist!`. [ENG-21](#eng-21) left this to the executor and no story picked it up. In DuckDB the catalog part is an attached database, and attached names are global to an instance, so two concurrent runs on the shared instance from [ENG-27](#eng-27) cannot both attach `lakehouse`. Proposed: a run with any three-level relation uses a throwaway DuckDB instance that attaches each catalog under its own name; one- and two-level runs keep the shared instance. DuckDB's own database names, `memory`, `system`, and `temp`, are reserved: a relation using one as its catalog is an error rather than a table in the shared instance.
+
+- **Done when:** a mock named `lakehouse.claims.members` loads and reads back; SQL reading `lakehouse.claims.members` and writing `lakehouse.claims.out` runs; concurrent three-level runs on one executor each see only their own rows; and a relation in catalog `memory` is an error naming it.
+- **Depends on:** [ENG-21](#eng-21), [ENG-27](#eng-27)
+
 ### Comparison
 
 <a id="eng-14"></a>
