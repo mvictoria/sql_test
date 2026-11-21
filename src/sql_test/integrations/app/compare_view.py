@@ -44,7 +44,7 @@ def compare_section(
     ]
     if not aligned and not actual:
         return DiffPanel(columns=columns, has_expected=False, comparison=None)
-    typed_rows = _typed_rows(schema, aligned)
+    typed_rows = [typed_row(schema, row) for row in aligned]
     expected = CaseTable(columns=columns, rows=typed_rows)
     comparison = compare(expected, actual, ordered=ordered)
     return DiffPanel(
@@ -54,23 +54,15 @@ def compare_section(
     )
 
 
-def _typed_rows(
-    schema: Schema,
-    rows: list[dict[str, str | None]],
-) -> list[Row]:
-    typed: list[Row] = []
-    for row in rows:
-        typed.append(
-            {
-                column.name: (
-                    None
-                    if row.get(column.name) is None or row.get(column.name) == ""
-                    else column.cast(row.get(column.name))
-                )
-                for column in schema
-            }
+def typed_row(schema: Schema, row: dict[str, str | None]) -> Row:
+    return {
+        column.name: (
+            None
+            if row.get(column.name) is None or row.get(column.name) == ""
+            else column.cast(row.get(column.name))
         )
-    return typed
+        for column in schema
+    }
 
 
 def target_schema(repo_catalog: Catalog, target: str) -> Schema | None:

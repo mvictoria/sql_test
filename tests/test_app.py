@@ -452,6 +452,80 @@ async def test_diff_shows_changed_missing_and_added_like_git(user: User):
     await user.should_see(marker="cell-expected.0.member_name")
 
 
+async def _run_a_failing_case(user: User) -> None:
+    _register(FIXTURE)
+    await user.open("/workbench?target=members&view=lineage&mock=members")
+    _fill(
+        user,
+        "members",
+        [
+            {"member_id": "1", "member_name": "Ada", "lob": "30"},
+            {"member_id": "2", "member_name": "Bea", "lob": "10"},
+            {"member_id": "3", "member_name": "Cia", "lob": "30"},
+        ],
+    )
+    _fill(
+        user,
+        "expected",
+        [
+            {"member_id": "1", "member_name": "Ada", "lob": "30"},
+            {"member_id": "2", "member_name": "Beatrice", "lob": "10"},
+            {"member_id": "9", "member_name": "Dia", "lob": "30"},
+        ],
+    )
+    user.find(marker="run").click()
+    await user.should_see(marker="verdict-failed")
+
+
+async def test_accepting_the_whole_actual_result_makes_the_case_pass(user: User):
+    await _run_a_failing_case(user)
+
+    user.find(marker="accept-all").click()
+
+    await user.should_see(marker="verdict-passed")
+    assert _count(user, "cell-expected.2.member_name") == 1
+    assert _value(user, "cell-expected.1.member_name") == "Bea"
+    user.find(marker="run").click()
+    await user.should_see(marker="verdict-passed")
+
+
+async def test_accepting_a_changed_row_replaces_the_expected_row(user: User):
+    await _run_a_failing_case(user)
+
+    user.find(marker="accept-row-changed-0").click()
+
+    assert _value(user, "cell-expected.1.member_name") == "Bea"
+    await user.should_see(marker="verdict-failed")
+    await user.should_not_see(marker="diff-changed")
+
+
+async def test_accepting_a_changed_cell_takes_the_actual_value(user: User):
+    await _run_a_failing_case(user)
+
+    user.find(marker="accept-cell-changed-0-member_name").click()
+
+    assert _value(user, "cell-expected.1.member_name") == "Bea"
+    await user.should_not_see(marker="diff-changed")
+
+
+async def test_accepting_an_added_row_appends_it_to_expected(user: User):
+    await _run_a_failing_case(user)
+
+    user.find(marker="accept-row-added-0").click()
+
+    assert _value(user, "cell-expected.3.member_name") == "Cia"
+    await user.should_not_see(marker="accept-row-added-0")
+
+
+async def test_removing_a_missing_row_drops_it_from_expected(user: User):
+    await _run_a_failing_case(user)
+
+    user.find(marker="remove-row-missing-0").click()
+
+    assert _count(user, "cell-expected.2.member_name") == 0
+    await user.should_not_see(marker="diff-missing")
+
+
 async def test_selecting_a_case_opens_the_workbench(user: User, tmp_path: Path):
     case = tmp_path / "cases" / "medicaid_members" / "alice"
     case.mkdir(parents=True)
