@@ -99,3 +99,21 @@ def test_reports_an_ambiguous_table():
                 "billing.members": [{"member_id": 2}],
             },
         )
+
+
+def test_given_rows_load_with_their_schema_types():
+    engine = Engine(
+        catalog=mapped_sql_folder(
+            sqls=REPOSITORY / "admin" / "sqls",
+            mapping=REPOSITORY / "admin" / "config" / "lookup_sql_table_mapping.csv",
+        ),
+        executor=DuckDBExecutor,
+    )
+
+    rows = engine.run(
+        "members",
+        rows={"members": [{"member_id": "1", "member_name": "Ada", "lob": "30"}]},
+    )
+
+    assert rows == [(1, "Ada", "30")]
+    assert type(rows[0][0]) is int
