@@ -128,11 +128,11 @@ def _workbench(
     result_view = query.get("result_view", [DEFAULT_RESULT_VIEW])[0]
     if result_view not in RESULT_VIEWS:
         result_view = DEFAULT_RESULT_VIEW
-    results = (
-        result_section(repository, target, expected_rows, run_result, result_view)
-        if run_result is not None
-        else ""
-    )
+    results = ""
+    if run_result is not None:
+        results, result_view = result_section(
+            repository, target, expected_rows, run_result, result_view
+        )
     case_line = (
         f"<p>Case: <strong>{html.escape(case_name)}</strong></p>" if case_name else ""
     )
