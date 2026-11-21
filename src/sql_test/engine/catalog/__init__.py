@@ -1,3 +1,3 @@
-from sql_test.engine.catalog.catalog import Catalog, Evidence
+from sql_test.engine.catalog.catalog import Catalog
 
-__all__ = ["Catalog", "Evidence"]
+__all__ = ["Catalog"]

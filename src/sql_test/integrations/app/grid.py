@@ -3,7 +3,6 @@ import re
 from pathlib import Path
 
 from sql_test.engine.executor import Given
-from sql_test.engine.relation import Relation
 from sql_test.engine.schema import Schema
 from sql_test.executors.duckdb import DuckDBExecutor
 from sql_test.integrations.app.engine_access import catalog
@@ -24,7 +23,6 @@ def mock_editor(
     if not mocks and not expected_section:
         return ""
     repo_catalog = catalog(repository)
-    known = repo_catalog.relations().keys()
     hidden = "".join(
         f'<input type="hidden" name="{html.escape(key)}" value="{html.escape(value)}">'
         for key, value in base_query.items()
@@ -36,8 +34,7 @@ def mock_editor(
     )
     sections: list[str] = []
     for name in mocks:
-        relation = Relation.parse(name).resolve(known)
-        schema = repo_catalog.schemas.get(relation)
+        schema = repo_catalog.schema(repo_catalog.resolve(name))
         if schema is None:
             sections.append(
                 f"<h3><code>{html.escape(name)}</code></h3>"
@@ -152,12 +149,11 @@ def type_grid_rows(
     repository: Path, rows: dict[str, list[dict[str, str]]]
 ) -> tuple[dict[str, list[dict[str, str]]], dict[str, dict[str, str]]]:
     repo_catalog = catalog(repository)
-    known = repo_catalog.relations().keys()
     typed_rows: dict[str, list[dict[str, str]]] = {}
     engine_types: dict[str, dict[str, str]] = {}
     for name, table_rows in rows.items():
-        relation = Relation.parse(name).resolve(known)
-        schema = repo_catalog.schemas.get(relation)
+        relation = repo_catalog.resolve(name)
+        schema = repo_catalog.schema(relation)
         if schema is None:
             typed_rows[name] = table_rows
             continue

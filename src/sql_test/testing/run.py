@@ -40,7 +40,7 @@ class CaseResult:
 
 def run_case(folder: Path, engine: Engine) -> CaseResult:
     try:
-        case = read_case(folder, engine.catalog.schemas)
+        case = read_case(folder, engine.catalog)
     except UncastableCell as error:
         return CaseResult(folder=folder, problem=str(error))
     if case.expected is None:

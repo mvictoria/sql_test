@@ -17,11 +17,11 @@ from sql_test.testing.cases import (
 REPOSITORY = Path(__file__).parent / "fixtures" / "repos" / "lakehouse-data-customer"
 
 
-def _schemas():
+def _catalog():
     return mapped_sql_folder(
         sqls=REPOSITORY / "admin" / "sqls",
         mapping=REPOSITORY / "admin" / "config" / "lookup_sql_table_mapping.csv",
-    ).schemas
+    )
 
 
 def _case_folder(root: Path, files: dict[str, str]) -> Path:
@@ -42,7 +42,7 @@ def test_reads_mocks_and_expected_as_typed_rows(tmp_path: Path):
         },
     )
 
-    case = read_case(folder, _schemas())
+    case = read_case(folder, _catalog())
 
     assert case.target == Relation(name="medicaid_members")
     assert case.name == "ada_is_medicaid"
@@ -59,7 +59,7 @@ def test_reads_mocks_and_expected_as_typed_rows(tmp_path: Path):
 def test_a_mock_without_a_schema_keeps_its_text(tmp_path: Path):
     folder = _case_folder(tmp_path, {"claims.csv": "claim_id\n7\n"})
 
-    case = read_case(folder, _schemas())
+    case = read_case(folder, _catalog())
 
     assert case.mocks[Relation(name="claims")].rows == [{"claim_id": "7"}]
     assert case.expected is None
@@ -71,7 +71,7 @@ def test_a_cell_that_cannot_be_cast_is_named(tmp_path: Path):
     )
 
     with pytest.raises(UncastableCell, match=r"expected\.csv line 3 member_id"):
-        read_case(folder, _schemas())
+        read_case(folder, _catalog())
 
 
 def test_writing_a_case_back_reproduces_its_files(tmp_path: Path):
@@ -83,7 +83,7 @@ def test_writing_a_case_back_reproduces_its_files(tmp_path: Path):
     folder = _case_folder(tmp_path, files)
     copy = tmp_path / "copy"
 
-    write_case(copy, read_case(folder, _schemas()))
+    write_case(copy, read_case(folder, _catalog()))
 
     assert {path.name: path.read_text() for path in copy.iterdir()} == files
 

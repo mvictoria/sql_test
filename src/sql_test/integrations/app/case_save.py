@@ -20,17 +20,16 @@ def save_case(
     if not name or "/" in name or name in {".", ".."}:
         raise SaveError("case name is required and must not contain '/'")
     config = RepositoryConfig.load(repository)
-    schemas = config.catalog().schemas
-    known = schemas.keys()
-    target_relation = Relation.parse(target).resolve(known)
+    repo_catalog = config.catalog()
+    target_relation = repo_catalog.resolve(target)
     mock_tables: dict[Relation, CaseTable] = {}
     for mock_name in mocks:
-        relation = Relation.parse(mock_name).resolve(known)
-        schema = schemas.get(relation)
+        relation = repo_catalog.resolve(mock_name)
+        schema = repo_catalog.schema(relation)
         if schema is None:
             raise SaveError(f"no schema for mock {mock_name}")
         mock_tables[relation] = _table_from_grid(schema, grid_rows.get(mock_name, []))
-    expected_schema = schemas.get(target_relation)
+    expected_schema = repo_catalog.schema(target_relation)
     expected = None
     if expected_schema is not None:
         expected_rows = grid_rows.get("expected", [])

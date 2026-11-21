@@ -8,7 +8,7 @@ from sql_test.testing.cases import Case, read_case
 def load_case(repository: Path, target: str, name: str) -> Case:
     config = RepositoryConfig.load(repository)
     folder = config.cases / target / name
-    return read_case(folder, config.catalog().schemas)
+    return read_case(folder, config.catalog())
 
 
 def case_grid_rows(case: Case) -> dict[str, list[dict[str, str]]]:
