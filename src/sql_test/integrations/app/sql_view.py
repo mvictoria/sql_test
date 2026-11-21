@@ -1,17 +1,12 @@
 import html
 from pathlib import Path
 
-from sql_test.engine.relation import Relation
 from sql_test.integrations.app.engine_access import catalog
 
 
 def sql_section(repository: Path, target: str) -> str:
-    relation = Relation.parse(target)
-    operations = [
-        operation
-        for operation in catalog(repository).operations
-        if operation.writes == relation
-    ]
+    repo_catalog = catalog(repository)
+    operations = repo_catalog.producers(repo_catalog.resolve(target))
     if not operations:
         return "<h2>SQL</h2><p class='empty'>No producer SQL</p>"
     blocks = "".join(

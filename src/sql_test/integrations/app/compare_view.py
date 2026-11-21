@@ -2,7 +2,6 @@ import html
 from pathlib import Path
 
 from sql_test.engine.executor import Given, Row
-from sql_test.engine.relation import Relation
 from sql_test.engine.schema import Schema
 from sql_test.executors.duckdb import DuckDBExecutor
 from sql_test.integrations.app.engine_access import catalog
@@ -81,15 +80,13 @@ def _load_typed_rows(
 ) -> list[Row]:
     if not rows:
         return []
-    repo_catalog = catalog(repository)
-    relation = Relation.parse(target).resolve(repo_catalog.relations().keys())
+    relation = catalog(repository).resolve(target)
     return DuckDBExecutor().run({relation: Given(schema, rows)}, [])[relation]
 
 
 def _target_schema(repository: Path, target: str) -> Schema | None:
     repo_catalog = catalog(repository)
-    relation = Relation.parse(target).resolve(repo_catalog.relations().keys())
-    return repo_catalog.schemas.get(relation)
+    return repo_catalog.schema(repo_catalog.resolve(target))
 
 
 def _render_comparison(comparison: Comparison, columns: tuple[str, ...]) -> str:

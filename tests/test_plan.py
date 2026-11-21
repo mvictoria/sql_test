@@ -161,3 +161,22 @@ def test_running_without_the_rows_it_needs_names_them():
 
     with pytest.raises(MissingRows, match="lob, members"):
         engine.run("medicaid_members_named_alice", rows={})
+
+
+def test_a_given_name_means_the_relation_the_catalog_resolves_it_to(tmp_path: Path):
+    (tmp_path / "ddl.sql").write_text(
+        "create table claims.members (id int);\ncreate table top (id int);\n"
+    )
+    (tmp_path / "top.sql").write_text("select * from claims.members")
+    mapping = tmp_path / "mapping.csv"
+    mapping.write_text("table_ref,sql_ref\ntop,top.sql\n")
+    engine = Engine(
+        catalog=mapped_sql_folder(sqls=tmp_path, mapping=mapping),
+        executor=DuckDBExecutor(),
+    )
+
+    plan = engine.plan("top", rows={"members": [{"id": 1}]})
+
+    assert plan.states[Relation(schema="claims", name="members")] is State.GIVEN
+    assert plan.needs_rows == set()
+    assert plan.unused == set()

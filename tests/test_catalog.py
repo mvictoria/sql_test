@@ -1,10 +1,11 @@
 from pathlib import Path
 
-from sql_test.engine.catalog import Evidence
+import pytest
+
 from sql_test.engine.catalog.adapters import mapped_sql_folder
 from sql_test.engine.catalog.mapping import read_operations
 from sql_test.engine.operation import Kind, Operation
-from sql_test.engine.relation import Relation
+from sql_test.engine.relation import AmbiguousRelation, Relation
 
 REPOSITORY = Path(__file__).parent / "fixtures" / "repos" / "lakehouse-data-customer"
 
@@ -61,14 +62,14 @@ def test_every_relation_in_the_sample_repository_is_declared():
     )
 
     assert catalog.relations() == {
-        Relation(name="members"): Evidence.DECLARED,
-        Relation(name="lob"): Evidence.DECLARED,
-        Relation(name="medicaid_members"): Evidence.DECLARED,
-        Relation(name="medicaid_members_named_alice"): Evidence.DECLARED,
+        Relation(name="members"),
+        Relation(name="lob"),
+        Relation(name="medicaid_members"),
+        Relation(name="medicaid_members_named_alice"),
     }
 
 
-def test_a_relation_only_read_by_sql_is_inferred(tmp_path):
+def test_a_relation_only_read_by_sql_is_in_the_catalog(tmp_path):
     (tmp_path / "a.sql").write_text("select * from claims.memebrs")
     mapping = tmp_path / "mapping.csv"
     mapping.write_text("load_type,table_ref,sql_ref\nhistoric,a,a.sql\n")
@@ -76,8 +77,8 @@ def test_a_relation_only_read_by_sql_is_inferred(tmp_path):
     catalog = mapped_sql_folder(sqls=tmp_path, mapping=mapping)
 
     assert catalog.relations() == {
-        Relation(name="a"): Evidence.DECLARED,
-        Relation(schema="claims", name="memebrs"): Evidence.INFERRED,
+        Relation(name="a"),
+        Relation(schema="claims", name="memebrs"),
     }
 
 
@@ -90,6 +91,56 @@ def test_a_bare_reference_resolves_to_a_declared_relation(tmp_path):
     catalog = mapped_sql_folder(sqls=tmp_path, mapping=mapping)
 
     assert catalog.relations() == {
-        Relation(name="a"): Evidence.DECLARED,
-        Relation(schema="claims", name="members"): Evidence.DECLARED,
+        Relation(name="a"),
+        Relation(schema="claims", name="members"),
     }
+
+
+def _sample():
+    return mapped_sql_folder(
+        sqls=REPOSITORY / "admin" / "sqls",
+        mapping=REPOSITORY / "admin" / "config" / "lookup_sql_table_mapping.csv",
+    )
+
+
+def test_resolve_finds_the_relation_a_name_refers_to(tmp_path):
+    (tmp_path / "ddl.sql").write_text("create table claims.members (id integer)")
+    (tmp_path / "a.sql").write_text("select * from members")
+    mapping = tmp_path / "mapping.csv"
+    mapping.write_text("table_ref,sql_ref\na,a.sql\n")
+    catalog = mapped_sql_folder(sqls=tmp_path, mapping=mapping)
+
+    assert catalog.resolve("members") == Relation(schema="claims", name="members")
+    assert catalog.resolve("unknown") == Relation(name="unknown")
+
+
+def test_resolve_reports_an_ambiguous_name(tmp_path):
+    (tmp_path / "ddl.sql").write_text(
+        "create table claims.members (id integer);\n"
+        "create table billing.members (id integer);\n"
+    )
+    mapping = tmp_path / "mapping.csv"
+    mapping.write_text("table_ref,sql_ref\n")
+    catalog = mapped_sql_folder(sqls=tmp_path, mapping=mapping)
+
+    with pytest.raises(AmbiguousRelation):
+        catalog.resolve("members")
+
+
+def test_schema_is_the_relations_columns_or_none():
+    catalog = _sample()
+
+    schema = catalog.schema(Relation(name="members"))
+    assert schema is not None
+    assert [column.name for column in schema] == ["member_id", "member_name", "lob"]
+    assert catalog.schema(Relation(name="unknown")) is None
+
+
+def test_producers_are_the_operations_that_write_a_relation():
+    catalog = _sample()
+
+    assert [
+        operation.sql_file.name
+        for operation in catalog.producers(Relation(name="medicaid_members"))
+    ] == ["medicaid_members.sql"]
+    assert catalog.producers(Relation(name="members")) == ()

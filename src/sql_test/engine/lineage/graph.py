@@ -1,4 +1,3 @@
-from collections import defaultdict
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -39,10 +38,7 @@ class Lineage:
 
 
 def upstream_lineage(target: Relation, catalog: Catalog) -> Lineage:
-    producers: dict[Relation, list[Operation]] = defaultdict(list)
-    for operation in catalog.operations:
-        producers[operation.writes].append(operation)
-    known = catalog.relations().keys()
+    known = catalog.relations()
     reached: dict[Relation, tuple[Operation, ...]] = {}
     reads: dict[Operation, set[Relation]] = {}
     source_reasons: dict[Relation, SourceReason] = {}
@@ -51,10 +47,11 @@ def upstream_lineage(target: Relation, catalog: Catalog) -> Lineage:
         current = pending.pop()
         if current in reached or current in source_reasons:
             continue
-        if current not in producers:
+        producers = catalog.producers(current)
+        if not producers:
             source_reasons[current] = SourceReason.NOT_PRODUCED
             continue
-        if current not in catalog.schemas:
+        if catalog.schema(current) is None:
             source_reasons[current] = SourceReason.NO_SCHEMA
             continue
         try:
@@ -62,12 +59,12 @@ def upstream_lineage(target: Relation, catalog: Catalog) -> Lineage:
                 operation: {
                     reference.resolve(known) for reference in tables_read(operation.sql)
                 }
-                for operation in producers[current]
+                for operation in producers
             }
         except UnparseableSql:
             source_reasons[current] = SourceReason.UNPARSEABLE_SQL
             continue
-        reached[current] = tuple(producers[current])
+        reached[current] = producers
         reads |= current_reads
         for relations in current_reads.values():
             pending.extend(relations)

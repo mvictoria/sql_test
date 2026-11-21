@@ -279,6 +279,7 @@ Behaviour-preserving cleanup of the engine, one commit per item:
 - [x] Front doors export only names used outside their layer: 11 from `sql_test.engine` and 11 from `sql_test.testing`. Executors import only `sql_test.engine.executor`.
 - [x] The executor interface reads rows one way: `read_rows`.
 - [x] The executor interface is one call, `run(given, operations)`, which owns the whole lifecycle and returns the rows of every given and written relation. `Engine` takes an executor instance; `setup`, `create_relation`, `execute`, `read_rows`, `teardown`, and `read_relation` are gone.
+- [x] The catalog answers lookups itself: `resolve(name)`, `schema(relation)`, and `producers(relation)` replace the `Relation.parse(...).resolve(catalog.relations().keys())` and `catalog.schemas.get(...)` pairs in the engine, the test layer, and the app. `relations()` is a set; `Evidence` is gone. `read_case` takes the catalog. `Engine.plan` resolves given names the same way `run` does.
 
 - **Done when:** each item's commit lands with the existing tests passing unchanged.
 - **Depends on:** none

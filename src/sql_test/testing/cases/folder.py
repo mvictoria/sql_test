@@ -1,10 +1,9 @@
 import csv
-from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from sql_test.engine import Column, Relation, Row, Schema
+from sql_test.engine import Catalog, Column, Relation, Row, Schema
 
 EXPECTED = "expected.csv"
 
@@ -27,17 +26,16 @@ class Case:
     expected: CaseTable | None
 
 
-def read_case(folder: Path, schemas: Mapping[Relation, Schema]) -> Case:
-    target = Relation.parse(folder.parent.name).resolve(schemas.keys())
+def read_case(folder: Path, catalog: Catalog) -> Case:
+    target = catalog.resolve(folder.parent.name)
     mocks = {}
     for path in sorted(folder.glob("*.csv")):
         if path.name != EXPECTED:
-            relation = Relation.parse(path.stem)
-            schema = schemas.get(relation.resolve(schemas.keys()), ())
-            mocks[relation] = _read_table(path, schema)
+            schema = catalog.schema(catalog.resolve(path.stem)) or ()
+            mocks[Relation.parse(path.stem)] = _read_table(path, schema)
     expected_path = folder / EXPECTED
     expected = (
-        _read_table(expected_path, schemas.get(target, ()))
+        _read_table(expected_path, catalog.schema(target) or ())
         if expected_path.is_file()
         else None
     )

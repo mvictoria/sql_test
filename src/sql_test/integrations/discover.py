@@ -20,7 +20,7 @@ def discover(repository: Path) -> Discovery:
     produced = {operation.writes for operation in catalog.operations}
     return Discovery(
         models=_names(produced),
-        sources=_names(catalog.relations().keys() - produced),
+        sources=_names(catalog.relations() - produced),
         cases=tuple(discover_cases(config.cases)),
     )
 

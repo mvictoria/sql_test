@@ -26,21 +26,19 @@ class Engine:
 
     def plan(self, table: str, rows: dict[str, list[Row]]) -> Plan:
         given = {
-            Relation.parse(name): len(table_rows) for name, table_rows in rows.items()
+            self._catalog.resolve(name): len(table_rows)
+            for name, table_rows in rows.items()
         }
-        known = self._catalog.relations().keys() | given.keys()
+        known = self._catalog.relations() | given.keys()
         return plan_run(Relation.parse(table).resolve(known), self._catalog, given)
 
     def run(self, table: str, rows: dict[str, list[Row]]) -> RunResult:
         plan = self.plan(table, rows)
         plan.check_rows()
-        known = self._catalog.relations().keys()
         given: dict[Relation, Given] = {}
         for name, table_rows in rows.items():
-            relation = Relation.parse(name).resolve(known)
-            schema = self._catalog.schemas.get(relation) or _schema_from_rows(
-                table_rows
-            )
+            relation = self._catalog.resolve(name)
+            schema = self._catalog.schema(relation) or _schema_from_rows(table_rows)
             given[relation] = Given(schema=schema, rows=table_rows)
         written = self._executor.run(given, plan.operations)
         target = plan.lineage.target
