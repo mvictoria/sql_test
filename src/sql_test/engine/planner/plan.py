@@ -28,6 +28,7 @@ class Plan:
     source_reasons: dict[Relation, SourceReason]
     needs_rows: set[Relation]
     unused: set[Relation]
+    incremental: set[Relation]
     operations: list[Operation]
 
 
@@ -72,5 +73,10 @@ def plan_run(target: Relation, catalog: Catalog, given: Mapping[Relation, int]) 
         needs_rows=needs_rows,
         unused={
             relation for relation in given if states.get(relation) is not State.GIVEN
+        },
+        incremental={
+            relation
+            for relation in lineage.incremental
+            if states[relation] is State.EXECUTED
         },
     )

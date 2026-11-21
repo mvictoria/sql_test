@@ -241,7 +241,7 @@ The DDL reader reads every `CREATE TABLE` with a column list, in any file under 
 
 ## Operations and producers
 
-An **operation** is a SQL statement that writes one relation. It records its SQL file, the relation it writes, and its kind. The relations it reads come from parsing its SQL. A bare `SELECT` is a full load: its result becomes the relation. `CREATE TABLE AS`, `INSERT`, `INSERT OVERWRITE`, and `MERGE` come later.
+An **operation** is a SQL statement that writes one relation. It records its SQL file, the relation it writes, and its kind. The relations it reads come from parsing its SQL. Its kind comes from the mapping's `load_type`: `incremental`, `append`, and `merge` are incremental kinds, and anything else is a full load, where a bare `SELECT`'s result becomes the relation. `CREATE TABLE AS`, `INSERT`, `INSERT OVERWRITE`, and `MERGE` statements in the SQL itself come later.
 
 SQL has a relation, not the other way round. A relation exists without any SQL; a source has none. The operations that write a relation are its **producers**, and a relation may have several.
 
@@ -296,6 +296,8 @@ Every setting is required. A repository with no `pyproject.toml`, no `[tool.sql-
 ## Upstream lineage
 
 The **upstream lineage** of a target is the graph relation → operation → relation that leads to it. A relation with producers in the catalog is a **model**, and traversal continues through each of its operations; any other relation is a source, and traversal stops. Projected to relation → relation, it is the default lineage view. Lineage says only what depends on what; what runs is the plan's job.
+
+A model is **incremental** when the repository's mapping gives one of its operations the load type `incremental`, `append`, or `merge`, or when one of its operations reads the relation it writes; any other load type, such as `historic`, or none, is a full load. A read of its own relation is of the **target before**, the relation's rows before the operation runs; the operation produces the **target after**. The self-reference is not an edge in the lineage, so an incremental model is not a cycle: its lineage and plan list it as incremental, and what it is built from leaves itself out. A cycle between two or more relations is still an error.
 
 ## Plan
 
