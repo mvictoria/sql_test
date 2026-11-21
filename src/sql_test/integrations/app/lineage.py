@@ -77,7 +77,7 @@ def lineage_graph(
     base_query: dict[str, str],
     counts: dict[Relation, int] | None = None,
 ) -> str:
-    projection = plan.lineage.projection()
+    projection = plan.built_from
     visible = {
         relation for relation, state in plan.states.items() if state is not State.PRUNED
     }
@@ -86,7 +86,7 @@ def lineage_graph(
         for relation, upstreams in projection.items()
         if relation in visible
     }
-    depths = _depths(plan.lineage.target, visible_projection)
+    depths = _depths(plan.target, visible_projection)
     columns: dict[int, list[Relation]] = {}
     for relation, depth in depths.items():
         if relation not in visible:
@@ -126,7 +126,7 @@ def lineage_graph(
             )
 
     mocked = set(mocks)
-    target_name = str(plan.lineage.target)
+    target_name = str(plan.target)
     nodes: list[str] = []
     for relation, (cx, cy) in centers.items():
         state = plan.states[relation]
@@ -150,7 +150,7 @@ def lineage_graph(
             label = "table under test"
         if needs:
             classes.append("needs-rows")
-        reason = plan.lineage.source_reasons.get(relation)
+        reason = plan.source_reasons.get(relation)
         subtitle = reason.value if reason else ("needs rows" if needs else label)
         count = None if counts is None else counts.get(relation)
         if count is not None:

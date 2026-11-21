@@ -4,6 +4,7 @@ import pytest
 
 from sql_test.engine import Engine
 from sql_test.engine.catalog.adapters import mapped_sql_folder
+from sql_test.engine.lineage.graph import SourceReason
 from sql_test.engine.planner.plan import MissingRows, State, plan_run
 from sql_test.engine.relation import Relation
 from sql_test.executors.duckdb import DuckDBExecutor
@@ -180,3 +181,27 @@ def test_a_given_name_means_the_relation_the_catalog_resolves_it_to(tmp_path: Pa
     assert plan.states[Relation(schema="claims", name="members")] is State.GIVEN
     assert plan.needs_rows == set()
     assert plan.unused == set()
+
+
+def test_a_plan_says_what_each_relation_is_built_from_and_why_sources_are_sources():
+    catalog = mapped_sql_folder(
+        sqls=REPOSITORY / "admin" / "sqls",
+        mapping=REPOSITORY / "admin" / "config" / "lookup_sql_table_mapping.csv",
+    )
+    alice = Relation(name="medicaid_members_named_alice")
+    medicaid = Relation(name="medicaid_members")
+    members, lob = Relation(name="members"), Relation(name="lob")
+
+    plan = plan_run(alice, catalog, given={})
+
+    assert plan.target == alice
+    assert plan.built_from == {
+        alice: {medicaid},
+        medicaid: {members, lob},
+        members: set(),
+        lob: set(),
+    }
+    assert plan.source_reasons == {
+        members: SourceReason.NOT_PRODUCED,
+        lob: SourceReason.NOT_PRODUCED,
+    }

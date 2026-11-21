@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from sql_test.engine.catalog import Catalog
 from sql_test.engine.executor import Executor, Given, Row
 from sql_test.engine.lineage.references import ends_in_order_by
-from sql_test.engine.planner.plan import Plan, plan_run
+from sql_test.engine.planner.plan import MissingRows, Plan, plan_run
 from sql_test.engine.relation import Relation
 from sql_test.engine.schema import Column, Schema
 
@@ -34,14 +34,16 @@ class Engine:
 
     def run(self, table: str, rows: dict[str, list[Row]]) -> RunResult:
         plan = self.plan(table, rows)
-        plan.check_rows()
+        if plan.needs_rows:
+            names = ", ".join(sorted(map(str, plan.needs_rows)))
+            raise MissingRows(f"These relations still need rows: {names}")
         given: dict[Relation, Given] = {}
         for name, table_rows in rows.items():
             relation = self._catalog.resolve(name)
             schema = self._catalog.schema(relation) or _schema_from_rows(table_rows)
             given[relation] = Given(schema=schema, rows=table_rows)
         written = self._executor.run(given, plan.operations)
-        target = plan.lineage.target
+        target = plan.target
         return RunResult(
             rows=written[target],
             counts={relation: len(rows) for relation, rows in written.items()},
