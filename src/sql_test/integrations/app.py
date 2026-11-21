@@ -1,4 +1,5 @@
 import html
+import re
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, quote, urlencode, urlparse
@@ -9,12 +10,14 @@ from sql_test.engine.catalog.mapping import read_operations
 from sql_test.engine.lineage.graph import upstream_lineage
 from sql_test.engine.planner.plan import Plan, State
 from sql_test.engine.relation import Relation
+from sql_test.engine.schema import Schema
 from sql_test.executors.duckdb import DuckDBExecutor
 from sql_test.integrations.discover import MAPPING, SQLS, Discovery, discover
 
 # Design toggle: view=lineage (default) | view=sql.
 VIEWS = frozenset({"sql", "lineage"})
 DEFAULT_VIEW = "lineage"
+_CELL = re.compile(r"^([^.]+)\.(\d+)\.(.+)$")
 
 
 def create_server(
@@ -40,6 +43,24 @@ def create_server(
             else:
                 self.send_error(404)
                 return
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def do_POST(self) -> None:
+            parsed = urlparse(self.path)
+            if parsed.path != "/workbench":
+                self.send_error(404)
+                return
+            length = int(self.headers.get("Content-Length", "0"))
+            raw = self.rfile.read(length).decode()
+            page = _workbench(repository, discover(repository), parse_qs(raw))
+            if page is None:
+                self.send_error(404)
+                return
+            body = page.encode()
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
@@ -115,6 +136,15 @@ def _workbench(
         view = DEFAULT_VIEW
     requested_mocks = tuple(sorted({name for name in query.get("mock", []) if name}))
     mocks = _frontier_mocks(repository, target, requested_mocks)
+    grid_rows = _parse_grid_rows(query)
+    grid_rows = _apply_grid_action(query.get("action", [""])[0], mocks, grid_rows)
+    engine_types: dict[str, dict[str, str]] = {}
+    reached = ""
+    if query.get("action", [""])[0] == "apply":
+        grid_rows, engine_types = _type_grid_rows(repository, grid_rows)
+        reached = (
+            '<p class="ready">Reached engine — mock rows loaded with schema types</p>'
+        )
 
     case_line = (
         f"<p>Case: <strong>{html.escape(case_name)}</strong></p>" if case_name else ""
@@ -127,7 +157,7 @@ def _workbench(
         else ""
     )
     body = (
-        _lineage_section(repository, target, mocks, base_query)
+        _lineage_section(repository, target, mocks, base_query, grid_rows)
         if view == "lineage"
         else _sql_section(repository, target)
     )
@@ -160,6 +190,12 @@ def _workbench(
     .graph .state {{ font: 10px system-ui, sans-serif; fill: #555; text-transform: uppercase; }}
     .ready {{ color: #1b7a45; }}
     .blocked {{ color: #a60; }}
+    .grid {{ border-collapse: collapse; margin: 0.5rem 0 1rem; }}
+    .grid th, .grid td {{ border: 1px solid #ccc; padding: 0.25rem 0.4rem; }}
+    .grid th {{ background: #f4f4f4; font-size: 0.85rem; }}
+    .grid input {{ width: 8rem; font: inherit; }}
+    .grid-actions {{ margin: 0 0 1rem; }}
+    .grid-actions button {{ margin-right: 0.5rem; }}
   </style>
 </head>
 <body>
@@ -170,6 +206,8 @@ def _workbench(
   {mocks_line}
   {_view_nav(base_query, view, mocks)}
   {body}
+  {reached}
+  {_mock_editor(repository, mocks, base_query, view, grid_rows, engine_types)}
 </body>
 </html>
 """
@@ -193,6 +231,176 @@ def _view_nav(base_query: dict[str, str], current: str, mocks: tuple[str, ...]) 
         cls = ' class="current"' if name == current else ""
         links.append(f'<a href="{html.escape(href)}"{cls}>{html.escape(name)}</a>')
     return f'<nav class="views">{" ".join(links)}</nav>'
+
+
+def _mock_editor(
+    repository: Path,
+    mocks: tuple[str, ...],
+    base_query: dict[str, str],
+    view: str,
+    rows: dict[str, list[dict[str, str]]],
+    engine_types: dict[str, dict[str, str]],
+) -> str:
+    if not mocks:
+        return ""
+    catalog = _catalog(repository)
+    known = catalog.relations().keys()
+    hidden = "".join(
+        f'<input type="hidden" name="{html.escape(key)}" value="{html.escape(value)}">'
+        for key, value in base_query.items()
+    )
+    hidden += f'<input type="hidden" name="view" value="{html.escape(view)}">'
+    hidden += "".join(
+        f'<input type="hidden" name="mock" value="{html.escape(name)}">'
+        for name in mocks
+    )
+    sections: list[str] = []
+    for name in mocks:
+        relation = Relation.parse(name).resolve(known)
+        schema = catalog.schemas.get(relation)
+        if schema is None:
+            sections.append(
+                f"<h3><code>{html.escape(name)}</code></h3>"
+                "<p class='empty'>No schema</p>"
+            )
+            continue
+        table_rows = rows.get(name) or [{}]
+        sections.append(_grid(name, schema, table_rows, engine_types.get(name, {})))
+    return (
+        '<form method="post" action="/workbench">'
+        "<h2>Mock editor</h2>"
+        f"{hidden}{''.join(sections)}"
+        '<p class="grid-actions">'
+        '<button type="submit" name="action" value="apply">Apply to engine</button>'
+        "</p>"
+        "</form>"
+    )
+
+
+def _grid(
+    name: str,
+    schema: Schema,
+    rows: list[dict[str, str]],
+    column_types: dict[str, str],
+) -> str:
+    headers = "".join(f"<th>{html.escape(column.name)}</th>" for column in schema)
+    headers += "<th></th>"
+    body_rows: list[str] = []
+    for index, row in enumerate(rows):
+        cells = []
+        for column in schema:
+            engine_type = column_types.get(column.name)
+            type_attr = (
+                f' data-engine-type="{html.escape(engine_type)}"' if engine_type else ""
+            )
+            cells.append(
+                f"<td{type_attr}><input "
+                f'name="{html.escape(name)}.{index}.{html.escape(column.name)}" '
+                f'value="{html.escape(str(row.get(column.name, "")))}"></td>'
+            )
+        cells.append(
+            "<td>"
+            f'<button type="submit" name="action" value="delete:{html.escape(name)}:{index}">'
+            "Delete</button></td>"
+        )
+        body_rows.append(f"<tr>{''.join(cells)}</tr>")
+    return (
+        f"<h3><code>{html.escape(name)}</code></h3>"
+        f'<table class="grid" data-table="{html.escape(name)}">'
+        f"<thead><tr>{headers}</tr></thead>"
+        f"<tbody>{''.join(body_rows)}</tbody>"
+        "</table>"
+        '<p class="grid-actions">'
+        f'<button type="submit" name="action" value="add:{html.escape(name)}">Add row</button>'
+        "</p>"
+    )
+
+
+def _parse_grid_rows(query: dict[str, list[str]]) -> dict[str, list[dict[str, str]]]:
+    buckets: dict[str, dict[int, dict[str, str]]] = {}
+    for key, values in query.items():
+        match = _CELL.match(key)
+        if not match:
+            continue
+        table, index_text, column = match.groups()
+        buckets.setdefault(table, {}).setdefault(int(index_text), {})[column] = values[
+            0
+        ]
+    return {
+        table: [rows[index] for index in sorted(rows)]
+        for table, rows in buckets.items()
+    }
+
+
+def _apply_grid_action(
+    action: str,
+    mocks: tuple[str, ...],
+    rows: dict[str, list[dict[str, str]]],
+) -> dict[str, list[dict[str, str]]]:
+    updated = {
+        name: [dict(row) for row in table_rows] for name, table_rows in rows.items()
+    }
+    for name in mocks:
+        updated.setdefault(name, [{}])
+    if action.startswith("add:"):
+        table = action.removeprefix("add:")
+        if table in mocks:
+            updated.setdefault(table, []).append({})
+    elif action.startswith("delete:"):
+        _, table, index_text = action.split(":", 2)
+        if table in mocks:
+            index = int(index_text)
+            table_rows = updated.get(table, [])
+            if 0 <= index < len(table_rows):
+                del table_rows[index]
+            if not table_rows:
+                table_rows.append({})
+            updated[table] = table_rows
+    return updated
+
+
+def _type_grid_rows(
+    repository: Path, rows: dict[str, list[dict[str, str]]]
+) -> tuple[dict[str, list[dict[str, str]]], dict[str, dict[str, str]]]:
+    catalog = _catalog(repository)
+    known = catalog.relations().keys()
+    typed_rows: dict[str, list[dict[str, str]]] = {}
+    engine_types: dict[str, dict[str, str]] = {}
+    for name, table_rows in rows.items():
+        relation = Relation.parse(name).resolve(known)
+        schema = catalog.schemas.get(relation)
+        if schema is None:
+            typed_rows[name] = table_rows
+            continue
+        non_empty = [
+            {column.name: row.get(column.name, "") for column in schema}
+            for row in table_rows
+            if any(str(row.get(column.name, "")).strip() for column in schema)
+        ]
+        if not non_empty:
+            typed_rows[name] = table_rows or [{}]
+            continue
+        executor = DuckDBExecutor()
+        executor.setup()
+        try:
+            executor.create_relation(relation, schema, non_empty)
+            loaded = executor.read_relation(relation)
+        finally:
+            executor.teardown()
+        display: list[dict[str, str]] = []
+        types: dict[str, str] = {}
+        for values in loaded:
+            display.append(
+                {
+                    column.name: "" if value is None else str(value)
+                    for column, value in zip(schema, values, strict=True)
+                }
+            )
+            for column, value in zip(schema, values, strict=True):
+                types[column.name] = type(value).__name__
+        typed_rows[name] = display or [{}]
+        engine_types[name] = types
+    return typed_rows, engine_types
 
 
 def _sql_section(repository: Path, target: str) -> str:
@@ -219,8 +427,9 @@ def _lineage_section(
     target: str,
     mocks: tuple[str, ...],
     base_query: dict[str, str],
+    grid_rows: dict[str, list[dict[str, str]]],
 ) -> str:
-    plan = _plan(repository, target, mocks)
+    plan = _plan(repository, target, mocks, grid_rows)
     ready = not plan.needs_rows
     status = (
         '<p class="ready">Ready to run — all needs_rows covered</p>'
@@ -251,10 +460,22 @@ def _catalog(repository: Path):
     return mapped_sql_folder(repository / SQLS, repository / MAPPING)
 
 
-def _plan(repository: Path, target: str, mocks: tuple[str, ...]) -> Plan:
+def _plan(
+    repository: Path,
+    target: str,
+    mocks: tuple[str, ...],
+    grid_rows: dict[str, list[dict[str, str]]],
+) -> Plan:
     engine = Engine(catalog=_catalog(repository), executor=DuckDBExecutor)
-    # Row count > 0 marks a mock as supplied; contents are ignored by plan().
-    rows = {name: [{"_": 1}] for name in mocks}
+    rows: dict[str, list[dict[str, str]]] = {}
+    for name in mocks:
+        table_rows = grid_rows.get(name, [])
+        filled = [
+            row
+            for row in table_rows
+            if any(str(value).strip() for value in row.values())
+        ]
+        rows[name] = filled
     return engine.plan(target, rows=rows)
 
 

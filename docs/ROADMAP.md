@@ -517,7 +517,7 @@ Click a table to mock or unmock it. The graph redraws with the new states.
 ### Mock editor
 
 <a id="app-6"></a>
-#### APP-6 Schema-aware grid
+#### APP-6 Schema-aware grid (done)
 
 Edit a mocked table's rows in a grid with columns from its schema. Add and delete rows.
 

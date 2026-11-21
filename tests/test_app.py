@@ -2,7 +2,7 @@ import threading
 from http.client import HTTPConnection
 from http.server import ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 from sql_test.integrations.app import create_server
 
@@ -19,6 +19,27 @@ def _get(server: ThreadingHTTPServer, path: str) -> str:
     body = connection.getresponse().read().decode()
     connection.close()
     return body
+
+
+def _post(
+    server: ThreadingHTTPServer,
+    path: str,
+    fields: dict[str, str] | list[tuple[str, str]],
+) -> str:
+    host, port = server.server_address[:2]
+    assert isinstance(host, str)
+    assert isinstance(port, int)
+    body = urlencode(fields)
+    connection = HTTPConnection(host, port, timeout=5)
+    connection.request(
+        "POST",
+        path,
+        body=body,
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
+    response = connection.getresponse().read().decode()
+    connection.close()
+    return response
 
 
 def _with_server(repository: Path):
@@ -105,7 +126,7 @@ def test_clicking_medicaid_members_mocks_it_and_prunes_members():
         'href="/workbench?target=medicaid_members_named_alice'
         '&amp;view=lineage&amp;mock=medicaid_members"'
     ) in open_graph
-    assert 'class="node mocked"' in mocked
+    assert "node mocked" in mocked
     assert ">medicaid_members</text>" in mocked
     # members is pruned by the mock — hidden until unmock.
     assert ">members</text>" not in mocked
@@ -140,7 +161,7 @@ def test_demo_tree_hides_pruned_and_keeps_frontier_mocks():
     assert "raw_claims" not in body
     assert "pruned" not in body or "pruned hidden" in body
     # Redundant upstream mock is dropped; still one mocked frontier node.
-    assert both.count('class="node mocked"') == 1
+    assert both.count("node mocked") == 1
     assert "raw_claims" not in both
     assert "Blocked" in body
     assert "raw_members" in body
@@ -149,9 +170,19 @@ def test_demo_tree_hides_pruned_and_keeps_frontier_mocks():
 def test_covering_needs_rows_marks_ready_to_run():
     server = _with_server(DEMO)
     try:
-        body = _get(
+        body = _post(
             server,
-            "/workbench?target=customer_summary&mock=staged_claims&mock=raw_members",
+            "/workbench",
+            [
+                ("target", "customer_summary"),
+                ("view", "lineage"),
+                ("mock", "staged_claims"),
+                ("mock", "raw_members"),
+                ("staged_claims.0.claim_id", "1"),
+                ("staged_claims.0.member_id", "1"),
+                ("raw_members.0.member_id", "1"),
+                ("raw_members.0.member_name", "Ada"),
+            ],
         )
     finally:
         server.shutdown()
@@ -159,6 +190,94 @@ def test_covering_needs_rows_marks_ready_to_run():
 
     assert "Ready to run" in body
     assert "Blocked" not in body
+
+
+def test_mocked_table_opens_a_schema_aware_grid():
+    server = _with_server(FIXTURE)
+    try:
+        body = _get(
+            server,
+            "/workbench?target=medicaid_members_named_alice&view=lineage&mock=members",
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert "Mock editor" in body
+    assert 'data-table="members"' in body
+    assert "member_id" in body
+    assert "member_name" in body
+    assert 'name="members.0.member_id"' in body
+    assert 'name="members.0.member_name"' in body
+    assert 'name="members.0.lob"' in body
+
+
+def test_grid_can_add_and_delete_rows():
+    server = _with_server(FIXTURE)
+    try:
+        added = _post(
+            server,
+            "/workbench",
+            {
+                "target": "medicaid_members_named_alice",
+                "view": "lineage",
+                "mock": "members",
+                "action": "add:members",
+                "members.0.member_id": "1",
+                "members.0.member_name": "Ada",
+                "members.0.lob": "30",
+            },
+        )
+        deleted = _post(
+            server,
+            "/workbench",
+            {
+                "target": "medicaid_members_named_alice",
+                "view": "lineage",
+                "mock": "members",
+                "action": "delete:members:0",
+                "members.0.member_id": "1",
+                "members.0.member_name": "Ada",
+                "members.0.lob": "30",
+                "members.1.member_id": "2",
+                "members.1.member_name": "Bea",
+                "members.1.lob": "10",
+            },
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert 'name="members.1.member_id"' in added
+    assert 'name="members.1.member_id"' not in deleted
+    assert 'value="2"' in deleted
+    assert 'value="Bea"' in deleted
+
+
+def test_grid_rows_reach_the_engine_with_schema_types():
+    server = _with_server(FIXTURE)
+    try:
+        body = _post(
+            server,
+            "/workbench",
+            {
+                "target": "members",
+                "view": "lineage",
+                "mock": "members",
+                "action": "apply",
+                "members.0.member_id": "1",
+                "members.0.member_name": "Ada",
+                "members.0.lob": "30",
+            },
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert 'data-table="members"' in body
+    assert 'data-engine-type="int"' in body
+    assert 'name="members.0.member_id" value="1"' in body
+    assert "Reached engine" in body
 
 
 def test_selecting_a_case_opens_the_workbench(tmp_path):
