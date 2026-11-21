@@ -1,16 +1,15 @@
 import html
 from pathlib import Path
 
-from sql_test.engine.catalog.mapping import read_operations
 from sql_test.engine.relation import Relation
-from sql_test.integrations.discover import MAPPING, SQLS
+from sql_test.integrations.app.engine_access import catalog
 
 
 def sql_section(repository: Path, target: str) -> str:
     relation = Relation.parse(target)
     operations = [
         operation
-        for operation in read_operations(repository / MAPPING, repository / SQLS)
+        for operation in catalog(repository).operations
         if operation.writes == relation
     ]
     if not operations:

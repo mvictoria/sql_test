@@ -1,15 +1,14 @@
 from pathlib import Path
 
-from sql_test.engine import Engine, RunResult
-from sql_test.engine.catalog.adapters import mapped_sql_folder
+from sql_test.engine import Catalog, Engine, RunResult
 from sql_test.engine.executor import Row
 from sql_test.engine.planner.plan import Plan
 from sql_test.executors.duckdb import DuckDBExecutor
-from sql_test.integrations.discover import MAPPING, SQLS
+from sql_test.integrations.config import RepositoryConfig
 
 
-def catalog(repository: Path):
-    return mapped_sql_folder(repository / SQLS, repository / MAPPING)
+def catalog(repository: Path) -> Catalog:
+    return RepositoryConfig.load(repository).catalog()
 
 
 def filled_rows(

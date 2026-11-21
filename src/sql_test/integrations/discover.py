@@ -6,10 +6,6 @@ from sql_test.engine import Relation
 from sql_test.integrations.config import RepositoryConfig
 from sql_test.testing import CaseSummary, discover_cases
 
-# The app still builds paths from these; remove once it reads RepositoryConfig.
-SQLS = Path("admin") / "sqls"
-MAPPING = Path("admin") / "config" / "lookup_sql_table_mapping.csv"
-
 
 @dataclass(frozen=True)
 class Discovery:
