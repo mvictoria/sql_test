@@ -40,10 +40,10 @@ Done:
 - [ENG-7](#eng-7)
 - [ENG-11](#eng-11)
 - [ENG-12](#eng-12)
+- [ENG-13](#eng-13)
 
 Can start now:
 
-- [ENG-13](#eng-13)
 - [ENG-14](#eng-14)
 
 ### Project skeleton
@@ -253,15 +253,11 @@ Create each relation whose rows are given from its discovered schema, and insert
   - [ENG-3](#eng-3)
 
 <a id="eng-13"></a>
-#### ENG-13 Execute a plan
+#### ENG-13 Execute a plan (done)
 
-The executor runs a plan's ordered operations against the given rows and returns the target's rows and the row count of every relation in the plan. `Engine.run(table, rows)` becomes planning followed by executing the plan.
+The executor runs a plan's ordered operations against the given rows and returns the target's rows. `Engine.run(table, rows)` is planning followed by executing the plan. Row counts per relation moved to [APP-9](#app-9), the first story that shows them.
 
-- **Done when:** the Alice plan returns `(1, 'Alice')` with row counts for:
-  - `members`
-  - `lob`
-  - `medicaid_members`
-  - the target
+- **Done when:** the Alice plan returns `(1, 'Alice')`.
 - **Depends on:**
   - [ENG-10](#eng-10)
   - [ENG-12](#eng-12)
@@ -553,9 +549,9 @@ Paste tabular data copied from Excel or Sheets into the grid, with a reminder th
 <a id="app-9"></a>
 #### APP-9 Run and show the output
 
-Run the case from the page and show the target's rows, with row counts on each table in the graph.
+Run the case from the page and show the target's rows, with row counts on each table in the graph. The engine returns the row count of every relation in the plan alongside the target's rows, so an empty result shows where the rows were lost.
 
-- **Done when:** running the Alice case shows one row and the row counts.
+- **Done when:** running the Alice case shows one row and row counts for `members`, `lob`, `medicaid_members`, and the target.
 - **Depends on:**
   - [APP-5](#app-5)
   - [APP-6](#app-6)
