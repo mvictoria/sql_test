@@ -277,7 +277,8 @@ Behaviour-preserving cleanup of the engine, one commit per item:
 - [x] One run method: `Engine.run` returns a `RunResult` with the target's rows, row counts, and whether the target's SQL orders its rows. `run_rows` and `run_result` are gone, and `run_case` no longer parses SQL.
 - [x] Front doors: `sql_test.engine`, `sql_test.executors`, and `sql_test.testing` export what other layers use; `tests/test_layers.py` checks that the test layer and integrations import through them, with the app exempt until [APP-15](#app-15). `discover()` reads models and sources from the catalog instead of parsing SQL itself.
 - [x] Front doors export only names used outside their layer: 11 from `sql_test.engine` and 11 from `sql_test.testing`. Executors import only `sql_test.engine.executor`.
-- [x] The executor interface reads rows one way: `read_rows`. `read_relation` stays on `DuckDBExecutor` only until [APP-15](#app-15).
+- [x] The executor interface reads rows one way: `read_rows`.
+- [x] The executor interface is one call, `run(given, operations)`, which owns the whole lifecycle and returns the rows of every given and written relation. `Engine` takes an executor instance; `setup`, `create_relation`, `execute`, `read_rows`, `teardown`, and `read_relation` are gone.
 
 - **Done when:** each item's commit lands with the existing tests passing unchanged.
 - **Depends on:** none
@@ -526,7 +527,7 @@ Done so far: the app reads its paths from `RepositoryConfig`, and the `SQLS` and
 <a id="app-15"></a>
 #### APP-15 Use the layers' front doors
 
-The app imports engine, executor, and test-layer names from `sql_test.engine`, `sql_test.executors`, and `sql_test.testing`, not from their modules, and drops the `app` exemption from `tests/test_layers.py`. The grid and the compare view type rows with `Column.cast` instead of loading them into a `DuckDBExecutor` and reading them back; the engine then removes `DuckDBExecutor.read_relation`. Also:
+The app imports engine, executor, and test-layer names from `sql_test.engine`, `sql_test.executors`, and `sql_test.testing`, not from their modules, and drops the `app` exemption from `tests/test_layers.py`. The grid and the compare view type rows with `Column.cast` instead of loading them through `DuckDBExecutor().run`. Also:
 
 - [x] `frontier_mocks` reads `Plan.unused` from [ENG-25](#eng-25) instead of walking the lineage itself, so a mock another path still reads is kept. The SQL view reads `catalog.operations` instead of re-reading the mapping.
 - The compare view passes `ordered=result.ordered`, so an ORDER BY target compares in order in the app as it does in pytest.

@@ -156,7 +156,7 @@ def test_running_without_the_rows_it_needs_names_them():
             sqls=REPOSITORY / "admin" / "sqls",
             mapping=REPOSITORY / "admin" / "config" / "lookup_sql_table_mapping.csv",
         ),
-        executor=DuckDBExecutor,
+        executor=DuckDBExecutor(),
     )
 
     with pytest.raises(MissingRows, match="lob, members"):

@@ -11,4 +11,4 @@ CONFIG = RepositoryConfig.load(Path(__file__).parent.parent)
 
 @pytest.fixture(scope="session")
 def engine():
-    return Engine(catalog=CONFIG.catalog(), executor=DuckDBExecutor)
+    return Engine(catalog=CONFIG.catalog(), executor=DuckDBExecutor())
