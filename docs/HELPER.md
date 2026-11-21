@@ -195,6 +195,16 @@ Every table that will be read but is not produced by executed SQL needs test dat
 
 # SQL-Aware Lineage
 
+## Relations
+
+A **relation** is a table or view, identified by an optional catalog, an optional schema, and a name, for example `lakehouse.claims.members`. Repositories may use one-, two-, or three-level names. A relation is kept as qualified as it was written; `claims.members` and `billing.members` are different relations.
+
+sqlglot parses names and normalizes their case for the configured dialect. The engine keeps its own small relation type, so other layers do not depend on sqlglot's types.
+
+A name written with fewer levels, such as a bare `members`, resolves to the one known relation whose trailing parts match. If several match, the name is ambiguous, and resolving it is an error that lists the candidates. If none match, the name stays as written, for example a source the repository does not produce.
+
+## Producers
+
 Some physical tables may be produced by multiple SQL statements.
 
 The internal execution representation therefore needs to distinguish **relations** from **SQL producers**.

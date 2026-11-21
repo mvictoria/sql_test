@@ -28,15 +28,16 @@ Done:
 - [ENG-20](#eng-20)
 - [ENG-10](#eng-10), ahead of the plan it belongs in
 - [ENG-23](#eng-23)
+- [ENG-21](#eng-21)
 
 Can start now:
 
+- [ENG-2](#eng-2)
 - [ENG-3](#eng-3)
 - [ENG-4](#eng-4)
 - [ENG-5](#eng-5)
 - [ENG-11](#eng-11)
 - [ENG-14](#eng-14)
-- [ENG-21](#eng-21)
 
 ### Project skeleton
 
@@ -82,12 +83,13 @@ The engine is given, in code, a folder of SQL holding DDL and DML, and a SQL-to-
 - **Depends on:** none
 
 <a id="eng-21"></a>
-#### ENG-21 Relation identity
+#### ENG-21 Relation identity (done)
 
-A relation is identified by an optional catalog, database, and schema, and a name, not by a bare table name or a file path. Leave room for a repository later, for multi-repository workspaces. A bare name, as written in SQL, a mapping, or given rows, resolves to a relation when exactly one matches. Define *relation* in [HELPER.md](HELPER.md).
+A relation is identified by an optional catalog, an optional schema, and a name, not by a bare table name or a file path. Real repositories may use three-level names such as `catalog.schema.table`. sqlglot parses and normalizes names; the engine wraps them in its own small type. A shorter name, as written in SQL, a mapping, or given rows, resolves to a relation when exactly one matches. Leave room for a repository later, for multi-repository workspaces. Running SQL with qualified names on DuckDB, which needs attached catalogs and schemas, belongs to the executor, not this story. Define *relation* in [HELPER.md](HELPER.md).
 
 - **Done when:**
-  - `db.members` and `members` in another database are different relations
+  - `catalog.schema.table`, `schema.table`, and `table` parse into their parts
+  - `claims.members` and `billing.members` are different relations, and table references in SQL keep their qualification
   - a bare `members` resolves when only one relation matches
   - an ambiguous bare name is an error that names the candidates
 - **Depends on:** none
