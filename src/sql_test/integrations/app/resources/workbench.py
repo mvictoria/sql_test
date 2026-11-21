@@ -2,6 +2,7 @@ import html
 from pathlib import Path
 
 from sql_test.engine import RunResult
+from sql_test.integrations.app.case_load import case_grid_rows, load_case
 from sql_test.integrations.app.compare_view import compare_section, expected_editor
 from sql_test.integrations.app.engine_access import run as run_case
 from sql_test.integrations.app.grid import (
@@ -64,9 +65,18 @@ def _workbench(
     view = query.get("view", [DEFAULT_VIEW])[0]
     if view not in VIEWS:
         view = DEFAULT_VIEW
-    requested_mocks = tuple(sorted({name for name in query.get("mock", []) if name}))
+    saved = load_case(repository, target, case_name) if case_name is not None else None
+    if saved is not None and "mock" not in query:
+        requested_mocks = tuple(sorted(str(relation) for relation in saved.mocks))
+    else:
+        requested_mocks = tuple(
+            sorted({name for name in query.get("mock", []) if name})
+        )
     mocks = frontier_mocks(repository, target, requested_mocks)
     grid_rows = parse_grid_rows(query)
+    if saved is not None:
+        for name, rows in case_grid_rows(saved).items():
+            grid_rows.setdefault(name, rows)
     action = query.get("action", [""])[0]
     grid_rows = apply_grid_action(action, mocks, grid_rows)
     engine_types: dict[str, dict[str, str]] = {}

@@ -630,21 +630,23 @@ In the expected/actual view:
 
 Write the case folder into the working tree. Nothing is committed.
 
-- **Done when:** a case saved from the page passes through pytest without the app running.
+- **Done when:** a case saved from the page passes through pytest without the app running, and loading that case then saving again changes no files.
 - **Depends on:**
   - [APP-6](#app-6)
+  - [APP-13](#app-13)
   - [ENG-16](#eng-16)
   - [ENG-18](#eng-18)
 
 <a id="app-13"></a>
-#### APP-13 Load a case
+#### APP-13 Load a case (done)
 
-Open an existing case folder in the same workbench used to create cases, with its mocks set in the graph and its rows in the grids.
+Open an existing case folder in the same workbench used to create cases, with its mocks set in the graph and its rows in the grids (including expected when present).
 
-- **Done when:** loading a saved case and saving it again changes no files.
+- **Done when:** opening a discovered case shows its mocks on the graph and its CSV rows in the grids.
 - **Depends on:**
   - [APP-3](#app-3)
   - [ENG-16](#eng-16)
+  - [APP-10](#app-10)
 
 ---
 
