@@ -25,21 +25,25 @@ class DiffPanel:
 def compare_section(
     repository: Path,
     target: str,
-    expected_rows: list[dict[str, str]],
+    expected_rows: list[dict[str, str | None]],
     actual: list[Row],
 ) -> DiffPanel:
     schema = target_schema(repository, target)
     filled = [
-        row
-        for row in expected_rows
-        if any(str(value).strip() for value in row.values())
+        row for row in expected_rows if any(_filled(value) for value in row.values())
     ]
     has_expected = bool(filled)
     if schema is None:
         return DiffPanel(columns=(), has_expected=has_expected, comparison=None)
     columns = tuple(column.name for column in schema)
     aligned = [
-        {column.name: row.get(column.name, "") for column in schema} for row in filled
+        {
+            column.name: (
+                None if row.get(column.name) is None else str(row.get(column.name, ""))
+            )
+            for column in schema
+        }
+        for row in filled
     ]
     if not aligned and not actual:
         return DiffPanel(columns=columns, has_expected=False, comparison=None)
@@ -57,7 +61,7 @@ def _load_typed_rows(
     repository: Path,
     target: str,
     schema: Schema,
-    rows: list[dict[str, str]],
+    rows: list[dict[str, str | None]],
 ) -> list[Row]:
     if not rows:
         return []
@@ -69,3 +73,9 @@ def _load_typed_rows(
 def target_schema(repository: Path, target: str) -> Schema | None:
     repo_catalog = catalog(repository)
     return repo_catalog.schema(repo_catalog.resolve(target))
+
+
+def _filled(value: str | None) -> bool:
+    if value is None:
+        return False
+    return value.strip() != ""

@@ -11,8 +11,8 @@ def load_case(repository: Path, target: str, name: str) -> Case:
     return read_case(folder, config.catalog())
 
 
-def case_grid_rows(case: Case) -> dict[str, list[dict[str, str]]]:
-    rows: dict[str, list[dict[str, str]]] = {}
+def case_grid_rows(case: Case) -> dict[str, list[dict[str, str | None]]]:
+    rows: dict[str, list[dict[str, str | None]]] = {}
     for relation, table in case.mocks.items():
         rows[str(relation)] = [
             _display_row(row, table.columns) for row in table.rows
@@ -24,5 +24,5 @@ def case_grid_rows(case: Case) -> dict[str, list[dict[str, str]]]:
     return rows
 
 
-def _display_row(row: Row, columns: tuple[str, ...]) -> dict[str, str]:
-    return {name: "" if row.get(name) is None else str(row[name]) for name in columns}
+def _display_row(row: Row, columns: tuple[str, ...]) -> dict[str, str | None]:
+    return {name: None if row.get(name) is None else str(row[name]) for name in columns}
