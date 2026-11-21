@@ -1,3 +1,3 @@
-from sql_test.engine.runner import Engine
+from sql_test.engine.runner import Engine, RunResult
 
-__all__ = ["Engine"]
+__all__ = ["Engine", "RunResult"]

@@ -308,6 +308,46 @@ def test_apply_with_bad_types_shows_an_error_not_a_blank_page():
     assert 'value="a"' in body
 
 
+def test_running_alice_shows_one_row_and_counts_on_the_graph():
+    server = _with_server(FIXTURE)
+    try:
+        body = _post(
+            server,
+            "/workbench",
+            [
+                ("target", "medicaid_members_named_alice"),
+                ("view", "lineage"),
+                ("mock", "members"),
+                ("mock", "lob"),
+                ("action", "run"),
+                ("members.0.member_id", "1"),
+                ("members.0.member_name", "Alice"),
+                ("members.0.lob", "30"),
+                ("members.1.member_id", "2"),
+                ("members.1.member_name", "Alice"),
+                ("members.1.lob", "10"),
+                ("members.2.member_id", "3"),
+                ("members.2.member_name", "Bea"),
+                ("members.2.lob", "30"),
+                ("lob.0.lob", "30"),
+                ("lob.0.lob_name", "Medicaid"),
+                ("lob.1.lob", "10"),
+                ("lob.1.lob_name", "Commercial"),
+            ],
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert "<h2>Output</h2>" in body
+    assert 'data-output-rows="1"' in body
+    assert "Alice" in body
+    assert 'data-row-count="3" data-relation="members"' in body
+    assert 'data-row-count="2" data-relation="lob"' in body
+    assert 'data-row-count="2" data-relation="medicaid_members"' in body
+    assert 'data-row-count="1" data-relation="medicaid_members_named_alice"' in body
+
+
 def test_selecting_a_case_opens_the_workbench(tmp_path):
     case = tmp_path / "cases" / "medicaid_members" / "alice"
     case.mkdir(parents=True)
