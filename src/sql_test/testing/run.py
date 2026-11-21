@@ -33,7 +33,7 @@ class CaseResult:
             if comparison.missing_columns:
                 lines.append(f"columns not in output: {comparison.missing_columns}")
             lines += [
-                f"changed {c.columns}: {c.expected} -> {c.actual}"
+                f"changed {c.differing_columns}: {c.expected} -> {c.actual}"
                 for c in comparison.changed
             ]
             lines += [f"missing: {row}" for row in comparison.missing]

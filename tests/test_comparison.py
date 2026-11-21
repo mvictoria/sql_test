@@ -22,7 +22,7 @@ def test_a_row_with_some_values_different_is_changed():
     comparison = compare(_expected(ADA), [actual])
 
     assert comparison.changed == [
-        Change(expected=ADA, actual=actual, columns=("member_name",))
+        Change(expected=ADA, actual=actual, differing_columns=("member_name",))
     ]
     assert not comparison.passed
 
@@ -65,6 +65,24 @@ def test_a_listed_column_the_output_lacks_fails():
 
     assert comparison.missing_columns == ("lob",)
     assert not comparison.passed
+
+
+def test_a_missing_checked_column_counts_as_differing_on_a_changed_row():
+    expected = CaseTable(
+        columns=("member_id", "member_name", "lob"),
+        rows=[{"member_id": 1, "member_name": "Ada", "lob": "30"}],
+    )
+
+    comparison = compare(expected, [ADA])
+
+    assert comparison.missing_columns == ("lob",)
+    assert comparison.changed == [
+        Change(
+            expected={"member_id": 1, "member_name": "Ada", "lob": "30"},
+            actual={"member_id": 1, "member_name": "Ada", "lob": None},
+            differing_columns=("lob",),
+        )
+    ]
 
 
 def test_null_matches_null():
