@@ -542,10 +542,10 @@ sql-test app [repository] [--port 8765]
 ```yaml
 jobs:
   data-tests:
-    uses: org/sql-test-tool/.github/workflows/data-tests.yml@v1
+    uses: mvictoria/sql_test/.github/workflows/data-tests.yml@v0
 ```
 
-The workflow checks out the calling repository, sets up Python, installs the package, and runs pytest. It works from the checked-out repository, not from SQL, schema, or case files passed as parameters.
+The workflow checks out the calling repository, sets up Python, installs `sql-test` from this repository at the same git commit as the workflow pin (`github.workflow_sha`), and runs pytest. It works from the checked-out repository, not from SQL, schema, or case files passed as parameters. Local installs use the same tags via `uv` and a git URL (see the README adoption section); PyPI is not required.
 
 **Pre-commit, later.** If static case checks earn their keep, a `sql-test validate` command could back a hook. That is not a reason to grow the CLI today; execution stays with pytest and CI.
 
@@ -571,7 +571,7 @@ This layout is illustrative. Where SQL, schemas, and cases live, and how SQL fil
 
 ## Versioning
 
-The engine, CLI, app, and reusable workflow are released together as one version. Consuming repositories pin a tag such as `@v1`, never `main`, so a change on the tool's `main` branch cannot silently change CI in every consuming repository.
+The engine, CLI, app, and reusable workflow are released together as one version. Consuming repositories pin a floating major tag such as `@v0` (while the package is 0.x), never `main`, so a change on the tool's `main` branch cannot silently change CI in every consuming repository.
 
 The case format carries its own format version if compatibility ever requires it. The tool's release version and the case format version are separate.
 
