@@ -401,7 +401,7 @@ def test_running_alice_shows_one_row_and_counts_on_the_graph():
         server.shutdown()
         server.server_close()
 
-    assert 'data-result-view="output"' in body
+    assert 'data-result-view="diff"' in body
     assert 'data-passed="false"' in body
     assert "Failed — add expected rows" in body
     assert "<h2>Output</h2>" in body
@@ -437,8 +437,39 @@ def test_run_with_matching_expected_shows_passed():
         server.server_close()
 
     assert 'data-passed="true"' in body
+    assert 'data-result-view="output"' in body
     assert ">Passed</p>" in body
     assert 'data-diff="clean"' in body
+
+
+def test_failed_run_defaults_to_diff_even_when_output_was_requested():
+    server = _with_server(FIXTURE)
+    try:
+        body = _post(
+            server,
+            "/workbench",
+            [
+                ("target", "members"),
+                ("view", "lineage"),
+                ("mock", "members"),
+                ("result_view", "output"),
+                ("action", "run"),
+                ("members.0.member_id", "1"),
+                ("members.0.member_name", "Ada"),
+                ("members.0.lob", "30"),
+                ("expected.0.member_id", "1"),
+                ("expected.0.member_name", "Beatrice"),
+                ("expected.0.lob", "30"),
+            ],
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert 'data-passed="false"' in body
+    assert 'data-result-view="diff"' in body
+    assert 'data-outcome="changed"' in body
+    assert 'name="result_view" value="diff"' in body
 
 
 def test_diff_shows_changed_missing_and_added_like_git():

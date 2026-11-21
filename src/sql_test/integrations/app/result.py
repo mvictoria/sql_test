@@ -15,10 +15,12 @@ def result_section(
     expected_rows: list[dict[str, str]],
     run_result: RunResult,
     result_view: str,
-) -> str:
-    if result_view not in RESULT_VIEWS:
-        result_view = DEFAULT_RESULT_VIEW
+) -> tuple[str, str]:
     panel = compare_section(repository, target, expected_rows, run_result.rows)
+    if not panel.passed:
+        result_view = "diff"
+    elif result_view not in RESULT_VIEWS:
+        result_view = DEFAULT_RESULT_VIEW
     output = output_section(run_result)
     diff = panel.html or '<p class="empty">Add expected rows to see a diff</p>'
     return (
@@ -32,7 +34,7 @@ def result_section(
         f"{' hidden' if result_view != 'diff' else ''}>{diff}</div>"
         "</section>"
         f"{_toggle_script()}"
-    )
+    ), result_view
 
 
 def _verdict(panel: DiffPanel) -> str:
