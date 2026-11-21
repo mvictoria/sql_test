@@ -354,6 +354,7 @@ Minimum functionality:
 - represent NULL
 - basic type validation
 - paste tabular data from spreadsheet applications
+- Tab / Shift+Tab move between cells only (not row-action buttons); Tab on the last cell of a row adds a new row
 
 Schema information is discovered from the repository rather than persisted separately in the test case.
 
