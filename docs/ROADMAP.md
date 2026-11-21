@@ -811,7 +811,7 @@ A workflow in this repository that:
 <a id="ci-2"></a>
 #### CI-2 Versioned releases (done)
 
-Release the package and workflow together under tags such as `v0`, so consuming repositories pin a tag instead of `main`. Local installs use the same tags via `uv` and a git URL.
+Release the package and workflow together under tags such as `v0`, so consuming repositories pin a tag instead of `main`. Local installs use the same tags via `uv` and a git URL. A PR title with `(major)`, `(minor)`, or `(patch)` tags the post-merge `main` tip; `cd.yml` then builds and publishes.
 
 - **Done when:** a consuming repository pinned to a tag is unaffected by a change on `main`.
 - **Depends on:** [CI-1](#ci-1)
