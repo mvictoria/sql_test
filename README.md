@@ -14,7 +14,14 @@ Requires Python 3.13+.
 
 ## Adopt in a consuming repository
 
-Minimal footprint:
+Scaffold a new repo (config, stub SQL + mapping, one case, pytest wiring):
+
+```bash
+uvx --from "sql-test @ git+https://github.com/mvictoria/sql_test.git@v0" sql-test init my-data
+cd my-data && uv sync && uv run pytest && uv run sql-test discover .
+```
+
+Or hand-build the same footprint:
 
 ```text
 customer-data/
@@ -24,11 +31,11 @@ customer-data/
 │   ├── cases/<table>/<case>/           # mocks + expected.csv
 │   ├── conftest.py                     # builds Engine from RepositoryConfig
 │   └── test_case_folders.py            # parametrize case_folders(...)
-├── pyproject.toml                      # [tool.sql-test] paths
+├── pyproject.toml                      # [project] + [tool.uv] + [tool.sql-test]
 └── .github/workflows/data-tests.yml    # calls the reusable workflow
 ```
 
-**Install locally** from a git tag (same tags CI uses):
+**Install locally** from a git tag (same tags CI uses), if you are not using `init`:
 
 ```bash
 uv add "sql-test @ git+https://github.com/mvictoria/sql_test.git@v0"
@@ -76,12 +83,14 @@ Manual tag push (`git tag vX.Y.Z && git push origin vX.Y.Z`) still runs the same
 pytest remains the test runner. The CLI also discovers tables/cases, prints coverage, and starts the authoring app.
 
 ```bash
+sql-test init [directory]
 sql-test discover [repository]
 sql-test coverage [repository]
 sql-test app [repository] [--port 8765]
 ```
 
-- `repository` — path to the consuming repository (default `.`)
+- `init` — write a minimal consuming-repository skeleton (refuses an existing `pyproject.toml`)
+- `repository` / `directory` — path (default `.`)
 - `--port` — localhost port for `app` (default `8765`)
 
 `coverage` prints tests and in-pipeline counts per table, untested first (same `coverage_report` the app home uses):

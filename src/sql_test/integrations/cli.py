@@ -6,6 +6,7 @@ from sql_test.executors import DuckDBExecutor
 from sql_test.integrations.app import serve
 from sql_test.integrations.config import ConfigError, RepositoryConfig
 from sql_test.integrations.discover import discover
+from sql_test.integrations.init import InitError, init_repository
 from sql_test.testing import coverage_report
 
 
@@ -38,7 +39,29 @@ def main(argv: list[str] | None = None) -> int:
         help="localhost port (default: 8765)",
     )
 
+    init_parser = sub.add_parser(
+        "init", help="write a minimal consuming-repository skeleton"
+    )
+    init_parser.add_argument(
+        "repository",
+        type=Path,
+        nargs="?",
+        default=Path("."),
+        help="directory to create or fill (default: .)",
+    )
+
     args = parser.parse_args(argv)
+
+    if args.command == "init":
+        try:
+            root = init_repository(args.repository)
+        except InitError as error:
+            print(error, file=sys.stderr)
+            return 1
+        print(f"Initialized {root}")
+        print("Next: uv sync && uv run pytest && uv run sql-test discover .")
+        return 0
+
     repository = args.repository.resolve()
     if not repository.is_dir():
         print(f"repository not found: {repository}", file=sys.stderr)
