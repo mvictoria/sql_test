@@ -56,7 +56,11 @@ def editor_view(state: WorkbenchState, actions: EditorActions) -> None:
         if schema is None:
             ui.label(f"{name}: no schema").classes("text-grey-7")
             continue
-        ui.label(name).classes("text-subtitle2").mark(f"grid-{name}")
+        heading = ui.label(name).classes("text-subtitle2").mark(f"grid-{name}")
+        if state.grid_focus is not None and state.grid_focus[0] == name:
+            heading.run_method(
+                "scrollIntoView", {"block": "center", "inline": "nearest"}
+            )
         grid_view(name, schema, state, actions)
     ui.label("Expected").classes("text-subtitle1").mark("grid-expected")
     if expected_schema is None:

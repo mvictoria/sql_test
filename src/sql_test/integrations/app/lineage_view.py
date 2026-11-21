@@ -120,17 +120,18 @@ def lineage_css() -> str:
     return _CSS
 
 
-def lineage_view(state: WorkbenchState, on_toggle: Callable[[str], None]) -> None:
+def lineage_view(
+    state: WorkbenchState,
+    on_toggle: Callable[[str], None],
+    on_focus: Callable[[str], None] | None = None,
+) -> None:
     plan = build_plan(state.catalog, state.target, state.mocks, state.grid_rows)
     counts = None if state.run_result is None else state.run_result.counts
     visible = _visible(plan)
     with ui.element("div").classes("lineage-panel w-full"):
         ui.label("Lineage").classes("lineage-title")
         if plan.needs_rows:
-            names = ", ".join(sorted(str(name) for name in plan.needs_rows))
-            ui.label(f"Blocked — still need rows: {names}").classes(
-                "lineage-status blocked"
-            ).mark("plan-blocked")
+            _blocked_status(plan.needs_rows, on_focus)
         else:
             ui.label("Ready to run — all needs_rows covered").classes(
                 "lineage-status ready"
@@ -158,6 +159,26 @@ def lineage_view(state: WorkbenchState, on_toggle: Callable[[str], None]) -> Non
         with ui.element("div").classes("lineage-hit-targets"):
             for relation in sorted(visible, key=str):
                 _hit_target(plan, relation, counts, on_toggle)
+
+
+def _blocked_status(
+    needs_rows: set[Relation], on_focus: Callable[[str], None] | None
+) -> None:
+    names = sorted(str(name) for name in needs_rows)
+    with ui.element("div").classes("lineage-status blocked").mark("plan-blocked"):
+        ui.label("Blocked — still need rows:")
+        for index, name in enumerate(names):
+            if index:
+                ui.label(",")
+            if on_focus is None:
+                ui.label(name)
+            else:
+                ui.button(
+                    name,
+                    on_click=lambda _, name=name: on_focus(name),
+                ).props("flat dense").classes("text-weight-bold focus-grid-link").mark(
+                    f"focus-grid-{name}"
+                )
 
 
 def lineage_columns(plan: Plan) -> dict[int, list[Relation]]:

@@ -341,6 +341,8 @@ QA can select any appropriate upstream table and mark it as mocked.
 
 The lineage updates immediately to show what will execute and what has been pruned.
 
+A blocked or mocked relation name is a jump target: activating it brings that table's mock grid into view ([APP-30](ROADMAP.md#app-30)).
+
 ## Mock editor
 
 Selecting a mocked table opens a schema-aware table editor.
@@ -389,7 +391,7 @@ QA should be able to:
 - remove an obsolete expected row
 - accept the complete actual result as the expectation
 
-This interaction is central to the product. Run types mocks and executes — Apply is not a required peer step ([APP-25](ROADMAP.md#app-25)).
+This interaction is central to the product. Run types mocks and executes — Apply is not a required peer step ([APP-25](ROADMAP.md#app-25)). After a run, keeping verdict, diff / accept, and Expected in one working region is [APP-27](ROADMAP.md#app-27).
 
 ### Comparison defaults
 

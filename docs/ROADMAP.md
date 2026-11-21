@@ -59,9 +59,9 @@ Done:
 
 Planning performance still open: [ENG-30](#eng-30), [ENG-32](#eng-32), [ENG-36](#eng-36), [COV-5](#cov-5) (measured by [TEST-2](#test-2)).
 
-v0.5 CI is done: [CI-1](#ci-1), [CI-2](#ci-2), [CI-3](#ci-3), [CI-4](#ci-4), [CI-5](#ci-5). Authoring app v0.3 is done ([APP-8](#app-8), [APP-17](#app-17), [APP-19](#app-19), and the earlier APP stories). [APP-25](#app-25) is done. [CFG-1](#cfg-1) is done.
+v0.5 CI is done: [CI-1](#ci-1), [CI-2](#ci-2), [CI-3](#ci-3), [CI-4](#ci-4), [CI-5](#ci-5). Authoring app v0.3 is done ([APP-8](#app-8), [APP-17](#app-17), [APP-19](#app-19), and the earlier APP stories). [APP-25](#app-25) is done. [APP-30](#app-30) is done. [CFG-1](#cfg-1) is done.
 
-**Before the next release** (from [UAT.md](UAT.md)): adoption first — [CI-6](#ci-6), [DOC-1](#doc-1), [CLI-7](#cli-7), [ENG-36](#eng-36), [APP-20](#app-20), [APP-21](#app-21) — then or beside massive-repo perf [ENG-31](#eng-31) and [ENG-32](#eng-32). Keep [APP-18](#app-18) parked until UAT and front-end design say synthetic fill is next. Do not open Spark, incremental, or richer lineage until after the release. Further CLI commands ([CLI-2](#cli-2)–[CLI-6](#cli-6)) stay parked; the CLI's job today is `sql-test app` (plus [CLI-7](#cli-7) when built).
+**Before the next release** (from [UAT.md](UAT.md)): adoption first — [CI-6](#ci-6), [DOC-1](#doc-1), [CLI-7](#cli-7), [ENG-36](#eng-36), [APP-20](#app-20), [APP-21](#app-21) — then or beside massive-repo perf [ENG-31](#eng-31) and [ENG-32](#eng-32). Workbench navigation track in parallel: [APP-30](#app-30) (done), then [APP-27](#app-27), [APP-26](#app-26), [APP-28](#app-28), [APP-29](#app-29). Keep [APP-18](#app-18) parked until UAT and front-end design say synthetic fill is next. Do not open Spark, incremental, or richer lineage until after the release. Further CLI commands ([CLI-2](#cli-2)–[CLI-6](#cli-6)) stay parked; the CLI's job today is `sql-test app` (plus [CLI-7](#cli-7) when built).
 
 ### Project skeleton
 
@@ -780,6 +780,61 @@ Faker is an optional dependency of the authoring app only. It does not write `ex
   - [APP-11](#app-11)
   - [APP-12](#app-12)
 - **Parked until:** UAT and front-end design work make mock entry easier overall ([UAT.md](UAT.md)); only then decide whether seeded Faker fill is the right next control (hand entry, Tab order, and paste may already be enough).
+
+### Navigation and focus (workbench UX)
+
+Fewer hops between “pick a table,” “open a case,” “fill mocks,” “read SQL,” and “run / fix expected.” IDs start at APP-26 so they do not collide with UAT adoption stories APP-20–APP-21. [APP-25](#app-25) (fold Apply into Run) is done. Build order: [APP-30](#app-30) → [APP-27](#app-27) → [APP-26](#app-26) → [APP-28](#app-28) / [APP-29](#app-29).
+
+<a id="app-26"></a>
+#### APP-26 Cases belong to their table
+
+A case is always for one table under test. Home should not make QA hunt a flat Cases list separately from the table it belongs to. Opening a table for a new case must still show that table's existing cases so opening one is one click from the same place — not back through home.
+
+- **Done when:** on home, cases for `medicaid_members_named_alice` appear with that table (not only in a disconnected global list); opening the table in the workbench lists those cases and choosing one loads it ([APP-13](#app-13)).
+- **Depends on:**
+  - [APP-3](#app-3)
+  - [APP-13](#app-13)
+
+<a id="app-27"></a>
+#### APP-27 Keep run, compare, and expected edit in one focus
+
+After Run, the verdict, diff / accept, and enough of Expected to fix a failure should stay in one working region. Today result sits above a long editor and Save/Run sit at the bottom, so the fail → fix → re-run loop is mostly scrolling. Primary actions (Run, Save) stay reachable while that region is in view — sticky bar or equivalent.
+
+- **Done when:** after a failing Alice run, QA can accept or edit expected and see the comparison update without scrolling away from the result region to find Expected or primary actions; Run and Save remain reachable from that region.
+- **Depends on:**
+  - [APP-10](#app-10)
+  - [APP-11](#app-11)
+  - [APP-25](#app-25)
+
+<a id="app-28"></a>
+#### APP-28 Spreadsheet-like grid without per-cell NULL chrome
+
+Mock and expected grids should read as tables of values. A NULL control must not sit inside every cell beside the input. NULL stays distinct from empty string ([HELPER.md](HELPER.md)); the affordance can be keyboard, a selected-cell action, clear-to-null, or another pattern — pick one that keeps Tab and paste ([APP-19](#app-19), [APP-8](#app-8)) intact.
+
+- **Done when:** the `members` grid shows typed values without a NULL button inside each cell; QA can still set and clear NULL distinctly from an empty string; Tab order and spreadsheet paste still behave as in [APP-19](#app-19) and [APP-8](#app-8).
+- **Depends on:**
+  - [APP-7](#app-7)
+  - [APP-8](#app-8)
+  - [APP-19](#app-19)
+
+<a id="app-29"></a>
+#### APP-29 See a node's SQL without leaving lineage
+
+The Lineage / SQL toggle replaces the whole body, so checking what a step does costs a round-trip and drops the graph. Keep the lineage view; show that relation's producer SQL beside or under the graph (side panel or strip) when QA selects the node or an explicit SQL control on it. A full-pipeline SQL page is optional secondary; it must not be the only way to read one node's SQL.
+
+- **Done when:** from the Alice lineage graph, opening `medicaid_members` SQL shows its statement while the graph remains visible; dismissing or collapsing that SQL returns to graph-only without a tab that destroys lineage context.
+- **Depends on:**
+  - [APP-4](#app-4)
+
+<a id="app-30"></a>
+#### APP-30 Jump from blocked or mocked node to its grid (done)
+
+Mocking a node (or reading “Blocked — still need rows: lob, members”) still leaves QA to scroll and find that table's editor. Clicking a mocked or needs-rows name — in the blocked status, the mocks summary, or the lineage node after mock — scrolls or focuses that table's grid so decide and edit are one gesture.
+
+- **Done when:** with Alice blocked on `members`, activating `members` from the blocked status (or the mocked node) brings the `members` grid into view and focus; mocking a new frontier table lands on its grid the same way.
+- **Depends on:**
+  - [APP-5](#app-5)
+  - [APP-6](#app-6)
 
 ### Run and compare
 
