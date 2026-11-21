@@ -2,6 +2,7 @@ import html
 from pathlib import Path
 
 from sql_test.engine import RunResult
+from sql_test.integrations.app.compare_view import compare_section, expected_editor
 from sql_test.integrations.app.engine_access import run as run_case
 from sql_test.integrations.app.grid import (
     apply_grid_action,
@@ -89,6 +90,12 @@ def _workbench(
             reached = f'<p class="blocked">Could not run: {html.escape(str(error))}</p>'
 
     counts = run_result.counts if run_result is not None else None
+    expected_rows = grid_rows.get("expected", [{}])
+    comparison = (
+        compare_section(repository, target, expected_rows, run_result.rows)
+        if run_result is not None
+        else ""
+    )
     case_line = (
         f"<p>Case: <strong>{html.escape(case_name)}</strong></p>" if case_name else ""
     )
@@ -105,6 +112,10 @@ def _workbench(
         else sql_section(repository, target)
     )
     output = output_section(run_result) if run_result is not None else ""
+    expected = expected_editor(repository, target, expected_rows)
+    editor = mock_editor(
+        repository, mocks, base_query, view, grid_rows, engine_types, expected
+    )
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -114,6 +125,7 @@ def _workbench(
     body {{ font-family: system-ui, sans-serif; margin: 2rem; }}
     h1 {{ font-size: 1.25rem; }}
     h2 {{ font-size: 1rem; margin-top: 1.5rem; }}
+    h3 {{ font-size: 0.9rem; }}
     a {{ color: inherit; }}
     nav.views a {{ margin-right: 1rem; }}
     nav.views a.current {{ font-weight: 700; text-decoration: none; }}
@@ -143,6 +155,16 @@ def _workbench(
     .output {{ border-collapse: collapse; margin: 0.5rem 0 1rem; }}
     .output th, .output td {{ border: 1px solid #ccc; padding: 0.25rem 0.5rem; }}
     .output th {{ background: #f4f4f4; font-size: 0.85rem; }}
+    .compare {{ border-collapse: collapse; margin: 0.5rem 0 1rem; }}
+    .compare th, .compare td {{ border: 1px solid #ccc; padding: 0.25rem 0.4rem; }}
+    .compare th {{ background: #f4f4f4; font-size: 0.85rem; }}
+    .compare input {{ width: 8rem; font: inherit; }}
+    .compare input[readonly] {{ background: #f8f8f8; border: 1px solid #ddd; }}
+    .compare .differing input {{ background: #fff3cd; }}
+    .compare-outcome[data-outcome="matching"] h3 {{ color: #1b7a45; }}
+    .compare-outcome[data-outcome="changed"] h3 {{ color: #a60; }}
+    .compare-outcome[data-outcome="missing"] h3 {{ color: #a33; }}
+    .compare-outcome[data-outcome="unexpected"] h3 {{ color: #3451b2; }}
   </style>
 </head>
 <body>
@@ -155,7 +177,8 @@ def _workbench(
   {body}
   {reached}
   {output}
-  {mock_editor(repository, mocks, base_query, view, grid_rows, engine_types)}
+  {comparison}
+  {editor}
 </body>
 </html>
 """

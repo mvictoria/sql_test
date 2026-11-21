@@ -348,6 +348,50 @@ def test_running_alice_shows_one_row_and_counts_on_the_graph():
     assert 'data-row-count="1" data-relation="medicaid_members_named_alice"' in body
 
 
+def test_expected_vs_actual_shows_matching_changed_missing_and_unexpected():
+    server = _with_server(FIXTURE)
+    try:
+        body = _post(
+            server,
+            "/workbench",
+            [
+                ("target", "members"),
+                ("view", "lineage"),
+                ("mock", "members"),
+                ("action", "run"),
+                ("members.0.member_id", "1"),
+                ("members.0.member_name", "Ada"),
+                ("members.0.lob", "30"),
+                ("members.1.member_id", "2"),
+                ("members.1.member_name", "Bea"),
+                ("members.1.lob", "10"),
+                ("members.2.member_id", "3"),
+                ("members.2.member_name", "Cia"),
+                ("members.2.lob", "30"),
+                ("expected.0.member_id", "1"),
+                ("expected.0.member_name", "Ada"),
+                ("expected.0.lob", "30"),
+                ("expected.1.member_id", "2"),
+                ("expected.1.member_name", "Beatrice"),
+                ("expected.1.lob", "10"),
+                ("expected.2.member_id", "9"),
+                ("expected.2.member_name", "Dia"),
+                ("expected.2.lob", "30"),
+            ],
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert "Expected vs actual" in body
+    assert 'data-outcome="matching"' in body
+    assert 'data-outcome="changed"' in body
+    assert 'data-outcome="missing"' in body
+    assert 'data-outcome="unexpected"' in body
+    assert 'name="expected.0.member_name"' in body
+    assert "readonly" in body or 'data-side="actual"' in body
+
+
 def test_selecting_a_case_opens_the_workbench(tmp_path):
     case = tmp_path / "cases" / "medicaid_members" / "alice"
     case.mkdir(parents=True)

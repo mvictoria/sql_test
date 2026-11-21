@@ -17,8 +17,9 @@ def mock_editor(
     view: str,
     rows: dict[str, list[dict[str, str]]],
     engine_types: dict[str, dict[str, str]],
+    expected_section: str = "",
 ) -> str:
-    if not mocks:
+    if not mocks and not expected_section:
         return ""
     repo_catalog = catalog(repository)
     known = repo_catalog.relations().keys()
@@ -43,10 +44,10 @@ def mock_editor(
             continue
         table_rows = rows.get(name) or [{}]
         sections.append(grid(name, schema, table_rows, engine_types.get(name, {})))
+    mocks_heading = "<h2>Mock editor</h2>" if mocks else ""
     return (
         '<form method="post" action="/workbench">'
-        "<h2>Mock editor</h2>"
-        f"{hidden}{''.join(sections)}"
+        f"{hidden}{mocks_heading}{''.join(sections)}{expected_section}"
         '<p class="grid-actions">'
         '<button type="submit" name="action" value="apply">Apply to engine</button>'
         '<button type="submit" name="action" value="run">Run</button>'
@@ -115,18 +116,19 @@ def apply_grid_action(
     mocks: tuple[str, ...],
     rows: dict[str, list[dict[str, str]]],
 ) -> dict[str, list[dict[str, str]]]:
+    editable = frozenset(mocks) | {"expected"}
     updated = {
         name: [dict(row) for row in table_rows] for name, table_rows in rows.items()
     }
-    for name in mocks:
+    for name in editable:
         updated.setdefault(name, [{}])
     if action.startswith("add:"):
         table = action.removeprefix("add:")
-        if table in mocks:
+        if table in editable:
             updated.setdefault(table, []).append({})
     elif action.startswith("delete:"):
         _, table, index_text = action.split(":", 2)
-        if table in mocks:
+        if table in editable:
             index = int(index_text)
             table_rows = updated.get(table, [])
             if 0 <= index < len(table_rows):
