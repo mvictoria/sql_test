@@ -47,6 +47,7 @@ Done:
 - [ENG-17](#eng-17)
 - [ENG-18](#eng-18)
 - [ENG-19](#eng-19)
+- [ENG-25](#eng-25)
 
 In progress: [ENG-24](#eng-24) engine cleanup, [ENG-26](#eng-26) parse each SQL once.
 
