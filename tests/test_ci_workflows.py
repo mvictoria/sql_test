@@ -57,6 +57,12 @@ def test_tool_ci_calls_reusable_workflow_for_sample():
     assert job["with"]["working-directory"] == "lakehouse-data-customer"
 
 
+def test_tool_ci_runs_on_pull_requests_only():
+    ci = _load(WORKFLOWS / "ci.yml")
+    assert "pull_request" in _on(ci)
+    assert "push" not in _on(ci)
+
+
 def test_tool_ci_tests_python_313_through_315():
     ci = _load(WORKFLOWS / "ci.yml")
     job = ci["jobs"]["test"]
