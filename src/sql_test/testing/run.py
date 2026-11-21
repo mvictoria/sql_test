@@ -1,9 +1,7 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from sql_test.engine import Engine
-from sql_test.engine.executor import Row
-from sql_test.engine.planner.plan import MissingRows
+from sql_test.engine import Engine, MissingRows, Row
 from sql_test.testing.cases import UncastableCell, read_case
 from sql_test.testing.comparison import Comparison, compare
 

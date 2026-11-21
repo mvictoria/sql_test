@@ -3,8 +3,7 @@ from dataclasses import dataclass, fields
 from pathlib import Path
 from typing import Self
 
-from sql_test.engine.catalog import Catalog
-from sql_test.engine.catalog.adapters import mapped_sql_folder
+from sql_test.engine import Catalog, mapped_sql_folder
 
 TABLE = "sql-test"
 

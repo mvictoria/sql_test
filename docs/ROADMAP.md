@@ -275,6 +275,7 @@ Behaviour-preserving cleanup of the engine, one commit per item:
 
 - [x] One run path: `run`, `run_rows`, and `run_result` share a single load-and-execute step.
 - [x] One run method: `Engine.run` returns a `RunResult` with the target's rows, row counts, and whether the target's SQL orders its rows. `run_rows` and `run_result` are gone, and `run_case` no longer parses SQL.
+- [x] Front doors: `sql_test.engine`, `sql_test.executors`, and `sql_test.testing` export what other layers use; `tests/test_layers.py` checks that the test layer and integrations import through them, with the app exempt until [APP-15](#app-15). `discover()` reads models and sources from the catalog instead of parsing SQL itself.
 
 - **Done when:** each item's commit lands with the existing tests passing unchanged.
 - **Depends on:** none
@@ -511,6 +512,14 @@ The app reads its paths from `RepositoryConfig` instead of the `SQLS` and `MAPPI
 - **Depends on:**
   - [CFG-1](#cfg-1)
   - [APP-2](#app-2)
+
+<a id="app-15"></a>
+#### APP-15 Use the layers' front doors
+
+The app imports engine, executor, and test-layer names from `sql_test.engine`, `sql_test.executors`, and `sql_test.testing`, not from their modules, and drops the `app` exemption from `tests/test_layers.py`. The grid and the compare view type rows with `Column.cast` instead of loading them into a `DuckDBExecutor` and reading them back; the engine then removes `DuckDBExecutor.read_relation`.
+
+- **Done when:** `tests/test_layers.py` checks the app with no exemption, and no app module creates an executor.
+- **Depends on:** [ENG-24](#eng-24)
 
 ### Target browser
 
