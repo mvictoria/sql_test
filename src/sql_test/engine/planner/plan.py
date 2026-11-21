@@ -26,6 +26,7 @@ class Plan:
     states: dict[Relation, State]
     operations: list[Operation]
     needs_rows: set[Relation]
+    unused: set[Relation]
 
     def check_rows(self) -> None:
         if self.needs_rows:
@@ -65,5 +66,11 @@ def plan_run(target: Relation, catalog: Catalog, given: Mapping[Relation, int]) 
         if state is State.SOURCE or (state is State.GIVEN and not given[relation])
     }
     return Plan(
-        lineage=lineage, states=states, operations=operations, needs_rows=needs_rows
+        lineage=lineage,
+        states=states,
+        operations=operations,
+        needs_rows=needs_rows,
+        unused={
+            relation for relation in given if states.get(relation) is not State.GIVEN
+        },
     )

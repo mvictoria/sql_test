@@ -87,6 +87,57 @@ def test_a_source_behind_a_mock_stays_pruned_even_if_also_given():
     assert plan.needs_rows == set()
 
 
+def test_a_given_relation_upstream_of_another_given_is_unused():
+    catalog = mapped_sql_folder(
+        sqls=REPOSITORY / "admin" / "sqls",
+        mapping=REPOSITORY / "admin" / "config" / "lookup_sql_table_mapping.csv",
+    )
+    medicaid = Relation(name="medicaid_members")
+    members = Relation(name="members")
+    alice = Relation(name="medicaid_members_named_alice")
+
+    plan = plan_run(alice, catalog, given={medicaid: 1, members: 1})
+
+    assert plan.unused == {members}
+
+
+def test_a_given_relation_outside_the_lineage_is_unused():
+    catalog = mapped_sql_folder(
+        sqls=REPOSITORY / "admin" / "sqls",
+        mapping=REPOSITORY / "admin" / "config" / "lookup_sql_table_mapping.csv",
+    )
+    unrelated = Relation(name="unrelated")
+
+    plan = plan_run(
+        Relation(name="medicaid_members"),
+        catalog,
+        given={Relation(name="members"): 1, Relation(name="lob"): 1, unrelated: 1},
+    )
+
+    assert plan.unused == {unrelated}
+
+
+def test_a_given_relation_another_path_still_reads_is_used(tmp_path: Path):
+    (tmp_path / "ddl.sql").write_text(
+        "".join(
+            f"create table {name} (id int);\n" for name in ("base", "middle", "top")
+        )
+    )
+    (tmp_path / "middle.sql").write_text("select * from base")
+    (tmp_path / "top.sql").write_text("select * from middle, base")
+    mapping = tmp_path / "mapping.csv"
+    mapping.write_text("table_ref,sql_ref\nmiddle,middle.sql\ntop,top.sql\n")
+    catalog = mapped_sql_folder(sqls=tmp_path, mapping=mapping)
+
+    plan = plan_run(
+        Relation(name="top"),
+        catalog,
+        given={Relation(name="middle"): 1, Relation(name="base"): 1},
+    )
+
+    assert plan.unused == set()
+
+
 def test_reports_the_relations_that_still_need_rows():
     catalog = mapped_sql_folder(
         sqls=REPOSITORY / "admin" / "sqls",
