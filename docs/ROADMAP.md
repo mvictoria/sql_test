@@ -43,10 +43,11 @@ Done:
 - [ENG-13](#eng-13)
 - [ENG-14](#eng-14)
 - [ENG-16](#eng-16)
+- [ENG-15](#eng-15)
 
 Can start now:
 
-- [ENG-15](#eng-15)
+- [ENG-17](#eng-17)
 
 ### Project skeleton
 
@@ -282,7 +283,7 @@ Record the decisions in [HELPER.md](HELPER.md). These must be settled before cas
 - **Depends on:** none
 
 <a id="eng-15"></a>
-#### ENG-15 Compare expected and actual
+#### ENG-15 Compare expected and actual (done)
 
 Part of the test layer. Compare expected and actual rows using the defaults from ENG-14, and report:
 
