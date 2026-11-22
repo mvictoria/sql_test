@@ -302,14 +302,18 @@ async def test_settings_can_enable_sql_peek(user: User, tmp_path: Path):
     box.set_value(True)
     user.find(marker="save-settings").click()
     await user.should_see(marker="settings-saved")
-    assert "sql_peek = true" in (repo / "pyproject.toml").read_text()
+    text = (repo / "pyproject.toml").read_text()
+    assert "[tool.sql-test.flags]" in text
+    assert "sql_peek = true" in text
 
 
 async def test_peeking_node_sql_keeps_the_lineage_graph(user: User, tmp_path: Path):
     """APP-29: with sql_peek, mid-pipeline SQL opens beside the graph."""
     repo = _copy_fixture(tmp_path)
     pyproject = repo / "pyproject.toml"
-    pyproject.write_text(pyproject.read_text().rstrip() + "\nsql_peek = true\n")
+    pyproject.write_text(
+        pyproject.read_text().rstrip() + "\n\n[tool.sql-test.flags]\nsql_peek = true\n"
+    )
 
     _register(repo)
     await user.open(f"/workbench?target={ALICE}&view=lineage")

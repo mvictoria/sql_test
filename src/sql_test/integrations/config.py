@@ -4,10 +4,12 @@ from pathlib import Path
 from typing import Self
 
 import tomlkit
+from tomlkit.items import Table
 
 from sql_test.engine import Catalog, mapped_sql_folder
 
 TABLE = "sql-test"
+FLAGS = "flags"
 PATH_NAMES = ("sqls", "mapping", "schemas", "cases")
 
 
@@ -17,7 +19,7 @@ class ConfigError(Exception):
 
 @dataclass(frozen=True)
 class AppFlags:
-    """Optional app toggles under `[tool.sql-test]` — absent keys stay off."""
+    """Optional app toggles under `[tool.sql-test.flags]` — absent keys stay off."""
 
     sql_peek: bool = False
 
@@ -29,7 +31,10 @@ class AppFlags:
             return cls()
         with pyproject.open("rb") as file:
             settings = tomllib.load(file).get("tool", {}).get(TABLE) or {}
-        return cls(sql_peek=bool(settings.get("sql_peek", False)))
+        flags = settings.get(FLAGS) or {}
+        if not isinstance(flags, dict):
+            flags = {}
+        return cls(sql_peek=bool(flags.get("sql_peek", False)))
 
 
 @dataclass(frozen=True)
@@ -74,7 +79,7 @@ class RepositoryConfig:
     ) -> None:
         """Write `[tool.sql-test]` paths with tomlkit; leave the rest of the file as-is.
 
-        When `flags` is set, also write those optional keys; otherwise leave them alone.
+        When `flags` is set, also write `[tool.sql-test.flags]`; otherwise leave it alone.
         """
         root = repository.resolve()
         cls.validate(root, relative)
@@ -88,10 +93,7 @@ class RepositoryConfig:
         for name in PATH_NAMES:
             table[name] = relative[name]
         if flags is not None:
-            if flags.sql_peek:
-                table["sql_peek"] = True
-            elif "sql_peek" in table:
-                del table["sql_peek"]
+            _write_flags(table, flags)
         pyproject.write_text(tomlkit.dumps(document))
 
     @classmethod
@@ -122,3 +124,20 @@ class RepositoryConfig:
         return mapped_sql_folder(
             sqls=self.sqls, mapping=self.mapping, schemas=self.schemas
         )
+
+
+def _write_flags(table: Table, flags: AppFlags) -> None:
+    if flags.sql_peek:
+        existing = table.get(FLAGS)
+        if not isinstance(existing, Table):
+            existing = tomlkit.table()
+            table[FLAGS] = existing
+        existing["sql_peek"] = True
+        return
+    if FLAGS not in table:
+        return
+    flags_table = table[FLAGS]
+    if isinstance(flags_table, Table) and "sql_peek" in flags_table:
+        del flags_table["sql_peek"]
+    if isinstance(flags_table, Table) and len(flags_table) == 0:
+        del table[FLAGS]
