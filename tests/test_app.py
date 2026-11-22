@@ -861,6 +861,33 @@ async def test_a_new_case_run_with_blank_expected_can_accept_its_actual_result(
     assert _value(user, "cell-expected.1.member_name") == "Bea"
 
 
+async def test_accepting_empty_actual_asks_before_expecting_no_rows(user: User):
+    """UAT-8: Accept all with zero actual rows must not silently set Expects no rows."""
+    _register(FIXTURE)
+    await user.open(f"/workbench?target={ALICE}&view=lineage&mock=medicaid_members")
+    _fill(user, "medicaid_members", [{"member_id": "1", "member_name": "Ada"}])
+    user.find(marker="run").click()
+    await user.should_see(marker="verdict-failed")
+    await user.should_see(marker="diff-empty")
+
+    user.find(marker="accept-all").click()
+
+    await user.should_see(marker="accept-empty-confirm")
+    await user.should_not_see(marker="expected-no-rows")
+    await user.should_see(marker="verdict-failed")
+
+    user.find(marker="accept-empty-cancel").click()
+
+    await user.should_not_see(marker="expected-no-rows")
+    await user.should_see(marker="verdict-failed")
+
+    user.find(marker="accept-all").click()
+    user.find(marker="accept-empty-confirm").click()
+
+    await user.should_see(marker="verdict-passed")
+    await user.should_see(marker="expected-no-rows")
+
+
 async def test_accepting_no_rows_expects_no_rows_through_save_and_load(
     user: User, tmp_path: Path
 ):
@@ -873,6 +900,7 @@ async def test_accepting_no_rows_expects_no_rows_through_save_and_load(
     await user.should_see(marker="diff-empty")
 
     user.find(marker="accept-all").click()
+    user.find(marker="accept-empty-confirm").click()
 
     await user.should_see(marker="verdict-passed")
     await user.should_see(marker="expected-no-rows")
