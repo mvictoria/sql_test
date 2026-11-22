@@ -6,8 +6,7 @@ A library for testing SQL transformations: mock upstream tables, run the real SQ
 
 - **Design decisions** (case format, lineage, mocking, coverage, architecture): [docs/HELPER.md](docs/HELPER.md). Read it before changing engine behaviour or the case format.
 - **Work items (source of truth):** [GitHub issues](https://github.com/mvictoria/sql_test/issues) titled `ID: …`, with area labels (`engine`, `user-interface`, `ci-cd`, …). Find the open issue before starting work; close it when the PR lands. Scope changes go on the issue.
-- **Product roadmap:** [docs/ROADMAP.md](docs/ROADMAP.md) — shipped capabilities and planned *features* by theme/version, not task breakdown.
-- **Adoption UAT:** [docs/UAT.md](docs/UAT.md). Prefer adoption/UX polish over opening Spark or incremental early.
+- **Product roadmap:** [docs/ROADMAP.md](docs/ROADMAP.md) — shipped capabilities and planned *features* by theme/version, not task breakdown. Follow its horizon (Spark → incremental → richer lineage; Later items stay Later unless an issue is in progress).
 
 ## Way of working
 
