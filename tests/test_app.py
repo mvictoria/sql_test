@@ -572,6 +572,18 @@ async def test_members_grid_has_no_per_cell_null_button(user: User):
     await user.should_see("Ctrl+; sets NULL")
 
 
+async def test_mock_grid_reads_as_a_sheet_lattice(user: User):
+    """APP-34: cells share a bordered sheet, not separate outlined fields."""
+    _register(FIXTURE)
+    await user.open(f"/workbench?target={ALICE}&view=lineage&mock=members")
+
+    await user.should_see(marker="sheet-members")
+    (cell,) = user.find(kind=ui.input, marker="cell-members.0.member_id").elements
+    assert "sheet-cell" in cell.classes
+    assert cell.props.get("borderless") is True or "borderless" in cell.props
+    assert not cell.props.get("outlined")
+
+
 async def test_null_hint_shows_while_editing_expected(user: User):
     """NULL shortcut is documented where Expected is edited, not only in docs."""
     _register(FIXTURE)

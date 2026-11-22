@@ -15,6 +15,73 @@ from sql_test.integrations.app.grid import (
 from sql_test.integrations.app.state import WorkbenchState
 
 _NULL_HINT = "Ctrl+; sets NULL on the focused cell. Type to replace a NULL."
+_SHEET_CSS = """
+.sheet {
+  display: inline-block;
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid #6b7280;
+  background: #fff;
+}
+.sheet-grid {
+  gap: 0 !important;
+}
+.sheet-header {
+  background: #dfe3e8;
+  border-right: 1px solid #6b7280;
+  border-bottom: 1px solid #6b7280;
+  padding: 4px 8px;
+  min-height: 2rem;
+  box-sizing: border-box;
+}
+.sheet-header .text-caption {
+  line-height: 1.2;
+}
+.sheet-cell {
+  position: relative;
+  border-right: 1px solid #6b7280;
+  border-bottom: 1px solid #6b7280;
+  background: #fff;
+  min-height: 2rem;
+  padding: 0;
+  box-sizing: border-box;
+}
+.sheet-cell .q-field {
+  margin: 0;
+  padding: 0;
+}
+.sheet-cell .q-field__control,
+.sheet-cell .q-field__native,
+.sheet-cell .q-field__marginal {
+  height: 2rem !important;
+  min-height: 2rem !important;
+  border-radius: 0 !important;
+}
+.sheet-cell .q-field__control {
+  padding: 0 6px;
+  box-shadow: none !important;
+  background: #fff;
+}
+.sheet-cell .q-field--focused .q-field__control,
+.sheet-cell .grid-focus .q-field__control {
+  outline: 2px solid #217346;
+  outline-offset: -2px;
+  background: #fff;
+  z-index: 1;
+}
+.sheet-cell-error {
+  font-size: 0.65rem;
+  line-height: 1.1;
+  padding: 0 4px 2px;
+  min-height: 0;
+}
+.sheet-actions {
+  border: none;
+  background: transparent;
+  padding: 2px 4px;
+  align-self: center;
+}
+"""
 _PASTE_JS = """
 (e) => {
     const data = e.clipboardData;
@@ -51,6 +118,11 @@ class EditorActions:
     on_duplicate_row: Callable[[str, int], None]
     on_run: Callable[[], None]
     on_save: Callable[[], None]
+
+
+def sheet_css() -> str:
+    """Excel-like lattice for mock and expected grids (APP-34)."""
+    return _SHEET_CSS
 
 
 def editor_view(state: WorkbenchState, actions: EditorActions) -> None:
@@ -133,31 +205,45 @@ def grid_view(
     columns = [column.name for column in schema]
     by_name = {column.name: column for column in schema}
     fields: dict[tuple[int, str], ui.input] = {}
-    with ui.grid(columns=f"repeat({len(columns)}, 11rem) auto auto").classes(
-        "items-start"
+    with (
+        ui.element("div").classes("sheet").mark(f"sheet-{name}"),
+        ui.grid(
+            columns=f"repeat({len(columns)}, minmax(7rem, 11rem)) auto auto"
+        ).classes("sheet-grid items-stretch"),
     ):
         for column in columns:
-            with ui.column().classes("gap-0"):
+            with ui.element("div").classes("sheet-header"):
                 ui.label(column).classes("text-caption text-weight-bold")
                 if column in types:
                     ui.label(types[column]).classes("text-caption text-grey-7").mark(
                         f"engine-type-{name}.{column}"
                     )
-        ui.label("")
-        ui.label("")
+        ui.element("div").classes("sheet-header sheet-actions")
+        ui.element("div").classes("sheet-header sheet-actions")
         for index, row in enumerate(rows):
             for column in columns:
                 _cell(
-                    name, index, row, by_name[column], state, actions, columns, fields
+                    name,
+                    index,
+                    row,
+                    by_name[column],
+                    state,
+                    actions,
+                    columns,
+                    fields,
                 )
-            ui.button(
-                "Duplicate",
-                on_click=lambda _, index=index: actions.on_duplicate_row(name, index),
-            ).props("flat dense tabindex=-1").mark(f"duplicate-{name}.{index}")
-            ui.button(
-                "Delete",
-                on_click=lambda _, index=index: actions.on_delete_row(name, index),
-            ).props("flat dense tabindex=-1").mark(f"delete-{name}.{index}")
+            with ui.element("div").classes("sheet-actions"):
+                ui.button(
+                    "Duplicate",
+                    on_click=lambda _, index=index: actions.on_duplicate_row(
+                        name, index
+                    ),
+                ).props("flat dense tabindex=-1").mark(f"duplicate-{name}.{index}")
+            with ui.element("div").classes("sheet-actions"):
+                ui.button(
+                    "Delete",
+                    on_click=lambda _, index=index: actions.on_delete_row(name, index),
+                ).props("flat dense tabindex=-1").mark(f"delete-{name}.{index}")
     ui.button("Add row", on_click=lambda: actions.on_add_row(name)).props(
         "flat dense"
     ).mark(f"add-row-{name}")
@@ -181,8 +267,10 @@ def _cell(
     markers = f"cell-{table}.{index}.{key}"
     if is_null:
         markers = f"{markers} null-{table}.{index}.{key}"
-    with ui.column().classes("gap-0"):
-        error_label = ui.label(error or "").classes("text-caption text-negative")
+    with ui.element("div").classes("sheet-cell"):
+        error_label = ui.label(error or "").classes(
+            "text-caption text-negative sheet-cell-error"
+        )
         if error:
             error_label.mark(invalid)
         field = (
@@ -193,7 +281,8 @@ def _cell(
                     _edit(row, key, event.value, column, invalid, error_label, actions)
                 ),
             )
-            .props("dense outlined")
+            .props("dense borderless")
+            .classes("sheet-cell")
             .tooltip(_NULL_HINT)
             .mark(markers)
         )
