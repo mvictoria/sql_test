@@ -151,7 +151,7 @@ Local workbench (`sql-test app`):
 - Load and save case mocks and expected rows
 - Picks up SQL files added, edited, or deleted while the app is open
 
-Details in [HELPER](docs/HELPER.md) and [ROADMAP](docs/ROADMAP.md).
+Product direction: [ROADMAP](docs/ROADMAP.md).
 
 ## Sample repository
 
