@@ -33,15 +33,18 @@ _CELL_KEYDOWN_JS = """
     const input = e.target?.tagName === 'INPUT'
         ? e.target
         : e.target?.closest?.('.q-field')?.querySelector?.('input');
-    if ((e.ctrlKey || e.metaKey) && e.key === ';') {
+    const isNullChord = (e.ctrlKey || e.metaKey)
+        && (e.key === ';' || e.code === 'Semicolon');
+    if (isNullChord) {
         e.preventDefault();
-        // Paint before the round-trip: grid rebuild mid-keydown leaves Quasar stale.
+        emit({op: 'null'});
+        // Best-effort DOM paint; Python also sets a NULL caption (Quasar may
+        // overwrite input.value from v-model before props land).
         if (input) {
             input.value = '';
             input.placeholder = 'NULL';
             input.readOnly = true;
         }
-        emit({op: 'null'});
         return;
     }
     if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -186,6 +189,11 @@ def _cell(
             .tooltip(_NULL_HINT)
             .mark(markers)
         )
+        null_caption = (
+            ui.label("NULL" if is_null else "")
+            .classes("text-caption text-grey-8 h-4")
+            .mark(f"null-caption-{table}.{index}.{key}")
+        )
         fields[(index, key)] = field
         if state.grid_focus == (table, index, key):
             field.classes(add="grid-focus")
@@ -218,7 +226,15 @@ def _cell(
             ),
         )
         set_null = lambda _, row=row, key=key, field=field, table=table, index=index: (
-            _set_null(row, key, actions, field=field, table=table, index=index)
+            _set_null(
+                row,
+                key,
+                actions,
+                field=field,
+                table=table,
+                index=index,
+                null_caption=null_caption,
+            )
         )
         # Chord for User tests; one JS keydown for browser Ctrl/Cmd+; and type-to-leave.
         field.on("keydown.ctrl.exact.;.prevent", set_null)
@@ -227,7 +243,14 @@ def _cell(
             "keydown",
             lambda event, row=row, key=key, field=field, table=table, index=index: (
                 _cell_keydown(
-                    event, row, key, actions, field=field, table=table, index=index
+                    event,
+                    row,
+                    key,
+                    actions,
+                    field=field,
+                    table=table,
+                    index=index,
+                    null_caption=null_caption,
                 )
             ),
             js_handler=_CELL_KEYDOWN_JS,
@@ -338,6 +361,7 @@ def _set_null(
     field: ui.input,
     table: str,
     index: int,
+    null_caption: ui.label,
 ) -> None:
     """Ctrl+; only sets NULL; leave NULL by typing (empty string stays "")."""
     if column in row and row[column] is None:
@@ -345,11 +369,14 @@ def _set_null(
     row[column] = None
     # Update in place — do not rebuild the grid here. clear()+recreate mid-keydown
     # destroys the focused Quasar input and the browser stays blank until Run.
+    # Caption is the reliable paint; Quasar placeholder alone is easy to miss / wipe.
     # set_value fires on_change; _edit must keep None (see guard above).
-    field.set_value("")
+    null_caption.set_text("NULL")
     field.props("readonly placeholder=NULL")
+    field.set_value("")
     field.mark(f"cell-{table}.{index}.{column} null-{table}.{index}.{column}")
     field.update()
+    null_caption.update()
 
 
 def _cell_keydown(
@@ -361,10 +388,19 @@ def _cell_keydown(
     field: ui.input,
     table: str,
     index: int,
+    null_caption: ui.label,
 ) -> None:
     args = getattr(event, "args", None)
     if isinstance(args, dict) and args.get("op") == "null":
-        _set_null(row, column, actions, field=field, table=table, index=index)
+        _set_null(
+            row,
+            column,
+            actions,
+            field=field,
+            table=table,
+            index=index,
+            null_caption=null_caption,
+        )
         return
     if isinstance(args, dict) and args.get("op") == "type":
         _clear_null_on_type({"key": args.get("key")}, row, column, actions)

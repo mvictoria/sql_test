@@ -548,6 +548,8 @@ async def test_ctrl_semicolon_paints_null_placeholder_after_typing(user: User):
     _set_null(user, "cell-members.0.member_name")
 
     await user.should_see(marker="null-members.0.member_name")
+    await user.should_see(marker="null-caption-members.0.member_name")
+    assert _text(user, "null-caption-members.0.member_name") == "NULL"
     (cell,) = user.find(kind=ui.input, marker="null-members.0.member_name").elements
     assert cell.props.get("placeholder") == "NULL"
     assert "readonly" in cell.props
