@@ -75,12 +75,13 @@ async def test_app_page_lists_models_and_sources(user: User):
 
 
 async def test_home_glosses_in_pipelines_without_a_drill_in(user: User):
-    """UAT-12: first contact explains In pipelines on home, not only after click."""
+    """UAT-12: In pipelines header tooltip explains the column without a drill-in."""
     _register(FIXTURE)
     await user.open("/")
 
     await user.should_see(marker="pipelines-gloss")
-    assert "without targeting" in _text(user, "pipelines-gloss").lower()
+    (tip,) = user.find(kind=ui.tooltip, marker="pipelines-gloss").elements
+    assert "without targeting" in tip.text.lower()
 
 
 async def test_home_lists_cases_with_their_table(user: User):
