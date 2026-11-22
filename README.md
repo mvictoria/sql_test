@@ -2,17 +2,9 @@
 
 Library and local tools for testing SQL transformations: mock upstream tables, run the real SQL, compare the output.
 
-## Setup (this repository)
+## Setup
 
-```bash
-uv sync
-```
-
-Requires Python 3.13+.
-
-## Adopt in a consuming repository
-
-Requires Python 3.13+. Prefer `sql-test init` for a new repo. To hand-build, copy [examples/minimal-consumer/](examples/minimal-consumer/) or paste the files below — that example is a standalone consumer that installs `sql-test` itself.
+Requires Python 3.13+. Prefer `sql-test init` for a new data repo. To hand-build, copy [examples/minimal-consumer/](examples/minimal-consumer/) or paste the files below — that example is a standalone consumer that installs `sql-test` itself.
 
 Scaffold:
 
@@ -91,14 +83,6 @@ jobs:
 
 The workflow installs `sql-test` from the same git commit as that pin and runs pytest in the calling repository.
 
-**Releases** — the git tag is the version (`dynamic` via hatchling / `uv-dynamic-versioning`).
-
-1. Start the **PR title** with `(major)`, `(minor)`, or `(patch)` as the first word when that PR should release (case-insensitive; example: `(patch) CI-2: versioned releases`). Later mentions are ignored. Skip the token if it should not release.
-2. Merge with linear history (rebase). CD runs on `main`, finds the merged PR, and tags **`main`'s new tip** — not the old branch commits.
-3. CD tags **`main`'s tip**, builds the wheel/sdist, creates/updates the GitHub Release, and moves floating `vX` (for example `v0`) in that same run — a bot tag push alone does not start a second workflow.
-
-Manual tag push (`git tag vX.Y.Z && git push origin vX.Y.Z`) still runs the release job.
-
 ## CLI
 
 pytest remains the test runner. The CLI also discovers tables/cases, prints coverage, and starts the authoring app.
@@ -155,12 +139,4 @@ Local workbench (`sql-test app`):
 
 For a richer chained-SQL fixture (mocks across several tables, both `test_sql.py` and case folders), use `tests/fixtures/repos/lakehouse-data-customer/`. Run its tests with `uv run pytest tests/fixtures/repos/lakehouse-data-customer/tests`.
 
-## Tests
-
-```bash
-uv run pytest
-```
-
-Fixture repositories under `tests/fixtures/` are skipped by the default pytest run. Run a fixture's own tests by path in a separate session.
-
-Design and vocabulary live in [docs/HELPER.md](docs/HELPER.md). Product direction is in [docs/ROADMAP.md](docs/ROADMAP.md); work items are [GitHub issues](https://github.com/mvictoria/sql_test/issues).
+Developing this package: [CONTRIBUTING.md](CONTRIBUTING.md). Design and vocabulary live in [docs/HELPER.md](docs/HELPER.md). Product direction is in [docs/ROADMAP.md](docs/ROADMAP.md); work items are [GitHub issues](https://github.com/mvictoria/sql_test/issues).
