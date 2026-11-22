@@ -139,6 +139,30 @@ async def test_selecting_a_model_opens_the_workbench(user: User):
     await user.should_see("Alice")
 
 
+async def test_sql_view_hides_mock_editor_and_run_save(user: User):
+    """UAT-14: SQL view is calm — no mock editor / Run / Save chrome."""
+    _register(FIXTURE)
+    await user.open(f"/workbench?target={ALICE}&view=lineage&mock=members")
+    await user.should_see(marker="run")
+    await user.should_see(marker="save")
+    await user.should_see("Mock editor")
+
+    user.find(marker="view-sql").click()
+
+    await user.should_see(marker="sql-code")
+    await user.should_see(marker="sql-read")
+    await user.should_see(marker="sql-read-hint")
+    await user.should_not_see(marker="run")
+    await user.should_not_see(marker="save")
+    await user.should_not_see("Mock editor")
+
+    user.find(marker="view-lineage").click()
+
+    await user.should_see(marker="lineage-graph")
+    await user.should_see(marker="run")
+    await user.should_see("Mock editor")
+
+
 async def test_opening_a_table_lists_its_cases_and_loads_one(user: User):
     """APP-26: workbench for a target lists that table's cases; choosing one loads it."""
     _register(FIXTURE)
