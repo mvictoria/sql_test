@@ -560,8 +560,7 @@ async def test_set_null_button_paints_null_on_focused_cell(user: User):
     _register(FIXTURE)
     await user.open("/workbench?target=members&view=lineage&mock=members")
     user.find(marker="cell-members.0.member_name").type("Ada")
-    # Focus records focused_cell for the button.
-    user.find(marker="cell-members.0.member_name").trigger("focus")
+    user.find(marker="cell-members.0.member_name").trigger("click")
 
     user.find(marker="set-null").click()
 

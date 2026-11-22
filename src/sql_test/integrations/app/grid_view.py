@@ -125,15 +125,14 @@ def _null_hint_row(state: WorkbenchState, actions: EditorActions) -> None:
 def _set_null_on_focused(state: WorkbenchState, actions: EditorActions) -> None:
     cell = state.focused_cell
     if cell is None:
-        ui.notify("Focus a grid cell first", type="warning")
+        ui.notify("Click a grid cell first", type="warning")
         return
     table, index, key = cell
-    field = state.cell_fields.get(cell)
     rows = state.grid_rows.get(table) or []
-    if field is None or index >= len(rows) or not isinstance(field, ui.input):
-        ui.notify("Focus a grid cell first", type="warning")
+    if index >= len(rows):
+        ui.notify("Click a grid cell first", type="warning")
         return
-    _set_null(rows[index], key, actions, field=field, table=table, index=index)
+    _set_null(rows[index], key, actions, state=state, table=table, index=index)
 
 
 def grid_view(
@@ -214,12 +213,6 @@ def _cell(
             field.classes(add="text-italic")
         fields[(index, key)] = field
         state.cell_fields[(table, index, key)] = field
-        field.on(
-            "focus",
-            lambda _, table=table, index=index, key=key: setattr(
-                state, "focused_cell", (table, index, key)
-            ),
-        )
         if state.grid_focus == (table, index, key):
             field.classes(add="grid-focus")
             field.run_method("focus")
@@ -251,18 +244,21 @@ def _cell(
                 reverse=True,
             ),
         )
-        set_null = lambda _, row=row, key=key, field=field, table=table, index=index: (
-            _set_null(row, key, actions, field=field, table=table, index=index)
+        remember = lambda _, table=table, index=index, key=key: setattr(
+            state, "focused_cell", (table, index, key)
+        )
+        field.on("focus", remember)
+        field.on("click", remember)
+        set_null = lambda _, row=row, key=key, table=table, index=index: _set_null(
+            row, key, actions, state=state, table=table, index=index
         )
         # Chord for User tests; one JS keydown for browser Ctrl/Cmd+; and type-to-leave.
         field.on("keydown.ctrl.exact.;.prevent", set_null)
         field.on("keydown.meta.exact.;.prevent", set_null)
         field.on(
             "keydown",
-            lambda event, row=row, key=key, field=field, table=table, index=index: (
-                _cell_keydown(
-                    event, row, key, actions, field=field, table=table, index=index
-                )
+            lambda event, row=row, key=key, table=table, index=index: _cell_keydown(
+                event, row, key, actions, state=state, table=table, index=index
             ),
             js_handler=_CELL_KEYDOWN_JS,
         )
@@ -367,22 +363,19 @@ def _set_null(
     column: str,
     actions: EditorActions,
     *,
-    field: ui.input,
+    state: WorkbenchState,
     table: str,
     index: int,
 ) -> None:
-    """Ctrl+; only sets NULL; leave NULL by typing (empty string stays "")."""
+    """Ctrl+; / Set NULL only sets NULL; leave NULL by typing ("" stays "")."""
     if column in row and row[column] is None:
         return
     row[column] = None
-    # Show the word NULL inside the input (model stays None). In-place only —
-    # rebuilding mid-keydown leaves the browser blank until Run.
-    field.props("readonly")
-    field.classes(add="text-italic")
-    field.set_value(_NULL_DISPLAY)
-    field.mark(f"cell-{table}.{index}.{column} null-{table}.{index}.{column}")
-    field.update()
-    ui.notify("NULL", type="info", position="top")
+    # Rebuild the grids (same path as Run). In-place Quasar updates do not paint
+    # reliably in the real browser; recreating the cell with value "NULL" does.
+    state.grid_focus = (table, index, column)
+    state.focused_cell = (table, index, column)
+    actions.on_rebuild()
 
 
 def _cell_keydown(
@@ -391,13 +384,13 @@ def _cell_keydown(
     column: str,
     actions: EditorActions,
     *,
-    field: ui.input,
+    state: WorkbenchState,
     table: str,
     index: int,
 ) -> None:
     args = getattr(event, "args", None)
     if isinstance(args, dict) and args.get("op") == "null":
-        _set_null(row, column, actions, field=field, table=table, index=index)
+        _set_null(row, column, actions, state=state, table=table, index=index)
         return
     if isinstance(args, dict) and args.get("op") == "type":
         _clear_null_on_type({"key": args.get("key")}, row, column, actions)
