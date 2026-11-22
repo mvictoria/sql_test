@@ -74,6 +74,15 @@ async def test_app_page_lists_models_and_sources(user: User):
     await user.should_not_see("Boundaries")
 
 
+async def test_home_glosses_in_pipelines_without_a_drill_in(user: User):
+    """UAT-12: first contact explains In pipelines on home, not only after click."""
+    _register(FIXTURE)
+    await user.open("/")
+
+    await user.should_see(marker="pipelines-gloss")
+    assert "without targeting" in _text(user, "pipelines-gloss").lower()
+
+
 async def test_home_lists_cases_with_their_table(user: User):
     """APP-26: Alice's cases sit with that table, not only a global Cases list."""
     _register(FIXTURE)

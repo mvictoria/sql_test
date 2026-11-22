@@ -116,7 +116,7 @@ sql-test app [repository] [--port 8765]
 - `repository` / `directory` — path (default `.`)
 - `--port` — localhost port for `app` (default `8765`)
 
-`coverage` prints tests and in-pipeline counts per table, untested first (same `coverage_report` the app home uses):
+`coverage` prints tests and in-pipeline counts per table, untested first (same `coverage_report` the app home uses). **In pipelines** means cases that execute the table without targeting it (its SQL runs as part of another case's pipeline).
 
 ```bash
 uv run sql-test coverage tests/fixtures/repos/lakehouse-data-customer

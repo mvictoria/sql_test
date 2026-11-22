@@ -18,7 +18,12 @@ def main(argv: list[str] | None = None) -> int:
     discover_parser.add_argument("repository", type=Path, nargs="?", default=Path("."))
 
     coverage_parser = sub.add_parser(
-        "coverage", help="list test and in-pipeline counts per table"
+        "coverage",
+        help="list test and in-pipeline counts per table",
+        description=(
+            "Print tests and in-pipeline counts per table (untested first). "
+            "In pipelines = cases that execute the table without targeting it."
+        ),
     )
     coverage_parser.add_argument("repository", type=Path, nargs="?", default=Path("."))
 
