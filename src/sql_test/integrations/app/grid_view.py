@@ -407,13 +407,14 @@ def _is_set_null_event(event: object) -> bool:
 
 
 def _case_name(state: WorkbenchState) -> None:
+    # Keep draft in sync so rename edits are what Save uses (APP-33).
+    if state.case_name and not state.case_draft:
+        state.case_draft = state.case_name
     field = ui.input(
         "Case name",
-        value=state.case_name or state.case_draft,
+        value=state.case_draft,
         on_change=lambda event: setattr(state, "case_draft", event.value or ""),
     ).mark("case-name")
-    if state.case_name:
-        field.props("readonly")
     if state.highlight_case_name:
         field.classes(add="case-name-needed")
         field.props("outlined color=negative")
