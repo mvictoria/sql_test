@@ -27,9 +27,6 @@ def _tables(result: Discovery, catalog: Catalog) -> None:
     models = set(result.models)
     cases_by_target = _cases_by_target(result)
     ui.label("Tables").classes("text-subtitle1")
-    ui.label(
-        "In pipelines: cases that execute this table without targeting it."
-    ).classes("text-caption text-grey-7").mark("pipelines-gloss")
     if not report:
         ui.label("None").classes("text-grey-7")
         return
@@ -37,7 +34,12 @@ def _tables(result: Discovery, catalog: Catalog) -> None:
         "items-center"
     ):
         for heading in ("Table", "Tests", "In pipelines", "Cases"):
-            ui.label(heading).classes("text-caption text-weight-bold")
+            label = ui.label(heading).classes("text-caption text-weight-bold")
+            if heading == "In pipelines":
+                with label:
+                    ui.tooltip(
+                        "Cases that execute this table without targeting it."
+                    ).mark("pipelines-gloss")
         for row in report:
             with ui.row().classes("items-baseline gap-2"):
                 ui.link(
