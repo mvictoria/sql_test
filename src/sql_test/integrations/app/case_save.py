@@ -1,3 +1,4 @@
+import shutil
 from pathlib import Path
 
 from sql_test.engine import Catalog, Relation, Schema
@@ -34,6 +35,8 @@ def save_case(
     mocks: tuple[str, ...],
     grid_rows: dict[str, list[dict[str, str | None]]],
     repo_catalog: Catalog,
+    *,
+    previous_name: str | None = None,
 ) -> Path:
     folder = case_folder(repository, target, name, repo_catalog)
     target_relation = repo_catalog.resolve(target)
@@ -64,6 +67,10 @@ def save_case(
             expected=expected,
         ),
     )
+    if previous_name and previous_name != name:
+        old = case_folder(repository, target, previous_name, repo_catalog)
+        if old != folder and old.is_dir():
+            shutil.rmtree(old)
     return folder
 
 

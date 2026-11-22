@@ -319,11 +319,13 @@ class Workbench:
     def save(self, *, overwrite: bool = False) -> None:
         state = self.state
         self.reload_catalog()
-        name = state.case_name or state.case_draft.strip()
+        previous = state.case_name
+        name = state.case_draft.strip() or previous or ""
         try:
             if not overwrite and case_exists(
                 state.repository, state.target, name, state.catalog
             ):
+                # UAT-9: confirm before replacing CSVs in an existing folder.
                 self._confirm_overwrite(name)
                 return
             folder = save_case(
@@ -333,8 +335,10 @@ class Workbench:
                 state.mocks,
                 state.grid_rows,
                 state.catalog,
+                previous_name=previous,
             )
             state.case_name = name
+            state.case_draft = name
             state.highlight_case_name = False
             state.message = Message(
                 f"Saved case {state.target}/{name}",

@@ -1130,6 +1130,32 @@ async def test_saving_a_loaded_case_writes_identical_files(user: User, tmp_path:
     assert after == before
 
 
+async def test_renaming_a_loaded_case_moves_the_folder(user: User, tmp_path: Path):
+    """APP-33: Case name stays editable after Save/load; Save under a new name moves it."""
+    repo = _copy_fixture(tmp_path)
+    old = repo / "tests" / "cases" / "medicaid_members" / "only_medicaid_members"
+    new = repo / "tests" / "cases" / "medicaid_members" / "renamed_medicaid"
+    assert old.is_dir()
+    assert not new.exists()
+
+    _register(repo)
+    await user.open(
+        "/workbench?case=" + quote("medicaid_members/only_medicaid_members", safe="")
+    )
+    await user.should_see(marker="case-label", content="only_medicaid_members")
+
+    user.find(marker="case-name").clear()
+    user.find(marker="case-name").type("renamed_medicaid")
+    user.find(marker="save").click()
+
+    await user.should_see("Saved case")
+    await user.should_see(marker="case-label", content="renamed_medicaid")
+    assert new.is_dir()
+    assert not old.exists()
+    assert (new / "members.csv").is_file()
+    assert (new / "lob.csv").is_file()
+
+
 async def test_saving_over_an_existing_case_asks_before_replacing_mocks(
     user: User, tmp_path: Path
 ):
