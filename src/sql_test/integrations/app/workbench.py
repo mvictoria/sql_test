@@ -99,11 +99,12 @@ class Workbench:
         self.summary = ui.column().classes("gap-0")
         self.body = ui.column().classes("w-full")
         self.status = ui.column().classes("gap-0")
-        with (
+        self.panes = (
             ui.row()
             .classes("w-full items-start gap-4 flex-wrap")
             .mark("workbench-panes")
-        ):
+        )
+        with self.panes:
             self.setup = (
                 ui.column().classes("w-full flex-1 min-w-80").mark("workbench-setup")
             )
@@ -116,6 +117,12 @@ class Workbench:
         self.refresh_summary()
         self.refresh_body()
         self.refresh_status()
+        reading_sql = self.state.view == "sql"
+        self.panes.set_visibility(not reading_sql)
+        if reading_sql:
+            self.setup.clear()
+            self.outcome.clear()
+            return
         self.refresh_setup()
         self.refresh_outcome()
 
