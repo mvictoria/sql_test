@@ -48,6 +48,8 @@ def test_sql_peek_flag_defaults_off_and_can_be_enabled(tmp_path: Path):
         'mapping = "config/mapping.csv"\n'
         'schemas = "ddl"\n'
         'cases = "tests/cases"\n'
+        "\n"
+        "[tool.sql-test.flags]\n"
         "sql_peek = true\n"
     )
 

@@ -11,7 +11,7 @@ from sql_test.integrations.config import (
 
 
 def settings_page(repository: Path, *, creating: bool = False) -> None:
-    """Edit or create `[tool.sql-test]` paths and optional app flags."""
+    """Edit or create `[tool.sql-test]` paths and `[tool.sql-test.flags]`."""
     try:
         values = RepositoryConfig.read_relative(repository)
         flags = AppFlags.load(repository)
