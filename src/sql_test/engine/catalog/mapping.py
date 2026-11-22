@@ -10,6 +10,7 @@ from sql_test.engine.relation import Relation
 class MappingProblem:
     file: Path
     reason: str
+    writes: Relation
 
 
 def read_operations(mapping: Path, sqls: Path) -> list[Operation]:
@@ -35,5 +36,7 @@ def existing_operations(
             operations.append(operation)
         else:
             reason = f"{operation.sql_file.relative_to(sqls)} does not exist"
-            problems.append(MappingProblem(file=mapping, reason=reason))
+            problems.append(
+                MappingProblem(file=mapping, reason=reason, writes=operation.writes)
+            )
     return operations, problems
