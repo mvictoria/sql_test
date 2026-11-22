@@ -1,3 +1,4 @@
+import socket
 from collections.abc import Callable
 from pathlib import Path
 
@@ -12,6 +13,10 @@ from sql_test.integrations.app.workbench import Workbench, open_workbench
 from sql_test.integrations.config import ConfigError, RepositoryConfig
 
 LOCAL_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
+
+
+class PortInUseError(Exception):
+    """The app port is already bound; do not print a false serving line."""
 
 
 def register_app(repository: Path, executor: Executor) -> None:
@@ -41,10 +46,25 @@ def serve(
 ) -> None:
     if host not in LOCAL_HOSTS:
         raise ValueError("app server must bind to localhost only")
+    _ensure_port_free(host, port)
     repository = repository.resolve()
     register_app(repository, executor)
     print(f"sql-test app serving {repository} at http://{host}:{port}/")
     ui.run(host=host, port=port, reload=False, show=False, title="sql-test")
+
+
+def _ensure_port_free(host: str, port: int) -> None:
+    """Raise PortInUseError before any success banner if the port cannot bind."""
+    family = socket.AF_INET6 if ":" in host and host != "localhost" else socket.AF_INET
+    bind_host = "127.0.0.1" if host == "localhost" else host
+    probe = socket.socket(family, socket.SOCK_STREAM)
+    try:
+        # No SO_REUSEADDR: match a real listen conflict (another app serving).
+        probe.bind((bind_host, port))
+    except OSError as error:
+        raise PortInUseError(f"port {port} is already in use") from error
+    finally:
+        probe.close()
 
 
 def _home_or_settings(repository: Path, pipelines: str | None) -> None:

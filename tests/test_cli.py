@@ -1,10 +1,15 @@
+import socket
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
 
+from sql_test.executors import DuckDBExecutor
+from sql_test.integrations.app.serve import PortInUseError, serve
 from sql_test.integrations.cli import main
+
+serve_mod = sys.modules["sql_test.integrations.app.serve"]
 
 FIXTURE = Path(__file__).parent / "fixtures/repos/lineage-demo"
 LAKEHOUSE = Path(__file__).parent / "fixtures/repos/lakehouse-data-customer"
@@ -67,6 +72,43 @@ def test_app_defaults_to_cwd_and_port_8765(monkeypatch: pytest.MonkeyPatch):
 
     assert main(["app"]) == 0
     assert calls == [(FIXTURE.resolve(), 8765, "DuckDBExecutor")]
+
+
+def test_serve_refuses_a_busy_port_before_claiming_to_serve(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+):
+    """UAT-16: busy port fails clearly; no false 'serving at' line."""
+    held = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    held.bind(("127.0.0.1", 0))
+    held.listen(1)
+    port = held.getsockname()[1]
+    monkeypatch.setattr(
+        serve_mod.ui,
+        "run",
+        lambda **_: pytest.fail("ui.run must not start when the port is busy"),
+    )
+
+    with pytest.raises(PortInUseError, match=rf"port {port} is already in use"):
+        serve(tmp_path, DuckDBExecutor(), port=port)
+
+    assert "serving" not in capsys.readouterr().out
+    held.close()
+
+
+def test_app_reports_port_in_use_without_serving_line(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+):
+    def busy(
+        repository: Path, *, executor, host: str = "127.0.0.1", port: int = 8765
+    ) -> None:
+        raise PortInUseError(f"port {port} is already in use")
+
+    monkeypatch.setattr("sql_test.integrations.cli.serve", busy)
+
+    assert main(["app", str(tmp_path), "--port", "9000"]) == 1
+    captured = capsys.readouterr()
+    assert "port 9000 is already in use" in captured.err
+    assert "serving" not in captured.out
 
 
 def test_coverage_lists_untested_tables_before_tested_ones(
