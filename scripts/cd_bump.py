@@ -9,18 +9,14 @@ from __future__ import annotations
 import argparse
 import sys
 
-_BUMPS = {
-    "(major)": "major",
-    "(minor)": "minor",
-    "(patch)": "patch",
-}
-
 
 def bump_from_title(title: str) -> str | None:
-    parts = title.split(None, 1)
-    if not parts:
-        return None
-    return _BUMPS.get(parts[0].lower())
+    word = title.split(None, 1)[0].lower() if title.strip() else ""
+    match word:
+        case "(major)" | "(minor)" | "(patch)":
+            return word[1:-1]
+        case _:
+            return None
 
 
 def next_tag(latest: str | None, bump: str) -> str:
