@@ -7,18 +7,20 @@ Anything later in the title is ignored. The tag is applied to main's tip after l
 from __future__ import annotations
 
 import argparse
-import re
 import sys
 
-FIRST_WORD_BUMP = re.compile(r"^\((major|minor|patch)\)$", re.IGNORECASE)
+_BUMPS = {
+    "(major)": "major",
+    "(minor)": "minor",
+    "(patch)": "patch",
+}
 
 
 def bump_from_title(title: str) -> str | None:
     parts = title.split(None, 1)
     if not parts:
         return None
-    match = FIRST_WORD_BUMP.fullmatch(parts[0])
-    return match.group(1).lower() if match else None
+    return _BUMPS.get(parts[0].lower())
 
 
 def next_tag(latest: str | None, bump: str) -> str:
@@ -29,12 +31,13 @@ def next_tag(latest: str | None, bump: str) -> str:
     else:
         body = latest.removeprefix("v")
         major, minor, patch = (int(p) for p in body.split("."))
-    if bump == "major":
-        major, minor, patch = major + 1, 0, 0
-    elif bump == "minor":
-        minor, patch = minor + 1, 0
-    else:
-        patch += 1
+    match bump:
+        case "major":
+            major, minor, patch = major + 1, 0, 0
+        case "minor":
+            minor, patch = minor + 1, 0
+        case "patch":
+            patch += 1
     return f"v{major}.{minor}.{patch}"
 
 
