@@ -11,6 +11,7 @@ from sql_test.integrations.app.home import home_page
 from sql_test.integrations.app.settings import settings_page
 from sql_test.integrations.app.workbench import Workbench, open_workbench
 from sql_test.integrations.config import ConfigError, RepositoryConfig
+from sql_test.integrations.discover import discover
 
 LOCAL_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
 
@@ -82,12 +83,32 @@ def _workbench_page(repository: Path, query: dict[str, list[str]]) -> None:
     except ConfigError:
         settings_page(repository, creating=True)
         return
+    if source := _source_target(repository, query):
+        _source_not_target_page(source)
+        return
     state = open_workbench(repository, query)
     if state is None:
         ui.link("← sql-test", "/").mark("home-link")
         ui.label("Not found").classes("text-h5").mark("not-found")
         return
     Workbench(state).build()
+
+
+def _source_target(repository: Path, query: dict[str, list[str]]) -> str | None:
+    """Return the named source when the deep link asks to use it as table under test."""
+    if query.get("case") or not query.get("target"):
+        return None
+    name = query["target"][0]
+    return name if name in discover(repository).sources else None
+
+
+def _source_not_target_page(name: str) -> None:
+    ui.link("← sql-test", "/").mark("home-link")
+    ui.label(f"{name} is a source").classes("text-h5").mark("source-not-target")
+    ui.label(
+        "Sources aren't tables under test. Open a model that reads this table, "
+        "or mock it from that model's lineage."
+    ).mark("source-not-target-detail")
 
 
 def _guarded(build: Callable[[], None]) -> None:

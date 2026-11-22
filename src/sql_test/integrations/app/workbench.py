@@ -41,7 +41,9 @@ def open_workbench(
             return None
     elif query.get("target"):
         target = query["target"][0]
-        if target not in result.models and target not in result.sources:
+        if target in result.sources:
+            return None
+        if target not in result.models:
             return None
     else:
         return None

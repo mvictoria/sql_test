@@ -74,6 +74,29 @@ async def test_app_page_lists_models_and_sources(user: User):
     await user.should_not_see("Boundaries")
 
 
+async def test_home_sources_are_not_workbench_links(user: User):
+    """UAT-13: sources stay listed but are not selectable as tables under test."""
+    _register(FIXTURE)
+    await user.open("/")
+
+    await user.should_see(marker="table-members")
+    (source,) = user.find(marker="table-members").elements
+    assert isinstance(source, ui.label)
+    (model,) = user.find(marker=f"table-{ALICE}").elements
+    assert isinstance(model, ui.link)
+
+
+async def test_source_as_workbench_target_is_rejected(user: User):
+    """UAT-13: deep-linking a source does not open an empty No producer SQL workbench."""
+    _register(FIXTURE)
+    await user.open("/workbench?target=members")
+
+    await user.should_see(marker="source-not-target")
+    await user.should_see(marker="source-not-target-detail")
+    await user.should_not_see("Workbench")
+    await user.should_not_see(marker="sql-empty")
+
+
 async def test_home_glosses_in_pipelines_without_a_drill_in(user: User):
     """UAT-12: In pipelines header tooltip explains the column without a drill-in."""
     _register(FIXTURE)
@@ -537,7 +560,7 @@ def _set_null(user: User, marker: str) -> None:
 async def test_members_grid_has_no_per_cell_null_button(user: User):
     """APP-28: values read as a table; NULL chrome is not beside every input."""
     _register(FIXTURE)
-    await user.open("/workbench?target=members&view=lineage&mock=members")
+    await user.open(f"/workbench?target={ALICE}&view=lineage&mock=members")
     await user.should_see(marker="cell-members.0.member_id")
     await user.should_not_see(marker="null-toggle-members.0.member_id")
     await user.should_not_see(marker="null-toggle-members.0.member_name")
@@ -557,7 +580,7 @@ async def test_null_hint_shows_while_editing_expected(user: User):
 
 async def test_null_is_distinct_from_an_empty_string(user: User):
     _register(FIXTURE)
-    await user.open("/workbench?target=members&view=lineage&mock=members")
+    await user.open(f"/workbench?target={ALICE}&view=lineage&mock=members")
     user.find(marker="cell-members.0.member_name").type("Ada")
 
     _set_null(user, "cell-members.0.member_name")
@@ -588,7 +611,7 @@ async def test_ctrl_semicolon_shows_null_immediately_on_expected(user: User):
 async def test_typing_clears_null_without_making_empty_string_null(user: User):
     """NULL → type leaves NULL; clear all text stays empty string; only Ctrl+; sets NULL."""
     _register(FIXTURE)
-    await user.open("/workbench?target=members&view=lineage&mock=members")
+    await user.open(f"/workbench?target={ALICE}&view=lineage&mock=members")
     user.find(marker="cell-members.0.member_name").type("Ada")
     _set_null(user, "cell-members.0.member_name")
     await user.should_see(marker="null-members.0.member_name")
@@ -604,10 +627,9 @@ async def test_typing_clears_null_without_making_empty_string_null(user: User):
 
 async def test_grid_rows_show_engine_types_after_run(user: User):
     _register(FIXTURE)
-    await user.open("/workbench?target=members&view=lineage&mock=members")
-    row = {"member_id": "1", "member_name": "Ada", "lob": "30"}
-    _fill(user, "members", [row])
-    _fill(user, "expected", [row])
+    await user.open(
+        "/workbench?case=" + quote("medicaid_members/only_medicaid_members", safe="")
+    )
 
     user.find(marker="run").click()
 
@@ -693,10 +715,9 @@ async def test_running_alice_shows_one_row_and_counts_on_the_graph(user: User):
 
 async def test_run_with_matching_expected_shows_passed(user: User):
     _register(FIXTURE)
-    await user.open("/workbench?target=members&view=lineage&mock=members")
-    row = {"member_id": "1", "member_name": "Ada", "lob": "30"}
-    _fill(user, "members", [row])
-    _fill(user, "expected", [row])
+    await user.open(
+        "/workbench?case=" + quote("medicaid_members/only_medicaid_members", safe="")
+    )
 
     user.find(marker="run").click()
 
@@ -709,10 +730,9 @@ async def test_run_with_matching_expected_shows_passed(user: User):
 
 async def test_failed_run_defaults_to_diff_even_when_output_was_requested(user: User):
     _register(FIXTURE)
-    await user.open("/workbench?target=members&view=lineage&mock=members")
-    row = {"member_id": "1", "member_name": "Ada", "lob": "30"}
-    _fill(user, "members", [row])
-    _fill(user, "expected", [row])
+    await user.open(
+        "/workbench?case=" + quote("medicaid_members/only_medicaid_members", safe="")
+    )
     user.find(marker="run").click()
     await user.should_see(marker="result-view-output")
 
@@ -726,23 +746,26 @@ async def test_failed_run_defaults_to_diff_even_when_output_was_requested(user: 
 
 async def test_diff_shows_changed_missing_and_added_like_git(user: User):
     _register(FIXTURE)
-    await user.open("/workbench?target=members&view=lineage&mock=members")
+    await user.open(
+        "/workbench?target=medicaid_members&view=lineage&mock=members&mock=lob"
+    )
     _fill(
         user,
         "members",
         [
             {"member_id": "1", "member_name": "Ada", "lob": "30"},
-            {"member_id": "2", "member_name": "Bea", "lob": "10"},
+            {"member_id": "2", "member_name": "Bea", "lob": "30"},
             {"member_id": "3", "member_name": "Cia", "lob": "30"},
         ],
     )
+    _fill(user, "lob", [{"lob": "30", "lob_name": "Medicaid"}])
     _fill(
         user,
         "expected",
         [
-            {"member_id": "1", "member_name": "Ada", "lob": "30"},
-            {"member_id": "2", "member_name": "Beatrice", "lob": "10"},
-            {"member_id": "9", "member_name": "Dia", "lob": "30"},
+            {"member_id": "1", "member_name": "Ada"},
+            {"member_id": "2", "member_name": "Beatrice"},
+            {"member_id": "9", "member_name": "Dia"},
         ],
     )
 
@@ -764,23 +787,26 @@ async def test_diff_shows_changed_missing_and_added_like_git(user: User):
 
 async def _run_a_failing_case(user: User) -> None:
     _register(FIXTURE)
-    await user.open("/workbench?target=members&view=lineage&mock=members")
+    await user.open(
+        "/workbench?target=medicaid_members&view=lineage&mock=members&mock=lob"
+    )
     _fill(
         user,
         "members",
         [
             {"member_id": "1", "member_name": "Ada", "lob": "30"},
-            {"member_id": "2", "member_name": "Bea", "lob": "10"},
+            {"member_id": "2", "member_name": "Bea", "lob": "30"},
             {"member_id": "3", "member_name": "Cia", "lob": "30"},
         ],
     )
+    _fill(user, "lob", [{"lob": "30", "lob_name": "Medicaid"}])
     _fill(
         user,
         "expected",
         [
-            {"member_id": "1", "member_name": "Ada", "lob": "30"},
-            {"member_id": "2", "member_name": "Beatrice", "lob": "10"},
-            {"member_id": "9", "member_name": "Dia", "lob": "30"},
+            {"member_id": "1", "member_name": "Ada"},
+            {"member_id": "2", "member_name": "Beatrice"},
+            {"member_id": "9", "member_name": "Dia"},
         ],
     )
     user.find(marker="run").click()
@@ -878,13 +904,13 @@ async def test_a_new_case_run_with_blank_expected_can_accept_its_actual_result(
     user: User,
 ):
     _register(FIXTURE)
-    await user.open("/workbench?target=members&view=lineage&mock=members")
+    await user.open(f"/workbench?target={ALICE}&view=lineage&mock=medicaid_members")
     _fill(
         user,
-        "members",
+        "medicaid_members",
         [
-            {"member_id": "1", "member_name": "Ada", "lob": "30"},
-            {"member_id": "2", "member_name": "Bea", "lob": "10"},
+            {"member_id": "1", "member_name": "Alice"},
+            {"member_id": "2", "member_name": "Bea"},
         ],
     )
     user.find(marker="run").click()
@@ -892,7 +918,7 @@ async def test_a_new_case_run_with_blank_expected_can_accept_its_actual_result(
     user.find(marker="accept-all").click()
 
     await user.should_see(marker="verdict-passed")
-    assert _value(user, "cell-expected.1.member_name") == "Bea"
+    assert _value(user, "cell-expected.0.member_name") == "Alice"
 
 
 async def test_accepting_empty_actual_asks_before_expecting_no_rows(user: User):
