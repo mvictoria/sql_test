@@ -484,7 +484,7 @@ async def test_duplicate_row_copies_the_row(user: User):
 
 
 def _set_null(user: User, marker: str) -> None:
-    """APP-28: Ctrl+; toggles NULL on the focused cell (no per-cell NULL button)."""
+    """APP-28: Ctrl+; sets NULL on the focused cell (no per-cell NULL button)."""
     user.find(marker=marker).trigger("keydown.ctrl.exact.;.prevent")
 
 
@@ -497,7 +497,7 @@ async def test_members_grid_has_no_per_cell_null_button(user: User):
     await user.should_not_see(marker="null-toggle-members.0.member_name")
     assert _count(user, "null-toggle-members.0.member_id") == 0
     await user.should_see(marker="null-hint")
-    await user.should_see("Ctrl+;")
+    await user.should_see("Ctrl+; sets NULL")
 
 
 async def test_null_hint_shows_while_editing_expected(user: User):
@@ -506,7 +506,7 @@ async def test_null_hint_shows_while_editing_expected(user: User):
     await user.open(f"/workbench?target={ALICE}&view=lineage&mock=members")
     await user.should_see(marker="grid-expected")
     await user.should_see(marker="null-hint")
-    await user.should_see("Ctrl+;")
+    await user.should_see("Ctrl+; sets NULL")
 
 
 async def test_null_is_distinct_from_an_empty_string(user: User):
@@ -519,8 +519,24 @@ async def test_null_is_distinct_from_an_empty_string(user: User):
     assert _value(user, "cell-members.0.member_name") == ""
 
     _set_null(user, "cell-members.0.member_name")
+    await user.should_see(marker="null-members.0.member_name")
+
+    user.find(marker="cell-members.0.member_name").trigger("keydown", args={"key": "x"})
+    await user.should_not_see(marker="null-members.0.member_name")
+    user.find(marker="cell-members.0.member_name").clear()
     await user.should_not_see(marker="null-members.0.member_name")
     assert _value(user, "cell-members.0.member_name") == ""
+
+
+async def test_ctrl_semicolon_shows_null_immediately_on_expected(user: User):
+    """Expected grid must show the NULL placeholder without waiting for Run."""
+    _register(FIXTURE)
+    await user.open(f"/workbench?target={ALICE}&view=lineage&mock=members")
+    await user.should_see(marker="cell-expected.0.member_id")
+
+    _set_null(user, "cell-expected.0.member_id")
+
+    await user.should_see(marker="null-expected.0.member_id")
 
 
 async def test_typing_clears_null_without_making_empty_string_null(user: User):

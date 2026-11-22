@@ -17,7 +17,7 @@ from sql_test.integrations.app.state import WorkbenchState
 _SYNTHETIC_REMINDER = (
     "Fixtures must be synthetic and must not contain real member data."
 )
-_NULL_HINT = "Ctrl+; sets or clears NULL on the focused cell."
+_NULL_HINT = "Ctrl+; sets NULL on the focused cell. Type to replace a NULL."
 _PASTE_JS = """
 (e) => {
     const data = e.clipboardData;
@@ -203,9 +203,7 @@ def _cell(
         )
         field.on(
             "keydown.ctrl.exact.;.prevent",
-            lambda _, row=row, key=key, is_null=is_null: _toggle_null(
-                row, key, is_null, actions
-            ),
+            lambda _, row=row, key=key: _set_null(row, key, actions),
         )
         field.on(
             "paste",
@@ -309,13 +307,15 @@ def _edit(
     actions.on_edit()
 
 
-def _toggle_null(
+def _set_null(
     row: dict[str, Cell],
     column: str,
-    currently_null: bool,
     actions: EditorActions,
 ) -> None:
-    row[column] = "" if currently_null else None
+    """Ctrl+; only sets NULL; leave NULL by typing (empty string stays "")."""
+    if column in row and row[column] is None:
+        return
+    row[column] = None
     actions.on_rebuild()
 
 
