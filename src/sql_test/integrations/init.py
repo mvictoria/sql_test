@@ -15,14 +15,17 @@ _RELATIVE = {
     "cases": "tests/cases",
 }
 
-_NEW_PYPROJECT = """\
+_SQL_TEST_DEP = "sql-test @ git+https://github.com/mvictoria/sql_test.git@v0"
+_PYTEST_DEP = "pytest>=9"
+
+_NEW_PYPROJECT = f"""\
 [project]
 name = "sql-test-demo"
 version = "0.0.0"
 requires-python = ">=3.13"
 dependencies = [
-    "sql-test @ git+https://github.com/mvictoria/sql_test.git@v0",
-    "pytest>=9",
+    "{_SQL_TEST_DEP}",
+    "{_PYTEST_DEP}",
 ]
 
 [tool.uv]
@@ -114,6 +117,7 @@ def _has_sql_test_table(pyproject: Path) -> bool:
 def _write_or_merge_pyproject(pyproject: Path) -> None:
     if pyproject.is_file():
         document = tomlkit.parse(pyproject.read_text())
+        _ensure_consumer_dependencies(document)
     else:
         document = tomlkit.parse(_NEW_PYPROJECT)
     tool = document.setdefault("tool", tomlkit.table())
@@ -121,6 +125,20 @@ def _write_or_merge_pyproject(pyproject: Path) -> None:
     for name in PATH_NAMES:
         table[name] = _RELATIVE[name]
     pyproject.write_text(tomlkit.dumps(document))
+
+
+def _ensure_consumer_dependencies(document: tomlkit.TOMLDocument) -> None:
+    """Add sql-test and pytest when missing so `uv sync && uv run pytest` can work."""
+    project = document.setdefault("project", tomlkit.table())
+    deps = project.get("dependencies")
+    if deps is None:
+        deps = tomlkit.array()
+        project["dependencies"] = deps
+    entries = [str(item).strip().strip('"').strip("'") for item in deps]
+    if not any(entry.startswith("sql-test") for entry in entries):
+        deps.append(_SQL_TEST_DEP)
+    if not any(entry.startswith("pytest") for entry in entries):
+        deps.append(_PYTEST_DEP)
 
 
 def _write_layout(root: Path) -> None:
