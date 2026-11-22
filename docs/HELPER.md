@@ -295,9 +295,9 @@ cases = "tests/cases"
 # sql_peek = true
 ```
 
-Every **path** setting is required. A repository with no `pyproject.toml`, no `[tool.sql-test]` table, or a missing path is an error that names what is missing; the tool assumes no layout. Optional **app flags** live under `[tool.sql-test.flags]` (for example `sql_peek`) and default to off when omitted; the authoring app Settings page can toggle them. The CLI (`discover`, `coverage`) and a repository's own pytest tests read paths the same way. The authoring app opens a settings page so QA can create or edit the table. Saving uses [tomlkit](https://github.com/python-poetry/tomlkit): `[tool.sql-test]` keys are written, and the rest of `pyproject.toml` (including comments) is left unchanged. Paths are checked before save (they exist; with them the catalog still discovers SQL, the mapping, and schemas).
+Every **path** setting is required. A repository with no `pyproject.toml`, no `[tool.sql-test]` table, or a missing path is an error that names what is missing; the tool assumes no layout. Optional **app flags** live under `[tool.sql-test.flags]` (for example `sql_peek`) and default to off when omitted. The authoring app Settings page can toggle them: **Apply for this window** keeps overrides in that browser tab only (other tabs and pytest still see disk); **Save** writes `[tool.sql-test.flags]` for the repository. The CLI (`discover`, `coverage`) and a repository's own pytest tests read only what is saved on disk. Saving uses [tomlkit](https://github.com/python-poetry/tomlkit): `[tool.sql-test]` keys are written, and the rest of `pyproject.toml` (including comments) is left unchanged. Paths are checked before save (they exist; with them the catalog still discovers SQL, the mapping, and schemas).
 
-**SQL peek** (`[tool.sql-test.flags] sql_peek`): when on, the lineage view offers a SQL control on each model node; choosing it shows that relation's producer SQL under the graph without leaving lineage. Off by default.
+**SQL peek** (`[tool.sql-test.flags] sql_peek`, or a session Apply): when on, the lineage view offers a SQL control on each model node; choosing it shows that relation's producer SQL under the graph without leaving lineage. Off by default.
 
 ## Upstream lineage
 
