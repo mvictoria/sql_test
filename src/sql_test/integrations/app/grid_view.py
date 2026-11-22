@@ -414,3 +414,9 @@ def _case_name(state: WorkbenchState) -> None:
     ).mark("case-name")
     if state.case_name:
         field.props("readonly")
+    if state.highlight_case_name:
+        field.classes(add="case-name-needed")
+        field.props("outlined color=negative")
+        field.mark("case-name case-name-needed")
+        field.run_method("focus")
+        state.highlight_case_name = False
