@@ -496,6 +496,17 @@ async def test_members_grid_has_no_per_cell_null_button(user: User):
     await user.should_not_see(marker="null-toggle-members.0.member_id")
     await user.should_not_see(marker="null-toggle-members.0.member_name")
     assert _count(user, "null-toggle-members.0.member_id") == 0
+    await user.should_see(marker="null-hint")
+    await user.should_see("Ctrl+;")
+
+
+async def test_null_hint_shows_while_editing_expected(user: User):
+    """NULL shortcut is documented where Expected is edited, not only in docs."""
+    _register(FIXTURE)
+    await user.open(f"/workbench?target={ALICE}&view=lineage&mock=members")
+    await user.should_see(marker="grid-expected")
+    await user.should_see(marker="null-hint")
+    await user.should_see("Ctrl+;")
 
 
 async def test_null_is_distinct_from_an_empty_string(user: User):

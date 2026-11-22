@@ -17,6 +17,7 @@ from sql_test.integrations.app.state import WorkbenchState
 _SYNTHETIC_REMINDER = (
     "Fixtures must be synthetic and must not contain real member data."
 )
+_NULL_HINT = "Ctrl+; sets or clears NULL on the focused cell."
 _PASTE_JS = """
 (e) => {
     const data = e.clipboardData;
@@ -61,6 +62,7 @@ def editor_view(state: WorkbenchState, actions: EditorActions) -> None:
     ui.label(_SYNTHETIC_REMINDER).classes("text-caption text-grey-8").mark(
         "synthetic-data-reminder"
     )
+    ui.label(_NULL_HINT).classes("text-caption text-grey-8").mark("null-hint")
     for name in state.mocks:
         schema = repo_catalog.schema(repo_catalog.resolve(name))
         if schema is None:
@@ -80,6 +82,7 @@ def run_focus_view(state: WorkbenchState, actions: EditorActions) -> None:
     if not state.mocks and expected_schema is None:
         return
     ui.label("Expected").classes("text-subtitle1").mark("grid-expected")
+    ui.label(_NULL_HINT).classes("text-caption text-grey-8").mark("null-hint")
     if expected_schema is None:
         ui.label("No schema for the table under test").classes("text-grey-7")
     else:
@@ -164,6 +167,7 @@ def _cell(
                 ),
             )
             .props("dense outlined debounce=300")
+            .tooltip(_NULL_HINT)
             .mark(markers)
         )
         fields[(index, key)] = field
