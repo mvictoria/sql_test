@@ -4,7 +4,7 @@ Product direction by version: what each release is *for*, not the work items to 
 
 **Work items** (tasks, done-when, dependencies, status) live in [GitHub issues](https://github.com/mvictoria/sql_test/issues).
 
-Nothing assumes where a repository lives. The engine is given SQL and a mapping; the test layer is given a repository. Adopt sample: `examples/minimal-consumer/`. Package tests use fixtures under `tests/fixtures/repos/`.
+Nothing assumes where a repository lives. The engine is given SQL and a mapping; the test layer is given a repository. Adopt samples: `examples/minimal-consumer/`, `examples/lakehouse-data-customer/`. Package tests use fixtures under `tests/fixtures/repos/`.
 
 ---
 
@@ -28,7 +28,7 @@ Reusable data-tests workflow, floating major tags (`@v0`), PR-title releases, Py
 
 ### Adoption bootstrap
 
-`sql-test init` scaffolds a consumer repository (deps, mapping, one case, pytest wiring, `@v0` workflow). Documented install pins the floating major tag. Copy-pasteable sample: `examples/minimal-consumer/`.
+`sql-test init` scaffolds a consumer repository (deps, mapping, one case, pytest wiring, `@v0` workflow). Documented install pins the floating major tag. Copy-pasteable samples: `examples/minimal-consumer/`, `examples/lakehouse-data-customer/`.
 
 ---
 
