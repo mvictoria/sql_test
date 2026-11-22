@@ -1,8 +1,10 @@
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from functools import cache
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any, Self
 
 from sqlglot import exp
@@ -64,14 +66,22 @@ class SchemaProblem:
 
 @dataclass
 class DiscoveredSchemas:
-    schemas: dict[Relation, Schema] = field(default_factory=dict)
-    problems: list[SchemaProblem] = field(default_factory=list)
+    _schemas: dict[Relation, Schema] = field(default_factory=dict, repr=False)
+    _problems: list[SchemaProblem] = field(default_factory=list, repr=False)
+
+    @property
+    def schemas(self) -> Mapping[Relation, Schema]:
+        return MappingProxyType(self._schemas)
+
+    @property
+    def problems(self) -> Sequence[SchemaProblem]:
+        return tuple(self._problems)
 
     def add_problem(self, file: Path, reason: str) -> None:
-        self.problems.append(SchemaProblem(file, reason))
+        self._problems.append(SchemaProblem(file, reason))
 
     def add(self, relation: Relation, schema: Schema, *, file: Path) -> None:
-        if relation in self.schemas:
+        if relation in self._schemas:
             self.add_problem(file, f"{relation} is already defined")
             return
-        self.schemas[relation] = schema
+        self._schemas[relation] = schema

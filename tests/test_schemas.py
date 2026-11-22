@@ -1,8 +1,10 @@
 from pathlib import Path
 
+import pytest
+
 from sql_test.engine.catalog.ddl import read_ddl_schemas
 from sql_test.engine.relation import Relation
-from sql_test.engine.schema import Column, DiscoveredSchemas
+from sql_test.engine.schema import Column, DiscoveredSchemas, SchemaProblem
 
 REPOSITORY = Path(__file__).parent / "fixtures" / "repos" / "lakehouse-data-customer"
 
@@ -18,9 +20,21 @@ def test_discovered_schemas_keeps_the_first_definition(tmp_path):
     discovered.add(Relation(name="t"), first, file=file_a)
     discovered.add(Relation(name="t"), second, file=file_b)
 
-    assert discovered.schemas == {Relation(name="t"): first}
+    assert dict(discovered.schemas) == {Relation(name="t"): first}
     assert [problem.file for problem in discovered.problems] == [file_b]
     assert "t is already defined" in discovered.problems[0].reason
+
+
+def test_discovered_schemas_results_are_read_only(tmp_path):
+    discovered = DiscoveredSchemas()
+    discovered.add(
+        Relation(name="t"), (Column(name="id", type="INT"),), file=tmp_path / "a.sql"
+    )
+
+    with pytest.raises(TypeError):
+        discovered.schemas[Relation(name="t")] = ()  # type: ignore[index]
+    with pytest.raises(AttributeError):
+        discovered.problems.append(SchemaProblem(tmp_path / "x.sql", "no"))  # type: ignore[attr-defined]
 
 
 def test_reads_every_table_defined_in_the_sql_folder():
@@ -37,7 +51,7 @@ def test_reads_every_table_defined_in_the_sql_folder():
         Column(name="member_name", type="VARCHAR(30)"),
         Column(name="lob", type="VARCHAR(2)"),
     )
-    assert discovered.problems == []
+    assert discovered.problems == ()
 
 
 def test_a_type_written_as_text_matches_the_same_type_in_ddl(tmp_path):
