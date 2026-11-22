@@ -90,6 +90,22 @@ def test_case(case, engine):
     assert result.passed, result.report()
 """
 
+_DATA_TESTS_WORKFLOW = """\
+name: Data tests
+
+"on":
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  data-tests:
+    uses: mvictoria/sql_test/.github/workflows/data-tests.yml@v0
+"""
+
 
 class InitError(Exception):
     pass
@@ -156,6 +172,11 @@ def _write_layout(root: Path) -> None:
     tests = root / "tests"
     _write_if_absent(tests / "conftest.py", _CONFTEST)
     _write_if_absent(tests / "test_case_folders.py", _TEST_CASE_FOLDERS)
+
+    _write_if_absent(
+        root / ".github" / "workflows" / "data-tests.yml",
+        _DATA_TESTS_WORKFLOW,
+    )
 
 
 def _write_if_absent(path: Path, text: str) -> None:
