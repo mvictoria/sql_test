@@ -8,6 +8,7 @@ from sql_test.testing.cases.folder import (
     Case,
     CaseTable,
     UncastableCell,
+    UnknownColumns,
     read_case,
     write_case,
 )
@@ -17,6 +18,7 @@ __all__ = [
     "CaseSummary",
     "CaseTable",
     "UncastableCell",
+    "UnknownColumns",
     "case_folders",
     "case_id",
     "discover_cases",

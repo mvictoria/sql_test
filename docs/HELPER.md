@@ -130,7 +130,7 @@ A **case table** is the columns and typed rows of one CSV in a case — a mock f
 - The folder names are the table under test and the case name. A mocked table's file is its relation name as written in the SQL, for example `members.csv` or `claims.members.csv`.
 - Each CSV is UTF-8, comma-separated, with a header row of column names and `\n` line endings.
 - Cells follow the [comparison defaults](#comparison-defaults): an empty, unquoted cell is NULL and `""` is an empty string. A cell is quoted only when it is empty or contains a comma, quote, or line break.
-- Each cell is read as its column's type from the discovered schema. A cell that cannot be read as that type is reported with its file, line, and column. Columns of a relation with no schema stay text.
+- Each cell is read as its column's type from the discovered schema. A cell that cannot be read as that type is reported with its file, line, and column. A header column that is not in the relation's schema is reported as unknown columns on that relation before the case is compared. Columns of a relation with no schema stay text.
 - Integers and decimals are written as digits, booleans as `true` or `false`, dates and timestamps in ISO 8601.
 - A mock file may list only some of its relation's columns; unlisted columns are NULL. `expected.csv` lists only the columns the case checks, and may be absent while a case is being written.
 
