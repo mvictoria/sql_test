@@ -571,7 +571,7 @@ customer-data/
 └── .github/workflows/data-tests.yml     calls the reusable workflow @v0
 ```
 
-This layout is illustrative. Where SQL, schemas, and cases live, and how SQL files map to tables, can differ per repository. The sample repository keeps SQL in `admin/sqls/` and maps each table to its SQL file in `admin/config/lookup_sql_table_mapping.csv`, with columns `table_ref` and `sql_ref`. Extra columns such as `load_type` are ignored. A **mapping problem** is a mapping row whose SQL file does not exist. The catalog records it (including which relation the row writes) alongside schema problems and leaves out that row's operation, so deleting a mapped SQL file removes its model even before the mapping row is removed.
+This layout is illustrative. Where SQL, schemas, and cases live, and how SQL files map to tables, can differ per repository. The sample repository keeps SQL in `admin/sqls/` and maps each table to its SQL file in `admin/config/lookup_sql_table_mapping.csv`, with columns `table_ref` and `sql_ref`. Extra columns such as `load_type` are ignored. Headers that omit either required column are an error naming `table_ref` and `sql_ref`. A **mapping problem** is a mapping row whose SQL file does not exist. The catalog records it (including which relation the row writes) alongside schema problems and leaves out that row's operation, so deleting a mapped SQL file removes its model even before the mapping row is removed.
 
 ## Versioning
 
