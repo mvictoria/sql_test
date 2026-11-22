@@ -102,16 +102,6 @@ uv run sql-test app . --port 9000
 - Load and save case mocks and expected rows
 - Picks up SQL files added, edited, or deleted while the app is open
 
-<img src="docs/screenshots/readme/home.png" alt="Home — tables, sources, cases" width="640" />
-
-<img src="docs/screenshots/readme/lineage-mocked.png" alt="Lineage — mocked frontier" width="640" />
-
-<img src="docs/screenshots/readme/mock-grid.png" alt="Mock grid" width="640" />
-
-<img src="docs/screenshots/readme/run-split.png" alt="Setup left, outcome right after Run" width="640" />
-
-<img src="docs/screenshots/readme/accept.png" alt="Accept actual into expected" width="640" />
-
 ## CLI
 
 pytest remains the test runner. The CLI also discovers tables/cases, prints coverage, and starts the authoring app.
