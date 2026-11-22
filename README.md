@@ -2,8 +2,6 @@
 
 Library and local tools for testing SQL transformations: mock upstream tables, run the real SQL, compare the output.
 
-Design and vocabulary live in [docs/HELPER.md](docs/HELPER.md). Product direction is in [docs/ROADMAP.md](docs/ROADMAP.md); work items are [GitHub issues](https://github.com/mvictoria/sql_test/issues).
-
 ## Setup (this repository)
 
 ```bash
@@ -151,8 +149,6 @@ Local workbench (`sql-test app`):
 - Load and save case mocks and expected rows
 - Picks up SQL files added, edited, or deleted while the app is open
 
-Product direction: [ROADMAP](docs/ROADMAP.md).
-
 ## Sample repository
 
 `examples/minimal-consumer/` is the copy-paste adopt sample (standalone `pyproject.toml`, one case, pytest wiring, workflow caller).
@@ -166,3 +162,5 @@ uv run pytest
 ```
 
 Fixture repositories under `tests/fixtures/` are skipped by the default pytest run. Run a fixture's own tests by path in a separate session.
+
+Design and vocabulary live in [docs/HELPER.md](docs/HELPER.md). Product direction is in [docs/ROADMAP.md](docs/ROADMAP.md); work items are [GitHub issues](https://github.com/mvictoria/sql_test/issues).
