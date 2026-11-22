@@ -8,6 +8,7 @@ from sql_test.integrations.app.case_save import SaveError, case_exists, save_cas
 from sql_test.integrations.app.compare_view import compare_section
 from sql_test.integrations.app.engine_access import catalog
 from sql_test.integrations.app.engine_access import run as run_case
+from sql_test.integrations.app.flags_session import effective_flags
 from sql_test.integrations.app.grid import apply_grid_action, type_grid_rows
 from sql_test.integrations.app.grid_view import EditorActions, editor_view, sheet_css
 from sql_test.integrations.app.lineage_view import lineage_css, lineage_view
@@ -32,6 +33,7 @@ def open_workbench(
     """The workbench a deep link asks for, or None when the link names nothing."""
     repo_catalog = catalog(repository)
     result = discover(repository, repo_catalog)
+    # Durable only here: tab_id is unset until the socket connects (see Workbench.build).
     flags = AppFlags.load(repository)
     case_name: str | None = None
     if query.get("case"):
@@ -117,6 +119,15 @@ class Workbench:
             self.outcome = (
                 ui.column().classes("w-full flex-1 min-w-80").mark("workbench-outcome")
             )
+        self.refresh()
+        # Session flag overrides are keyed by tab_id, which arrives on handshake.
+        ui.context.client.on_connect(self._sync_session_flags)
+
+    def _sync_session_flags(self) -> None:
+        flags = effective_flags(self.state.repository)
+        if flags == self.state.flags:
+            return
+        self.state.flags = flags
         self.refresh()
 
     def refresh(self) -> None:
@@ -239,11 +250,12 @@ class Workbench:
         self.state.view = name
         if name != "lineage":
             self.state.sql_peek = None
-        self.state.flags = AppFlags.load(self.state.repository)
+        self.state.flags = effective_flags(self.state.repository)
         self.refresh()
 
     def peek_sql(self, name: str) -> None:
         """Show producer SQL for a lineage node without leaving the graph."""
+        self.state.flags = effective_flags(self.state.repository)
         if not self.state.flags.sql_peek:
             return
         self.state.sql_peek = name

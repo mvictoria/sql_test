@@ -307,6 +307,54 @@ async def test_settings_can_enable_sql_peek(user: User, tmp_path: Path):
     assert "sql_peek = true" in text
 
 
+async def test_apply_flags_enables_peek_without_writing_disk(
+    user: User, tmp_path: Path
+):
+    """CFG-3: Apply is session-only; pyproject stays unchanged."""
+    from sql_test.integrations.app.flags_session import clear_all_overrides
+
+    clear_all_overrides()
+    repo = _copy_fixture(tmp_path)
+    before = (repo / "pyproject.toml").read_text()
+    _register(repo)
+    await user.open("/settings")
+    (box,) = user.find(kind=ui.checkbox, marker="flag-sql_peek").elements
+    box.set_value(True)
+    user.find(marker="apply-flags").click()
+    await user.should_see(marker="settings-flags-applied")
+    assert (repo / "pyproject.toml").read_text() == before
+
+    await user.open(f"/workbench?target={ALICE}&view=lineage")
+    await user.should_see(marker="peek-sql-medicaid_members")
+
+
+async def test_two_tabs_can_differ_on_session_flags(create_user, tmp_path: Path):
+    """CFG-3: two windows on the same repo, different session flags, one process."""
+    from sql_test.integrations.app.flags_session import clear_all_overrides
+
+    clear_all_overrides()
+    repo = _copy_fixture(tmp_path)
+    _register(repo)
+    user_a = create_user()
+    user_b = create_user()
+
+    await user_a.open("/settings")
+    (box_a,) = user_a.find(kind=ui.checkbox, marker="flag-sql_peek").elements
+    box_a.set_value(True)
+    user_a.find(marker="apply-flags").click()
+    await user_a.should_see(marker="settings-flags-applied")
+
+    await user_b.open("/settings")
+    (box_b,) = user_b.find(kind=ui.checkbox, marker="flag-sql_peek").elements
+    assert box_b.value is False
+
+    await user_a.open(f"/workbench?target={ALICE}&view=lineage")
+    await user_a.should_see(marker="peek-sql-medicaid_members")
+
+    await user_b.open(f"/workbench?target={ALICE}&view=lineage")
+    await user_b.should_not_see(marker="peek-sql-medicaid_members")
+
+
 async def test_peeking_node_sql_keeps_the_lineage_graph(user: User, tmp_path: Path):
     """APP-29: with sql_peek, mid-pipeline SQL opens beside the graph."""
     repo = _copy_fixture(tmp_path)
