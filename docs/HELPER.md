@@ -391,7 +391,7 @@ QA should be able to:
 - remove an obsolete expected row
 - accept the complete actual result as the expectation
 
-This interaction is central to the product. Run types mocks and executes — Apply is not a required peer step. After a run, verdict, diff / accept, and Expected sit in one `run-focus` region with sticky Run / Save; mock grids stay above that region so the fail → fix → re-run loop does not scroll through them.
+This interaction is central to the product. Run types mocks and executes — Apply is not a required peer step. The workbench splits **setup** (left: case name, mock grids, Expected, sticky Run / Save) from **outcome** (right: verdict, output / diff, accept). Accept copies from the right into Expected on the left. Mock grids and Expected default to collapsed headers (row-count summary); any combination may be expanded at once — not an accordion. Jumping to a mock from lineage or the mocks strip expands that grid on the left.
 
 ### Comparison defaults
 
