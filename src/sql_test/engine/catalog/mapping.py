@@ -5,6 +5,12 @@ from pathlib import Path
 from sql_test.engine.operation import Kind, Operation
 from sql_test.engine.relation import Relation
 
+REQUIRED_COLUMNS = ("table_ref", "sql_ref")
+
+
+class MappingError(Exception):
+    pass
+
 
 @dataclass(frozen=True)
 class MappingProblem:
@@ -15,13 +21,22 @@ class MappingProblem:
 
 def read_operations(mapping: Path, sqls: Path) -> list[Operation]:
     with mapping.open(newline="") as file:
+        reader = csv.DictReader(file)
+        headers = set(reader.fieldnames or ())
+        missing = [name for name in REQUIRED_COLUMNS if name not in headers]
+        if missing:
+            expected = ", ".join(REQUIRED_COLUMNS)
+            raise MappingError(
+                f"{mapping} is missing columns {', '.join(missing)}; "
+                f"expected columns {expected}"
+            )
         return [
             Operation(
                 sql_file=sqls / row["sql_ref"],
                 writes=Relation.parse(row["table_ref"]),
                 kind=Kind.FULL_LOAD,
             )
-            for row in csv.DictReader(file)
+            for row in reader
         ]
 
 

@@ -5,12 +5,27 @@ import sqlglot
 
 from sql_test.engine import Engine
 from sql_test.engine.catalog.adapters import mapped_sql_folder
-from sql_test.engine.catalog.mapping import MappingProblem, read_operations
+from sql_test.engine.catalog.mapping import (
+    MappingError,
+    MappingProblem,
+    read_operations,
+)
 from sql_test.engine.operation import Kind, Operation
 from sql_test.engine.relation import AmbiguousRelation, Relation
 from sql_test.executors import DuckDBExecutor
 
 REPOSITORY = Path(__file__).parent / "fixtures" / "repos" / "lakehouse-data-customer"
+
+
+def test_wrong_mapping_headers_name_the_expected_columns(tmp_path):
+    mapping = tmp_path / "mapping.csv"
+    mapping.write_text("table,sql\nmembers,members.sql\n")
+
+    with pytest.raises(MappingError, match="table_ref.*sql_ref") as error:
+        read_operations(mapping=mapping, sqls=tmp_path)
+
+    assert "sql_ref" in str(error.value)
+    assert not isinstance(error.value, KeyError)
 
 
 def test_mapped_sql_files_are_full_load_operations():
