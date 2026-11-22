@@ -14,9 +14,6 @@ from sql_test.integrations.app.grid import (
 )
 from sql_test.integrations.app.state import WorkbenchState
 
-_SYNTHETIC_REMINDER = (
-    "Fixtures must be synthetic — do not use real production or PII data."
-)
 _NULL_HINT = "Ctrl+; sets NULL on the focused cell. Type to replace a NULL."
 _PASTE_JS = """
 (e) => {
@@ -66,9 +63,6 @@ def editor_view(state: WorkbenchState, actions: EditorActions) -> None:
         return
     repo_catalog = state.catalog
     ui.label("Mock editor").classes("text-subtitle1")
-    ui.label(_SYNTHETIC_REMINDER).classes("text-caption text-grey-8").mark(
-        "synthetic-data-reminder"
-    )
     ui.label(_NULL_HINT).classes("text-caption text-grey-8").mark("null-hint")
     for name in state.mocks:
         schema = repo_catalog.schema(repo_catalog.resolve(name))
