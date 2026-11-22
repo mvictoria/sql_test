@@ -15,7 +15,7 @@ from sql_test.integrations.app.grid import (
 from sql_test.integrations.app.state import WorkbenchState
 
 _SYNTHETIC_REMINDER = (
-    "Fixtures must be synthetic and must not contain real member data."
+    "Fixtures must be synthetic — do not use real production or PII data."
 )
 _NULL_HINT = "Ctrl+; sets NULL on the focused cell. Type to replace a NULL."
 _PASTE_JS = """
