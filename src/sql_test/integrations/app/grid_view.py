@@ -54,49 +54,75 @@ class EditorActions:
 
 
 def editor_view(state: WorkbenchState, actions: EditorActions) -> None:
-    """Mock grids and case name — Expected and Run/Save live in run_focus_view."""
+    """Setup pane: case name, collapsible mocks and Expected, sticky Run/Save."""
     expected_schema = target_schema(state.catalog, state.target)
     if not state.mocks and expected_schema is None:
         return
     _case_name(state)
-    if not state.mocks:
-        return
-    repo_catalog = state.catalog
-    ui.label("Mock editor").classes("text-subtitle1")
-    ui.label(_NULL_HINT).classes("text-caption text-grey-8").mark("null-hint")
-    for name in state.mocks:
-        schema = repo_catalog.schema(repo_catalog.resolve(name))
-        if schema is None:
-            ui.label(f"{name}: no schema").classes("text-grey-7")
-            continue
-        heading = ui.label(name).classes("text-subtitle2").mark(f"grid-{name}")
-        if state.grid_focus is not None and state.grid_focus[0] == name:
-            heading.run_method(
-                "scrollIntoView", {"block": "center", "inline": "nearest"}
-            )
-        grid_view(name, schema, state, actions)
-
-
-def run_focus_view(state: WorkbenchState, actions: EditorActions) -> None:
-    """Expected grid and primary actions for the fail → fix → re-run loop."""
-    expected_schema = target_schema(state.catalog, state.target)
-    if not state.mocks and expected_schema is None:
-        return
-    ui.label("Expected").classes("text-subtitle1").mark("grid-expected")
+    if state.mocks:
+        ui.label("Mock editor").classes("text-subtitle1")
+        ui.label(_NULL_HINT).classes("text-caption text-grey-8").mark("null-hint")
+        repo_catalog = state.catalog
+        for name in state.mocks:
+            schema = repo_catalog.schema(repo_catalog.resolve(name))
+            if schema is None:
+                ui.label(f"{name}: no schema").classes("text-grey-7")
+                continue
+            _collapsible_grid(name, name, schema, state, actions)
     ui.label(_NULL_HINT).classes("text-caption text-grey-8").mark("null-hint")
     if expected_schema is None:
+        ui.label("Expected").classes("text-subtitle1").mark("grid-expected")
         ui.label("No schema for the table under test").classes("text-grey-7")
     else:
         if state.grid_rows.get("expected") == []:
             ui.label("Expects no rows").classes("text-caption text-grey-8").mark(
                 "expected-no-rows"
             )
-        grid_view("expected", expected_schema, state, actions)
+        _collapsible_grid("expected", "Expected", expected_schema, state, actions)
     with ui.row().classes(
         "sticky bottom-0 z-10 w-full bg-white py-2 gap-2 items-center border-t"
     ):
         ui.button("Run", on_click=actions.on_run).mark("run")
         ui.button("Save case", on_click=actions.on_save).mark("save")
+
+
+def _collapsible_grid(
+    name: str,
+    title: str,
+    schema: Schema,
+    state: WorkbenchState,
+    actions: EditorActions,
+) -> None:
+    rows = state.grid_rows.setdefault(name, [{}])
+    caption = _rows_caption(rows)
+    open_ = name in state.expanded_grids
+    expansion = (
+        ui.expansion(
+            f"{title} · {caption}",
+            value=open_,
+            on_value_change=lambda event, table=name: _set_expanded(
+                state, table, bool(event.value)
+            ),
+        )
+        .classes("w-full")
+        .mark(f"grid-expand-{name} grid-{name}")
+    )
+    if state.grid_focus is not None and state.grid_focus[0] == name:
+        expansion.run_method("scrollIntoView", {"block": "center", "inline": "nearest"})
+    with expansion:
+        grid_view(name, schema, state, actions)
+
+
+def _set_expanded(state: WorkbenchState, name: str, open_: bool) -> None:
+    if open_:
+        state.expanded_grids.add(name)
+    else:
+        state.expanded_grids.discard(name)
+
+
+def _rows_caption(rows: list[dict]) -> str:
+    count = len(rows)
+    return "1 row" if count == 1 else f"{count} rows"
 
 
 def grid_view(

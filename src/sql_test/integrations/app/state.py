@@ -32,6 +32,7 @@ class WorkbenchState:
     grid_rows: dict[str, list[dict[str, str | None]]] = field(default_factory=dict)
     engine_types: dict[str, dict[str, str]] = field(default_factory=dict)
     grid_focus: tuple[str, int, str] | None = None
+    expanded_grids: set[str] = field(default_factory=set)
     view: str = DEFAULT_VIEW
     result_view: str = DEFAULT_RESULT_VIEW
     run_result: RunResult | None = None

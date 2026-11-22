@@ -42,6 +42,11 @@ def _value(user: User, marker: str) -> str:
     return field.value
 
 
+def _expansion(user: User, marker: str) -> ui.expansion:
+    (panel,) = user.find(kind=ui.expansion, marker=marker).elements
+    return panel
+
+
 def _fill(user: User, table: str, rows: list[dict[str, str]]) -> None:
     for index, row in enumerate(rows):
         if index:
@@ -760,10 +765,10 @@ async def test_accepting_the_whole_actual_result_makes_the_case_pass(user: User)
     await user.should_see(marker="verdict-passed")
 
 
-async def test_failing_alice_run_keeps_compare_expected_and_actions_in_focus(
+async def test_workbench_split_keeps_setup_left_and_outcome_right(
     user: User,
 ):
-    """APP-27: verdict, Expected, Accept, and Run/Save share one run-focus region."""
+    """APP-32: after Run, setup (Expected, Run/Save) stays left; outcome right."""
     _register(FIXTURE)
     await user.open(f"/workbench?target={ALICE}&view=lineage&mock=medicaid_members")
     _fill(user, "medicaid_members", [{"member_id": "1", "member_name": "Alice"}])
@@ -772,21 +777,67 @@ async def test_failing_alice_run_keeps_compare_expected_and_actions_in_focus(
     user.find(marker="run").click()
 
     await user.should_see(marker="verdict-failed")
-    await user.should_see(marker="run-focus")
-    assert _count_within(user, "verdict-failed", within="run-focus") == 1
-    assert _count_within(user, "accept-all", within="run-focus") == 1
-    assert _count_within(user, "grid-expected", within="run-focus") == 1
-    assert _count_within(user, "cell-expected.0.member_name", within="run-focus") == 1
-    assert _count_within(user, "run", within="run-focus") == 1
-    assert _count_within(user, "save", within="run-focus") == 1
+    await user.should_see(marker="workbench-setup")
+    await user.should_see(marker="workbench-outcome")
+    assert _count_within(user, "grid-expected", within="workbench-setup") == 1
+    assert (
+        _count_within(user, "cell-expected.0.member_name", within="workbench-setup")
+        == 1
+    )
+    assert _count_within(user, "run", within="workbench-setup") == 1
+    assert _count_within(user, "save", within="workbench-setup") == 1
+    assert _count_within(user, "verdict-failed", within="workbench-outcome") == 1
+    assert _count_within(user, "accept-all", within="workbench-outcome") == 1
+    assert _count_within(user, "grid-expected", within="workbench-outcome") == 0
 
     user.find(marker="accept-all").click()
 
     await user.should_see(marker="verdict-passed")
-    assert _count_within(user, "verdict-passed", within="run-focus") == 1
+    assert _count_within(user, "verdict-passed", within="workbench-outcome") == 1
     assert _value(user, "cell-expected.0.member_name") == "Alice"
-    assert _count_within(user, "run", within="run-focus") == 1
-    assert _count_within(user, "save", within="run-focus") == 1
+    assert (
+        _count_within(user, "cell-expected.0.member_name", within="workbench-setup")
+        == 1
+    )
+    assert _count_within(user, "run", within="workbench-setup") == 1
+    assert _count_within(user, "save", within="workbench-setup") == 1
+
+
+async def test_mock_and_expected_grids_start_collapsed_and_can_open_together(
+    user: User,
+):
+    """APP-32: grids default collapsed; any combination may be open at once."""
+    _register(FIXTURE)
+    await user.open(f"/workbench?target={ALICE}&view=lineage&mock=members&mock=lob")
+
+    await user.should_see(marker="grid-expand-members")
+    await user.should_see(marker="grid-expand-lob")
+    await user.should_see(marker="grid-expand-expected")
+    members = _expansion(user, "grid-expand-members")
+    lob = _expansion(user, "grid-expand-lob")
+    expected = _expansion(user, "grid-expand-expected")
+    assert members.value is False
+    assert lob.value is False
+    assert expected.value is False
+
+    members.set_value(True)
+    lob.set_value(True)
+    assert _expansion(user, "grid-expand-members").value is True
+    assert _expansion(user, "grid-expand-lob").value is True
+    assert _expansion(user, "grid-expand-expected").value is False
+
+
+async def test_jumping_to_a_mock_expands_its_collapsed_grid(user: User):
+    """APP-32: focus / jump expands that mock on the setup pane."""
+    _register(FIXTURE)
+    await user.open(f"/workbench?target={ALICE}&view=lineage&mock=members")
+    assert _expansion(user, "grid-expand-members").value is False
+
+    user.find(marker="focus-grid-members").click()
+
+    assert _expansion(user, "grid-expand-members").value is True
+    (cell,) = user.find(kind=ui.input, marker="cell-members.0.member_id").elements
+    assert "grid-focus" in cell.classes
 
 
 async def test_a_new_case_run_with_blank_expected_can_accept_its_actual_result(

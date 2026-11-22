@@ -9,11 +9,7 @@ from sql_test.integrations.app.compare_view import compare_section
 from sql_test.integrations.app.engine_access import catalog
 from sql_test.integrations.app.engine_access import run as run_case
 from sql_test.integrations.app.grid import apply_grid_action, type_grid_rows
-from sql_test.integrations.app.grid_view import (
-    EditorActions,
-    editor_view,
-    run_focus_view,
-)
+from sql_test.integrations.app.grid_view import EditorActions, editor_view
 from sql_test.integrations.app.lineage_view import lineage_css, lineage_view
 from sql_test.integrations.app.mocks import frontier_mocks, toggled_mocks
 from sql_test.integrations.app.result_view import result_view
@@ -103,16 +99,25 @@ class Workbench:
         self.summary = ui.column().classes("gap-0")
         self.body = ui.column().classes("w-full")
         self.status = ui.column().classes("gap-0")
-        self.editor = ui.column().classes("w-full")
-        self.run_focus = ui.column().classes("w-full").mark("run-focus")
+        with (
+            ui.row()
+            .classes("w-full items-start gap-4 flex-wrap")
+            .mark("workbench-panes")
+        ):
+            self.setup = (
+                ui.column().classes("w-full flex-1 min-w-80").mark("workbench-setup")
+            )
+            self.outcome = (
+                ui.column().classes("w-full flex-1 min-w-80").mark("workbench-outcome")
+            )
         self.refresh()
 
     def refresh(self) -> None:
         self.refresh_summary()
         self.refresh_body()
         self.refresh_status()
-        self.refresh_editor()
-        self.refresh_run_focus()
+        self.refresh_setup()
+        self.refresh_outcome()
 
     def refresh_summary(self) -> None:
         state = self.state
@@ -183,21 +188,19 @@ class Workbench:
                     "status-detail"
                 )
 
-    def refresh_run_focus(self) -> None:
-        self.run_focus.clear()
-        with self.run_focus:
-            result_view(self.state, self.show_result_view, self.accept_expected)
-            run_focus_view(self.state, self.actions)
-
-    def refresh_editor(self) -> None:
-        self.editor.clear()
-        with self.editor:
+    def refresh_setup(self) -> None:
+        self.setup.clear()
+        with self.setup:
             editor_view(self.state, self.actions)
+
+    def refresh_outcome(self) -> None:
+        self.outcome.clear()
+        with self.outcome:
+            result_view(self.state, self.show_result_view, self.accept_expected)
 
     def refresh_grids(self) -> None:
         """Rebuild mock and Expected grids after NULL / paste / row shape changes."""
-        self.refresh_editor()
-        self.refresh_run_focus()
+        self.refresh_setup()
 
     def reload_catalog(self) -> None:
         """Replace the catalog with one built from the checkout as it is now."""
@@ -219,7 +222,7 @@ class Workbench:
 
     def show_result_view(self, name: str) -> None:
         self.state.result_view = name
-        self.refresh_run_focus()
+        self.refresh_outcome()
 
     def toggle_mock(self, name: str) -> None:
         state = self.state
@@ -237,7 +240,7 @@ class Workbench:
             self.focus_grid(next(iter(sorted(added))))
 
     def focus_grid(self, table: str) -> None:
-        """Scroll the named mock grid into view and focus its first cell."""
+        """Expand the named mock, scroll it into view, and focus its first cell."""
         state = self.state
         if table not in state.mocks:
             return
@@ -247,8 +250,9 @@ class Workbench:
         rows = state.grid_rows.setdefault(table, [{}])
         if not rows:
             rows.append({})
+        state.expanded_grids.add(table)
         state.grid_focus = (table, 0, schema[0].name)
-        self.refresh_editor()
+        self.refresh_setup()
 
     def add_row(self, table: str) -> None:
         self._grid_action(f"add:{table}")
@@ -308,7 +312,8 @@ class Workbench:
                 ordered=state.run_result.ordered,
             )
         state.message = Message("Accepted actual as expected", ok=True)
-        self.refresh_run_focus()
+        self.refresh_setup()
+        self.refresh_outcome()
         self.refresh_status()
 
     def save(self) -> None:
