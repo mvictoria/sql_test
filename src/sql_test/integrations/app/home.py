@@ -27,6 +27,9 @@ def _tables(result: Discovery, catalog: Catalog) -> None:
     models = set(result.models)
     cases_by_target = _cases_by_target(result)
     ui.label("Tables").classes("text-subtitle1")
+    ui.label(
+        "In pipelines: cases that execute this table without targeting it."
+    ).classes("text-caption text-grey-7").mark("pipelines-gloss")
     if not report:
         ui.label("None").classes("text-grey-7")
         return
