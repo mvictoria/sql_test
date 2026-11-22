@@ -4,6 +4,7 @@ from pathlib import Path
 
 from sql_test.executors import DuckDBExecutor
 from sql_test.integrations.app import serve
+from sql_test.integrations.app.serve import PortInUseError
 from sql_test.integrations.config import ConfigError, RepositoryConfig
 from sql_test.integrations.discover import discover
 from sql_test.integrations.init import InitError, init_repository
@@ -69,7 +70,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "app":
         # Missing config opens the settings page in the app instead of exiting.
-        serve(repository, executor=DuckDBExecutor(), port=args.port)
+        try:
+            serve(repository, executor=DuckDBExecutor(), port=args.port)
+        except PortInUseError as error:
+            print(error, file=sys.stderr)
+            return 1
         return 0
 
     try:
