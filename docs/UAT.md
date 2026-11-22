@@ -5,7 +5,7 @@ User-acceptance pass against the product as a **new consuming-repository adopter
 **When:** 2026-11-21
 **Method:** follow the README adopt path literally; spin up a greenfield repo (`/tmp/uat-orders-data`: DDL + SELECT SQL + mapping + case folders + pytest); break common things on purpose; drive the authoring app (home → workbench → mock → run → save; settings; empty and broken repos).
 
-Related planning: [ROADMAP.md](ROADMAP.md) pre-release stories from this pass.
+Related planning: [ROADMAP.md](ROADMAP.md) (pre-release themes) and [open issues](https://github.com/mvictoria/sql_test/issues?q=is%3Aissue+is%3Aopen).
 
 ---
 
@@ -99,15 +99,15 @@ Ordered roughly by how much they block a new adopter.
 
 ## Suggested focus for “polish from UAT”
 
-Turned into roadmap stories under **Pre-release — adoption (from UAT)** in [ROADMAP.md](ROADMAP.md):
+Themes (work tracked in [issues](https://github.com/mvictoria/sql_test/issues), not as story lists here):
 
-1. Ship a real floating major tag and align README + sample CI pins — [CI-6](ROADMAP.md#ci-6) (done).
-2. Copy-pasteable consumer `pyproject` / standalone sample — [DOC-1](ROADMAP.md#doc-1).
-3. `sql-test init` or template — [CLI-7](ROADMAP.md#cli-7).
-4. Path / DDL / mapping / INSERT diagnoses — [ENG-36](ROADMAP.md#eng-36).
-5. App first-run polish — [APP-20](ROADMAP.md#app-20); accept expected in the UI — [APP-21](ROADMAP.md#app-21).
+1. Floating adopt tag and pins — done (`@v0` + CD).
+2. Copy-pasteable consumer `pyproject` / standalone sample.
+3. `sql-test init` — done.
+4. Path / DDL / mapping / INSERT diagnoses.
+5. First-run authoring polish and accept-actual in the workbench.
 
-Massive-repo planning cost stays a parallel track: [ENG-31](ROADMAP.md#eng-31), [ENG-32](ROADMAP.md#eng-32).
+Massive-repo planning cost is largely addressed for per-case runs; leftover micro-optimizations stay tabled unless a profile says otherwise.
 
 ---
 

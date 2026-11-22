@@ -2,7 +2,7 @@
 
 Library and local tools for testing SQL transformations: mock upstream tables, run the real SQL, compare the output.
 
-Design and vocabulary live in [docs/HELPER.md](docs/HELPER.md). Planned work is in [docs/ROADMAP.md](docs/ROADMAP.md).
+Design and vocabulary live in [docs/HELPER.md](docs/HELPER.md). Product direction is in [docs/ROADMAP.md](docs/ROADMAP.md); work items are [GitHub issues](https://github.com/mvictoria/sql_test/issues).
 
 ## Setup (this repository)
 
@@ -14,9 +14,7 @@ Requires Python 3.13+.
 
 ## Adopt in a consuming repository
 
-Requires Python 3.13+. Prefer `sql-test init` for a new repo. To hand-build, copy [examples/minimal-consumer/](examples/minimal-consumer/) or paste the files below — that example is a standalone consumer that installs `sql-test` itself. `lakehouse-data-customer/` is **monorepo-only** — it has no `[project]` table and is meant to run from this repository's venv, not as a template for a new data repo.
-
-Scaffold:
+Scaffold a new repo (config, stub SQL + mapping, one case, pytest wiring):
 
 ```bash
 uvx --from "sql-test @ git+https://github.com/mvictoria/sql_test.git@v0" sql-test init my-data
@@ -37,21 +35,17 @@ customer-data/
 └── .github/workflows/data-tests.yml    # calls the reusable workflow
 ```
 
-**`pyproject.toml`** — a consumer needs a full `[project]` table (and usually `[tool.uv] package = false`). Paths under `[tool.sql-test]` are required and relative to the repository root:
+**Install locally** from the floating major tag (same pin CI uses), if you are not using `init`:
+
+```bash
+uv add "sql-test @ git+https://github.com/mvictoria/sql_test.git@v0"
+```
+
+Use `@main` only as a bleeding-edge fallback while developing against unreleased commits.
+
+**Configure** paths in `pyproject.toml` (all four required, relative to the repository root):
 
 ```toml
-[project]
-name = "minimal-consumer"
-version = "0.0.0"
-requires-python = ">=3.13"
-dependencies = [
-    "sql-test @ git+https://github.com/mvictoria/sql_test.git@v0",
-    "pytest>=9",
-]
-
-[tool.uv]
-package = false
-
 [tool.sql-test]
 sqls = "admin/sqls"                                 # SQL files the mapping points at
 mapping = "admin/config/lookup_sql_table_mapping.csv"  # SQL file -> table it writes
@@ -59,22 +53,7 @@ schemas = "admin/sqls"                              # CREATE TABLE DDL
 cases = "tests/cases"                               # case folders
 ```
 
-**Install** from the floating major tag (same pin CI uses), if you are not using `init`:
-
-```bash
-uv add "sql-test @ git+https://github.com/mvictoria/sql_test.git@v0"
-```
-
-Use `@main` only as a bleeding-edge fallback while developing against unreleased commits — do not pin consumer CI to `main`.
-
-**Mapping CSV** — header row must be `table_ref,sql_ref` (table the SQL writes, then the SQL file under `sqls`). Extra columns such as `load_type` are ignored:
-
-```csv
-table_ref,sql_ref
-example,example.sql
-```
-
-**Run cases** with a parametrized pytest test (full wiring in [examples/minimal-consumer/tests/](examples/minimal-consumer/tests/)):
+**Run cases** with a parametrized pytest test (see `lakehouse-data-customer/tests/` for a full example):
 
 ```python
 @pytest.mark.parametrize("case", case_folders(CASES), ids=case_id)
@@ -91,7 +70,7 @@ jobs:
     uses: mvictoria/sql_test/.github/workflows/data-tests.yml@v0
 ```
 
-Copy [examples/minimal-consumer/.github/workflows/data-tests.yml](examples/minimal-consumer/.github/workflows/data-tests.yml). The workflow installs `sql-test` from the same git commit as that pin and runs pytest in the calling repository.
+Copy [lakehouse-data-customer/.github/workflows/data-tests.yml](lakehouse-data-customer/.github/workflows/data-tests.yml). The workflow installs `sql-test` from the same git commit as that pin and runs pytest in the calling repository.
 
 **Releases** — the git tag is the version (`dynamic` via hatchling / `uv-dynamic-versioning`).
 
@@ -151,13 +130,11 @@ Built with [NiceGUI](https://nicegui.io); its tests use NiceGUI's `User` fixture
 - Load and save case mocks and expected rows
 - Picks up SQL files added, edited, or deleted while the app is open
 
-Details in HELPER and the ROADMAP.
+Details in HELPER and the product ROADMAP.
 
 ## Sample repository
 
-`examples/minimal-consumer/` is the copy-paste adopt sample (standalone `pyproject.toml`, one case, pytest wiring, workflow caller).
-
-`lakehouse-data-customer/` is a temporary **monorepo-only** sample for richer chained-SQL demos inside this repository. Do not copy its `pyproject.toml` into a new data repo — it is only `[tool.sql-test]` and expects this monorepo's venv. The tool must not assume it is present; package tests use copies under `tests/fixtures/repos/`.
+`lakehouse-data-customer/` is a temporary sample consuming repository. The tool must not assume it is present; package tests use copies under `tests/fixtures/repos/`.
 
 Its `tests/` show both ways a repository uses the library: `test_sql.py` calls the engine with rows written in Python, and `test_case_folders.py` runs one parametrized test per case folder under `tests/cases/`. Run them with `uv run pytest lakehouse-data-customer/tests`.
 

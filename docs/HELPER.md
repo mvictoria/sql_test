@@ -229,7 +229,7 @@ Each relation in the catalog records how it is known:
 
 A reference resolves to a declared relation when it matches one; otherwise it is inferred as written. Inferred relations keep lineage complete, including sources owned elsewhere, but a typo such as `memebrs` is also inferred. The tool does not validate that a repository's SQL reads real tables; that belongs to the repository's own linting. It should show inferred relations distinctly, so a typo is not mocked into a case by accident; nothing does yet. A relation is declared when `Catalog.producers` or `Catalog.schema` finds it, so the distinction needs no separate tag. Callers find relations through the catalog: `resolve(name)`, `schema(relation)`, and `producers(relation)`.
 
-A catalog is a **snapshot**: frozen once built, it works out its relations once. A long-running caller, such as the app, sees SQL (and mapping) files that were added, modified, or deleted by building a **new** catalog and dropping the old one. [ENG-26](ROADMAP.md#eng-26) memoizes parse on each file's text so a rebuild re-parses only changed content; unchanged files hit the cache. Catalogs stay immutable — no in-place patch of operations or indexes. The app builds a new catalog for each page load and at the start of each workbench action (switching views, mocking or unmocking, Run, Save). Typing in a grid keeps the catalog it has. A rebuild after a one-file edit takes about 0.1 s for 300 models and 0.25 s for 1,000 models (2,001 files), so there are no incremental catalog updates ([APP-17](ROADMAP.md#app-17)). The parse caches must hold more entries than a repository has files: a rebuild reads files in the same order each time, so a smaller least-recently-used cache drops every entry before it is used again. Lookups are indexed once per catalog: `resolve` compares a name only with relations of that name, and `producers` reads an index of operations by the relation they write.
+A catalog is a **snapshot**: frozen once built, it works out its relations once. A long-running caller, such as the app, sees SQL (and mapping) files that were added, modified, or deleted by building a **new** catalog and dropping the old one. Parse memoization caches parse on each file's text so a rebuild re-parses only changed content; unchanged files hit the cache. Catalogs stay immutable — no in-place patch of operations or indexes. The app builds a new catalog for each page load and at the start of each workbench action (switching views, mocking or unmocking, Run, Save). Typing in a grid keeps the catalog it has. A rebuild after a one-file edit takes about 0.1 s for 300 models and 0.25 s for 1,000 models (2,001 files), so there are no incremental catalog updates. The parse caches must hold more entries than a repository has files: a rebuild reads files in the same order each time, so a smaller least-recently-used cache drops every entry before it is used again. Lookups are indexed once per catalog: `resolve` compares a name only with relations of that name, and `producers` reads an index of operations by the relation they write.
 
 ## Schemas
 
@@ -237,7 +237,7 @@ A relation's **schema** is its ordered columns, each a name and a type. Reposito
 
 Types are parsed and normalized by sqlglot, so `integer` and `INT` are the same type whatever format they were written in. Schemas are read in the dialect they were written in, defaulting to sqlglot's generic dialect, never DuckDB's: sqlglot's DuckDB dialect drops `varchar` lengths, as DuckDB does.
 
-The DDL reader reads every `CREATE TABLE` with a column list, in any file under the SQL folder; one file may define several relations. Other statements, including `CREATE TABLE AS`, are skipped. Only statements that begin with `CREATE` are parsed, and a file that never mentions `create` is not split at all, so model SQL kept in the same folder is parsed once, by lineage ([ENG-33](ROADMAP.md#eng-33)). A `CREATE` statement that cannot be parsed, or a relation defined twice, is reported as a problem and discovery continues. SQL that is not `CREATE` and does not parse shows up in lineage as an unparseable source instead. sqlglot is lenient, so some malformed DDL parses without a problem.
+The DDL reader reads every `CREATE TABLE` with a column list, in any file under the SQL folder; one file may define several relations. Other statements, including `CREATE TABLE AS`, are skipped. Only statements that begin with `CREATE` are parsed, and a file that never mentions `create` is not split at all, so model SQL kept in the same folder is parsed once, by lineage. A `CREATE` statement that cannot be parsed, or a relation defined twice, is reported as a problem and discovery continues. SQL that is not `CREATE` and does not parse shows up in lineage as an unparseable source instead. sqlglot is lenient, so some malformed DDL parses without a problem.
 
 ## Operations and producers
 
@@ -299,7 +299,7 @@ The **upstream lineage** of a target is the graph relation → operation → rel
 
 ## Plan
 
-A relation is **given** when the caller supplies its rows; the test layer gives a case's mocks. A **plan** is what a run will do, worked out without executing anything. It marks each relation in the target's lineage as given, executed, pruned, or source, and lists the executed operations in the order they run. Given is the engine's word for what the UI shows as mocked. A relation upstream of a given relation is pruned unless another executed path still needs it. A plan's walk stops at given relations, so it never visits what lies past them and lists only given, executed, and source relations. Its cost depends on what the run executes, not on how deep the target sits ([ENG-31](ROADMAP.md#eng-31)). The app's lineage view asks for the full walk (`with_pruned`), which also marks pruned relations. A plan is everything a caller needs about a run without the lineage behind it: the target, each relation's state, what each relation is built from, why each source is a source, what still needs rows, and which given relations are unused. A given relation is **unused** when the run never reads it: every path from it to the target passes through another given relation, or it is not in the target's lineage at all. The app's lineage view draws the plan. `Engine.execute(plan, rows)` runs that plan; `Engine.run` is plan then execute. Callers that already have a plan (the test layer, the app) execute it instead of planning again.
+A relation is **given** when the caller supplies its rows; the test layer gives a case's mocks. A **plan** is what a run will do, worked out without executing anything. It marks each relation in the target's lineage as given, executed, pruned, or source, and lists the executed operations in the order they run. Given is the engine's word for what the UI shows as mocked. A relation upstream of a given relation is pruned unless another executed path still needs it. A plan's walk stops at given relations, so it never visits what lies past them and lists only given, executed, and source relations. Its cost depends on what the run executes, not on how deep the target sits. The app's lineage view asks for the full walk (`with_pruned`), which also marks pruned relations. A plan is everything a caller needs about a run without the lineage behind it: the target, each relation's state, what each relation is built from, why each source is a source, what still needs rows, and which given relations are unused. A given relation is **unused** when the run never reads it: every path from it to the target passes through another given relation, or it is not in the target's lineage at all. The app's lineage view draws the plan. `Engine.execute(plan, rows)` runs that plan; `Engine.run` is plan then execute. Callers that already have a plan (the test layer, the app) execute it instead of planning again.
 
 The application is initially launched against a single local repository. The repository is always passed in, for example `sql-test app <path>`. The tool never assumes where a consuming repository lives or that it is inside the tool's own directory.
 
@@ -320,7 +320,7 @@ It does not manage branch lifecycle or discover tests from other branches.
 
 QA can search or browse tables/models.
 
-For each target, the application shows the number of discovered tests, and separately the number of other tests whose pipeline runs it (see Coverage). Discovered cases for that target appear beside the table on home (not only in a separate global list). Opening a table in the workbench lists those same cases so choosing one loads it without going back through home ([APP-26](ROADMAP.md#app-26)).
+For each target, the application shows the number of discovered tests, and separately the number of other tests whose pipeline runs it (see Coverage). Discovered cases for that target appear beside the table on home (not only in a separate global list). Opening a table in the workbench lists those same cases so choosing one loads it without going back through home.
 
 Example:
 
@@ -341,7 +341,7 @@ QA can select any appropriate upstream table and mark it as mocked.
 
 The lineage updates immediately to show what will execute and what has been pruned.
 
-A blocked or mocked relation name is a jump target: activating it brings that table's mock grid into view ([APP-30](ROADMAP.md#app-30)).
+A blocked or mocked relation name is a jump target: activating it brings that table's mock grid into view.
 
 ## Mock editor
 
@@ -391,7 +391,7 @@ QA should be able to:
 - remove an obsolete expected row
 - accept the complete actual result as the expectation
 
-This interaction is central to the product. Run types mocks and executes — Apply is not a required peer step ([APP-25](ROADMAP.md#app-25)). After a run, verdict, diff / accept, and Expected sit in one `run-focus` region with sticky Run / Save ([APP-27](ROADMAP.md#app-27)); mock grids stay above that region so the fail → fix → re-run loop does not scroll through them.
+This interaction is central to the product. Run types mocks and executes — Apply is not a required peer step. After a run, verdict, diff / accept, and Expected sit in one `run-focus` region with sticky Run / Save; mock grids stay above that region so the fail → fix → re-run loop does not scroll through them.
 
 ### Comparison defaults
 
@@ -559,7 +559,7 @@ The workflow checks out the calling repository, sets up Python, installs `sql-te
 
 Data-product repositories own their data products and test cases. The tool's repository owns the machinery that authors, validates, discovers, and executes them. No engine code is copied into a consuming repository.
 
-A consuming repository needs very little. The README adoption section is the copy-paste guide; [examples/minimal-consumer/](../examples/minimal-consumer/) is the standalone sample that installs `sql-test` itself. The footprint is SQL, schemas, cases, a full consumer `pyproject.toml` (`[project]` with `requires-python = ">=3.13"`, usually `[tool.uv] package = false`, and `[tool.sql-test]` paths), a pytest test over case folders, and a workflow caller. `lakehouse-data-customer/` is monorepo-only — not that template.
+A consuming repository needs very little. The README adoption section is the copy-paste guide; the footprint is SQL, schemas, cases, `[tool.sql-test]` in `pyproject.toml`, a pytest test over case folders, and a workflow caller:
 
 ```text
 customer-data/
@@ -567,12 +567,11 @@ customer-data/
 ├── schemas/
 ├── cases/
 │   └── <table under test>/<case name>/
-├── pyproject.toml                       [project] + [tool.uv] + [tool.sql-test]
+├── pyproject.toml                       [tool.sql-test] paths
 └── .github/workflows/data-tests.yml     calls the reusable workflow @v0
 ```
 
-This layout is illustrative. Where SQL, schemas, and cases live, and how SQL files map to tables, can differ per repository. The sample and minimal example keep SQL in `admin/sqls/` and map each table to its SQL file in `admin/config/lookup_sql_table_mapping.csv`, with required columns `table_ref` and `sql_ref`. Extra columns such as `load_type` are ignored. A **mapping problem** is a mapping row whose SQL file does not exist. The catalog records it alongside schema problems and leaves out that row's operation, so deleting a mapped SQL file removes its model even before the mapping row is removed.
-
+This layout is illustrative. Where SQL, schemas, and cases live, and how SQL files map to tables, can differ per repository. The sample repository keeps SQL in `admin/sqls/` and maps each table to its SQL file in `admin/config/lookup_sql_table_mapping.csv`, with columns `table_ref` and `sql_ref`. Extra columns such as `load_type` are ignored. A **mapping problem** is a mapping row whose SQL file does not exist. The catalog records it alongside schema problems and leaves out that row's operation, so deleting a mapped SQL file removes its model even before the mapping row is removed.
 
 ## Versioning
 
@@ -580,7 +579,7 @@ The engine, CLI, app, and reusable workflow are released together as one version
 
 The git tag is the source of truth for the package version (`dynamic = ["version"]` via hatchling and `uv-dynamic-versioning`).
 
-**How a release is cut.** The PR title's first word is `(major)`, `(minor)`, or `(patch)` (case-insensitive; for example `(patch) CI-2: …`). Tokens elsewhere in the title do not count, so there is never more than one bump. After that PR lands on `main` (linear history: rebase, so branch SHAs are rewritten), `.github/workflows/cd.yml` looks up the PR for the new `main` tip, computes the next `vX.Y.Z` from the latest version tag via `scripts/cd_bump.py`, and tags **that `main` commit**. The **same job** then builds the sdist/wheel, creates or updates the GitHub Release, and force-moves the floating major tag `vX` — a tag push made with `GITHUB_TOKEN` does not start a second workflow. A title that does not start with a bump token does not release. Pushing a `vX.Y.Z` tag by hand still runs the separate release job.
+**How a release is cut.** The PR title's first word is `(major)`, `(minor)`, or `(patch)` (case-insensitive; for example `(patch) cut a release: …`). Tokens elsewhere in the title do not count, so there is never more than one bump. After that PR lands on `main` (linear history: rebase, so branch SHAs are rewritten), `.github/workflows/cd.yml` looks up the PR for the new `main` tip, computes the next `vX.Y.Z` from the latest version tag via `scripts/cd_bump.py`, and tags **that `main` commit**. The **same job** then builds the sdist/wheel, creates or updates the GitHub Release, and force-moves the floating major tag `vX` — a tag push made with `GITHUB_TOKEN` does not start a second workflow. A title that does not start with a bump token does not release. Pushing a `vX.Y.Z` tag by hand still runs the separate release job.
 
 Local and CI installs both use those git tags (for example `uv add "sql-test @ git+https://github.com/mvictoria/sql_test.git@v0"`).
 
