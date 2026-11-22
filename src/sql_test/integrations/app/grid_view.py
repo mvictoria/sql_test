@@ -28,19 +28,28 @@ _PASTE_JS = """
     }
 }
 """
-_CLEAR_NULL_JS = """
+_CELL_KEYDOWN_JS = """
 (e) => {
+    const input = e.target?.tagName === 'INPUT'
+        ? e.target
+        : e.target?.closest?.('.q-field')?.querySelector?.('input');
+    if ((e.ctrlKey || e.metaKey) && e.key === ';') {
+        e.preventDefault();
+        // Paint before the round-trip: grid rebuild mid-keydown leaves Quasar stale.
+        if (input) {
+            input.value = '';
+            input.placeholder = 'NULL';
+            input.readOnly = true;
+        }
+        emit({op: 'null'});
+        return;
+    }
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (typeof e.key !== 'string' || e.key.length !== 1) return;
+    // Only steal printable keys while the cell is showing NULL (readonly).
+    if (!input || !input.readOnly) return;
     e.preventDefault();
-    emit({key: e.key});
-}
-"""
-_SET_NULL_JS = """
-(e) => {
-    if (!(e.ctrlKey || e.metaKey) || e.key !== ';') return;
-    e.preventDefault();
-    emit({});
+    emit({op: 'type', key: e.key});
 }
 """
 
@@ -211,17 +220,17 @@ def _cell(
         set_null = lambda _, row=row, key=key, field=field, table=table, index=index: (
             _set_null(row, key, actions, field=field, table=table, index=index)
         )
-        # Chord for User tests; JS emit so real browsers see Ctrl/Cmd+;.
+        # Chord for User tests; one JS keydown for browser Ctrl/Cmd+; and type-to-leave.
         field.on("keydown.ctrl.exact.;.prevent", set_null)
         field.on("keydown.meta.exact.;.prevent", set_null)
         field.on(
             "keydown",
             lambda event, row=row, key=key, field=field, table=table, index=index: (
-                _set_null(row, key, actions, field=field, table=table, index=index)
-                if _is_set_null_event(event)
-                else None
+                _cell_keydown(
+                    event, row, key, actions, field=field, table=table, index=index
+                )
             ),
-            js_handler=_SET_NULL_JS,
+            js_handler=_CELL_KEYDOWN_JS,
         )
         field.on(
             "paste",
@@ -232,13 +241,6 @@ def _cell(
         )
         if is_null:
             field.props("readonly")
-            field.on(
-                "keydown",
-                lambda event, row=row, key=key: _clear_null_on_type(
-                    event.args, row, key, actions
-                ),
-                js_handler=_CLEAR_NULL_JS,
-            )
 
 
 def _move_grid_focus(
@@ -341,15 +343,34 @@ def _set_null(
     if column in row and row[column] is None:
         return
     row[column] = None
-    # Clear the visible text and show the NULL placeholder on this input before
-    # rebuild. set_value fires on_change; _edit must keep None (see guard above).
-    # Without this paint, a mid-handler grid clear often leaves the browser
-    # looking empty until a later full refresh (Run).
+    # Update in place — do not rebuild the grid here. clear()+recreate mid-keydown
+    # destroys the focused Quasar input and the browser stays blank until Run.
+    # set_value fires on_change; _edit must keep None (see guard above).
     field.set_value("")
     field.props("readonly placeholder=NULL")
     field.mark(f"cell-{table}.{index}.{column} null-{table}.{index}.{column}")
     field.update()
-    actions.on_rebuild()
+
+
+def _cell_keydown(
+    event: object,
+    row: dict[str, Cell],
+    column: str,
+    actions: EditorActions,
+    *,
+    field: ui.input,
+    table: str,
+    index: int,
+) -> None:
+    args = getattr(event, "args", None)
+    if isinstance(args, dict) and args.get("op") == "null":
+        _set_null(row, column, actions, field=field, table=table, index=index)
+        return
+    if isinstance(args, dict) and args.get("op") == "type":
+        _clear_null_on_type({"key": args.get("key")}, row, column, actions)
+        return
+    # User tests: trigger("keydown", args={"key": "x"}) while NULL.
+    _clear_null_on_type(args, row, column, actions)
 
 
 def _clear_null_on_type(
@@ -358,6 +379,8 @@ def _clear_null_on_type(
     column: str,
     actions: EditorActions,
 ) -> None:
+    if not (column in row and row[column] is None):
+        return
     key = _keydown_character(args)
     if key is None:
         return
@@ -372,18 +395,6 @@ def _keydown_character(args: object) -> str | None:
     if not isinstance(key, str) or len(key) != 1:
         return None
     return key
-
-
-def _is_set_null_event(event: object) -> bool:
-    """Chord handlers and JS emit({}) set NULL; ignore other keydowns."""
-    args = getattr(event, "args", None)
-    if args is None or args == {} or args is True:
-        return True
-    if not isinstance(args, dict):
-        return False
-    if args.get("key") != ";":
-        return False
-    return bool(args.get("ctrlKey") or args.get("metaKey") or args.get("ctrl"))
 
 
 def _case_name(state: WorkbenchState) -> None:

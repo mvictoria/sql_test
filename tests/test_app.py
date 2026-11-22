@@ -539,6 +539,21 @@ async def test_ctrl_semicolon_shows_null_immediately_on_expected(user: User):
     await user.should_see(marker="null-expected.0.member_id")
 
 
+async def test_ctrl_semicolon_paints_null_placeholder_after_typing(user: User):
+    """APP-31: after data entry, Ctrl+; must show NULL on the same cell without Run."""
+    _register(FIXTURE)
+    await user.open("/workbench?target=members&view=lineage&mock=members")
+    user.find(marker="cell-members.0.member_name").type("Ada")
+
+    _set_null(user, "cell-members.0.member_name")
+
+    await user.should_see(marker="null-members.0.member_name")
+    (cell,) = user.find(kind=ui.input, marker="null-members.0.member_name").elements
+    assert cell.props.get("placeholder") == "NULL"
+    assert "readonly" in cell.props
+    assert _value(user, "null-members.0.member_name") == ""
+
+
 async def test_typing_clears_null_without_making_empty_string_null(user: User):
     """NULL → type leaves NULL; clear all text stays empty string; only Ctrl+; sets NULL."""
     _register(FIXTURE)
