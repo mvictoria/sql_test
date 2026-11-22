@@ -9,6 +9,24 @@ class SaveError(Exception):
     pass
 
 
+def case_folder(
+    repository: Path, target: str, name: str, repo_catalog: Catalog
+) -> Path:
+    """On-disk folder for `target`/`name` under the repository's cases root."""
+    if not name or "/" in name or name in {".", ".."}:
+        raise SaveError("case name is required and must not contain '/'")
+    cases = RepositoryConfig.load(repository).cases
+    return cases / str(repo_catalog.resolve(target)) / name
+
+
+def case_exists(
+    repository: Path, target: str, name: str, repo_catalog: Catalog
+) -> bool:
+    """True when the case folder already has CSV files (a silent overwrite risk)."""
+    folder = case_folder(repository, target, name, repo_catalog)
+    return folder.is_dir() and any(folder.glob("*.csv"))
+
+
 def save_case(
     repository: Path,
     target: str,
@@ -17,9 +35,7 @@ def save_case(
     grid_rows: dict[str, list[dict[str, str | None]]],
     repo_catalog: Catalog,
 ) -> Path:
-    if not name or "/" in name or name in {".", ".."}:
-        raise SaveError("case name is required and must not contain '/'")
-    cases = RepositoryConfig.load(repository).cases
+    folder = case_folder(repository, target, name, repo_catalog)
     target_relation = repo_catalog.resolve(target)
     mock_tables: dict[Relation, CaseTable] = {}
     for mock_name in mocks:
@@ -36,7 +52,6 @@ def save_case(
             any(str(value).strip() for value in row.values()) for row in expected_rows
         ):
             expected = _table_from_grid(expected_schema, expected_rows)
-    folder = cases / str(target_relation) / name
     folder.mkdir(parents=True, exist_ok=True)
     for path in folder.glob("*.csv"):
         path.unlink()

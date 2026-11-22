@@ -4,7 +4,7 @@ from urllib.parse import quote
 from nicegui import ui
 
 from sql_test.integrations.app.case_load import case_grid_rows, load_case
-from sql_test.integrations.app.case_save import SaveError, save_case
+from sql_test.integrations.app.case_save import SaveError, case_exists, save_case
 from sql_test.integrations.app.compare_view import compare_section
 from sql_test.integrations.app.engine_access import catalog
 from sql_test.integrations.app.engine_access import run as run_case
@@ -316,11 +316,16 @@ class Workbench:
         self.refresh_outcome()
         self.refresh_status()
 
-    def save(self) -> None:
+    def save(self, *, overwrite: bool = False) -> None:
         state = self.state
         self.reload_catalog()
         name = state.case_name or state.case_draft.strip()
         try:
+            if not overwrite and case_exists(
+                state.repository, state.target, name, state.catalog
+            ):
+                self._confirm_overwrite(name)
+                return
             folder = save_case(
                 state.repository,
                 state.target,
@@ -349,3 +354,20 @@ class Workbench:
         except Exception as error:  # noqa: BLE001 — show failures in the page
             state.message = Message(f"Could not save: {error}", ok=False)
         self.refresh()
+
+    def _confirm_overwrite(self, name: str) -> None:
+        """UAT-9: ask before replacing an existing case folder's CSVs."""
+        with ui.dialog() as dialog, ui.card().classes("gap-2"):
+            ui.label(
+                f"Case {self.state.target}/{name} already exists. "
+                "Save will replace its mock and expected CSVs."
+            ).mark("save-overwrite-prompt")
+            with ui.row().classes("gap-2"):
+                ui.button("Cancel", on_click=dialog.close).props("flat").mark(
+                    "save-overwrite-cancel"
+                )
+                ui.button(
+                    "Overwrite",
+                    on_click=lambda: (dialog.close(), self.save(overwrite=True)),
+                ).props("unelevated color=negative").mark("save-overwrite-confirm")
+        dialog.open()
