@@ -40,4 +40,4 @@ jobs:
   sample-data-tests:
     uses: ./.github/workflows/data-tests.yml
     with:
-      working-directory: lakehouse-data-customer
+      working-directory: tests/fixtures/repos/lakehouse-data-customer
