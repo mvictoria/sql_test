@@ -440,21 +440,19 @@ async def test_shift_tab_walks_cells_in_reverse_without_row_actions(user: User):
     await user.should_see(marker="cell-members.1.member_id")
 
 
-async def test_synthetic_data_reminder_is_repo_agnostic(user: User):
-    """UAT-11: compliance copy must not say customer-specific 'member' data."""
-    _register(FIXTURE)
-    await user.open(f"/workbench?target={ALICE}&view=lineage&mock=members")
-    reminder = _text(user, "synthetic-data-reminder")
-    assert "member" not in reminder.lower()
-    assert "production" in reminder.lower() or "pii" in reminder.lower()
-
-
-async def test_pasting_tsv_into_a_cell_fills_several_rows_and_columns(user: User):
-    """Paste starts at the focused cell; blanks become NULL; synthetic reminder shows."""
+async def test_mock_editor_has_no_synthetic_data_reminder(user: User):
+    """UAT-11: drop the compliance reminder entirely."""
     _register(FIXTURE)
     await user.open(f"/workbench?target={ALICE}&view=lineage&mock=members")
     await user.should_see(marker="cell-members.0.member_id")
-    await user.should_see(marker="synthetic-data-reminder")
+    assert _count(user, "synthetic-data-reminder") == 0
+
+
+async def test_pasting_tsv_into_a_cell_fills_several_rows_and_columns(user: User):
+    """Paste starts at the focused cell; blanks become NULL."""
+    _register(FIXTURE)
+    await user.open(f"/workbench?target={ALICE}&view=lineage&mock=members")
+    await user.should_see(marker="cell-members.0.member_id")
 
     user.find(marker="cell-members.0.member_id").trigger(
         "paste",
