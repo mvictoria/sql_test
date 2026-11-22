@@ -282,6 +282,53 @@ async def test_a_repository_without_config_opens_settings(user: User, tmp_path: 
     await user.should_see(marker="path-sqls")
 
 
+async def test_sql_peek_controls_are_hidden_when_the_flag_is_off(user: User):
+    """APP-29: peek stays behind sql_peek until the flag is on."""
+    _register(FIXTURE)
+    await user.open(f"/workbench?target={ALICE}&view=lineage")
+
+    await user.should_see(marker="lineage-graph")
+    await user.should_see(marker="node-medicaid_members")
+    await user.should_not_see(marker="peek-sql-medicaid_members")
+
+
+async def test_settings_can_enable_sql_peek(user: User, tmp_path: Path):
+    repo = _copy_fixture(tmp_path)
+    _register(repo)
+    await user.open("/settings")
+    await user.should_see(marker="flag-sql_peek")
+    (box,) = user.find(kind=ui.checkbox, marker="flag-sql_peek").elements
+    assert box.value is False
+    box.set_value(True)
+    user.find(marker="save-settings").click()
+    await user.should_see(marker="settings-saved")
+    assert "sql_peek = true" in (repo / "pyproject.toml").read_text()
+
+
+async def test_peeking_node_sql_keeps_the_lineage_graph(user: User, tmp_path: Path):
+    """APP-29: with sql_peek, mid-pipeline SQL opens beside the graph."""
+    repo = _copy_fixture(tmp_path)
+    pyproject = repo / "pyproject.toml"
+    pyproject.write_text(pyproject.read_text().rstrip() + "\nsql_peek = true\n")
+
+    _register(repo)
+    await user.open(f"/workbench?target={ALICE}&view=lineage")
+    await user.should_see(marker="peek-sql-medicaid_members")
+
+    user.find(marker="peek-sql-medicaid_members").click()
+
+    await user.should_see(marker="sql-peek")
+    await user.should_see(marker="lineage-graph")
+    await user.should_see(marker="sql-peek-file", content="medicaid_members.sql")
+    await user.should_see("from members")
+    await user.should_see(marker="view-lineage")
+
+    user.find(marker="sql-peek-close").click()
+
+    await user.should_not_see(marker="sql-peek")
+    await user.should_see(marker="lineage-graph")
+
+
 async def test_lineage_view_shows_grey_sources_that_need_rows(user: User):
     _register(FIXTURE)
     await user.open(f"/workbench?target={ALICE}&view=lineage")

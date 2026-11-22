@@ -22,6 +22,7 @@ from sql_test.integrations.app.state import (
     Message,
     WorkbenchState,
 )
+from sql_test.integrations.config import AppFlags
 from sql_test.integrations.discover import Discovery, discover
 
 
@@ -31,6 +32,7 @@ def open_workbench(
     """The workbench a deep link asks for, or None when the link names nothing."""
     repo_catalog = catalog(repository)
     result = discover(repository, repo_catalog)
+    flags = AppFlags.load(repository)
     case_name: str | None = None
     if query.get("case"):
         raw = query["case"][0]
@@ -71,6 +73,7 @@ def open_workbench(
         target_cases=target_cases,
         mocks=mocks,
         grid_rows=apply_grid_action("", mocks, grid_rows),
+        flags=flags,
         view=view if view in VIEWS else DEFAULT_VIEW,
     )
 
@@ -173,7 +176,13 @@ class Workbench:
                     ).mark(f"view-{name}")
                     button.props("unelevated" if name == self.state.view else "outline")
             if self.state.view == "lineage":
-                lineage_view(self.state, self.toggle_mock, self.focus_grid)
+                lineage_view(
+                    self.state,
+                    self.toggle_mock,
+                    self.focus_grid,
+                    on_peek=self.peek_sql,
+                    on_close_peek=self.clear_sql_peek,
+                )
             else:
                 sql_view(self.state.catalog, self.state.target)
 
@@ -227,7 +236,21 @@ class Workbench:
     def show_view(self, name: str) -> None:
         self.reload_catalog()
         self.state.view = name
+        if name != "lineage":
+            self.state.sql_peek = None
+        self.state.flags = AppFlags.load(self.state.repository)
         self.refresh()
+
+    def peek_sql(self, name: str) -> None:
+        """Show producer SQL for a lineage node without leaving the graph."""
+        if not self.state.flags.sql_peek:
+            return
+        self.state.sql_peek = name
+        self.refresh_body()
+
+    def clear_sql_peek(self) -> None:
+        self.state.sql_peek = None
+        self.refresh_body()
 
     def show_result_view(self, name: str) -> None:
         self.state.result_view = name

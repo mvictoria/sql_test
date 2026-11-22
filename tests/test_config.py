@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from sql_test.integrations.config import ConfigError, RepositoryConfig
+from sql_test.integrations.config import AppFlags, ConfigError, RepositoryConfig
 
 FIXTURE = Path(__file__).parent / "fixtures" / "repos" / "lakehouse-data-customer"
 
@@ -29,6 +29,29 @@ def test_the_sample_repository_has_a_config():
 
     assert config.sqls == FIXTURE.resolve() / "admin" / "sqls"
     assert config.cases == FIXTURE.resolve() / "tests" / "cases"
+
+
+def test_sql_peek_flag_defaults_off_and_can_be_enabled(tmp_path: Path):
+    (tmp_path / "pyproject.toml").write_text(
+        "[tool.sql-test]\n"
+        'sqls = "sql"\n'
+        'mapping = "config/mapping.csv"\n'
+        'schemas = "ddl"\n'
+        'cases = "tests/cases"\n'
+    )
+
+    assert AppFlags.load(tmp_path) == AppFlags(sql_peek=False)
+
+    (tmp_path / "pyproject.toml").write_text(
+        "[tool.sql-test]\n"
+        'sqls = "sql"\n'
+        'mapping = "config/mapping.csv"\n'
+        'schemas = "ddl"\n'
+        'cases = "tests/cases"\n'
+        "sql_peek = true\n"
+    )
+
+    assert AppFlags.load(tmp_path) == AppFlags(sql_peek=True)
 
 
 def test_a_repository_without_pyproject_is_an_error(tmp_path: Path):

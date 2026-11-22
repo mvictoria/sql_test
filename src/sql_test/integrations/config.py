@@ -16,6 +16,23 @@ class ConfigError(Exception):
 
 
 @dataclass(frozen=True)
+class AppFlags:
+    """Optional app toggles under `[tool.sql-test]` — absent keys stay off."""
+
+    sql_peek: bool = False
+
+    @classmethod
+    def load(cls, repository: Path) -> Self:
+        root = repository.resolve()
+        pyproject = root / "pyproject.toml"
+        if not pyproject.is_file():
+            return cls()
+        with pyproject.open("rb") as file:
+            settings = tomllib.load(file).get("tool", {}).get(TABLE) or {}
+        return cls(sql_peek=bool(settings.get("sql_peek", False)))
+
+
+@dataclass(frozen=True)
 class RepositoryConfig:
     sqls: Path
     mapping: Path
@@ -48,8 +65,17 @@ class RepositoryConfig:
         return {name: str(settings[name]) for name in names}
 
     @classmethod
-    def write(cls, repository: Path, relative: dict[str, str]) -> None:
-        """Write `[tool.sql-test]` paths with tomlkit; leave the rest of the file as-is."""
+    def write(
+        cls,
+        repository: Path,
+        relative: dict[str, str],
+        *,
+        flags: AppFlags | None = None,
+    ) -> None:
+        """Write `[tool.sql-test]` paths with tomlkit; leave the rest of the file as-is.
+
+        When `flags` is set, also write those optional keys; otherwise leave them alone.
+        """
         root = repository.resolve()
         cls.validate(root, relative)
         pyproject = root / "pyproject.toml"
@@ -61,6 +87,11 @@ class RepositoryConfig:
         table = tool.setdefault(TABLE, tomlkit.table())
         for name in PATH_NAMES:
             table[name] = relative[name]
+        if flags is not None:
+            if flags.sql_peek:
+                table["sql_peek"] = True
+            elif "sql_peek" in table:
+                del table["sql_peek"]
         pyproject.write_text(tomlkit.dumps(document))
 
     @classmethod

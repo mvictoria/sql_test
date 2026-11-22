@@ -3,6 +3,7 @@ from pathlib import Path
 
 from sql_test.engine import Catalog, RunResult
 from sql_test.integrations.app.compare_view import DiffPanel
+from sql_test.integrations.config import AppFlags
 
 VIEWS = ("lineage", "sql")
 DEFAULT_VIEW = "lineage"
@@ -34,6 +35,8 @@ class WorkbenchState:
     engine_types: dict[str, dict[str, str]] = field(default_factory=dict)
     grid_focus: tuple[str, int, str] | None = None
     expanded_grids: set[str] = field(default_factory=set)
+    flags: AppFlags = field(default_factory=AppFlags)
+    sql_peek: str | None = None
     view: str = DEFAULT_VIEW
     result_view: str = DEFAULT_RESULT_VIEW
     run_result: RunResult | None = None

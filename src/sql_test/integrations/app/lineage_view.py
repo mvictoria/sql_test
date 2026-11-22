@@ -2,7 +2,7 @@ from collections.abc import Callable
 
 from nicegui import ui
 
-from sql_test.engine import Plan, Relation, State
+from sql_test.engine import Catalog, Plan, Relation, State
 from sql_test.integrations.app.engine_access import plan as build_plan
 from sql_test.integrations.app.state import WorkbenchState
 
@@ -124,10 +124,13 @@ def lineage_view(
     state: WorkbenchState,
     on_toggle: Callable[[str], None],
     on_focus: Callable[[str], None] | None = None,
+    on_peek: Callable[[str], None] | None = None,
+    on_close_peek: Callable[[], None] | None = None,
 ) -> None:
     plan = build_plan(state.catalog, state.target, state.mocks, state.grid_rows)
     counts = None if state.run_result is None else state.run_result.counts
     visible = _visible(plan)
+    peek_enabled = state.flags.sql_peek and on_peek is not None
     with ui.element("div").classes("lineage-panel w-full"):
         ui.label("Lineage").classes("lineage-title")
         if plan.needs_rows:
@@ -149,16 +152,23 @@ def lineage_view(
                     ui.label(label).classes("text-caption")
             with ui.element("span").classes("lineage-chip"):
                 ui.label("click a node to mock / unmock").classes("text-caption")
+            if peek_enabled:
+                with ui.element("span").classes("lineage-chip"):
+                    ui.label("SQL opens a peek under the graph").classes("text-caption")
         diagram = _mermaid(plan, visible, counts)
         with ui.element("div").classes("lineage-graph").mark("lineage-graph"):
             ui.mermaid(
                 diagram,
                 on_node_click=lambda e: _clicked(e.node_id, plan, on_toggle),
             )
+        if peek_enabled:
+            _peek_controls(state.catalog, visible, on_peek)
         # Hit targets for User tests (mermaid SVG nodes are not clickable there).
         with ui.element("div").classes("lineage-hit-targets"):
             for relation in sorted(visible, key=str):
                 _hit_target(plan, relation, counts, on_toggle)
+        if peek_enabled and state.sql_peek:
+            _sql_peek(state, on_close_peek)
 
 
 def _blocked_status(
@@ -229,6 +239,54 @@ def _hit_target(
     )
     if upstreams:
         ui.label("reads " + ", ".join(upstreams)).mark(f"reads-{name}")
+
+
+def _peek_controls(
+    catalog: Catalog,
+    visible: set[Relation],
+    on_peek: Callable[[str], None],
+) -> None:
+    models = sorted(
+        (relation for relation in visible if catalog.producers(relation)),
+        key=str,
+    )
+    if not models:
+        return
+    with (
+        ui.row().classes("gap-2 flex-wrap items-center mt-2").mark("sql-peek-controls")
+    ):
+        ui.label("Peek SQL:").classes("text-caption text-grey-8")
+        for relation in models:
+            name = str(relation)
+            ui.button(
+                name,
+                on_click=lambda _, name=name: on_peek(name),
+            ).props("outline dense no-caps").mark(f"peek-sql-{name}")
+
+
+def _sql_peek(state: WorkbenchState, on_close: Callable[[], None] | None) -> None:
+    name = state.sql_peek
+    if not name:
+        return
+    with ui.column().classes("w-full gap-1 mt-3").mark("sql-peek"):
+        with ui.row().classes("w-full items-center justify-between"):
+            ui.label(f"SQL · {name}").classes("text-subtitle1").mark("sql-peek-title")
+            if on_close is not None:
+                ui.button("Close", on_click=on_close).props("flat dense").mark(
+                    "sql-peek-close"
+                )
+        relation = state.catalog.resolve(name)
+        operations = state.catalog.producers(relation)
+        if not operations:
+            ui.label("No producer SQL").classes("text-grey-7").mark("sql-peek-empty")
+            return
+        for operation in operations:
+            ui.label(operation.sql_file.name).classes("text-caption").mark(
+                "sql-peek-file"
+            )
+            ui.code(operation.sql, language="sql").classes("w-full").mark(
+                "sql-peek-code"
+            )
 
 
 def _mermaid(

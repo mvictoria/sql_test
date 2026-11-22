@@ -289,9 +289,13 @@ sqls = "admin/sqls"
 mapping = "admin/config/lookup_sql_table_mapping.csv"
 schemas = "admin/sqls"
 cases = "tests/cases"
+# optional app flags (default off when omitted):
+# sql_peek = true
 ```
 
-Every setting is required. A repository with no `pyproject.toml`, no `[tool.sql-test]` table, or a missing setting is an error that names what is missing; the tool assumes no layout. The CLI (`discover`, `coverage`) and a repository's own pytest tests read the config that way. The authoring app instead opens a settings page so QA can create or edit the table. Saving uses [tomlkit](https://github.com/python-poetry/tomlkit): only `[tool.sql-test]` keys are written, and the rest of `pyproject.toml` (including comments) is left unchanged. Paths are checked before save (they exist; with them the catalog still discovers SQL, the mapping, and schemas).
+Every **path** setting is required. A repository with no `pyproject.toml`, no `[tool.sql-test]` table, or a missing path is an error that names what is missing; the tool assumes no layout. Optional **app flags** (for example `sql_peek`) default to off when omitted; the authoring app Settings page can toggle them. The CLI (`discover`, `coverage`) and a repository's own pytest tests read paths the same way. The authoring app opens a settings page so QA can create or edit the table. Saving uses [tomlkit](https://github.com/python-poetry/tomlkit): `[tool.sql-test]` keys are written, and the rest of `pyproject.toml` (including comments) is left unchanged. Paths are checked before save (they exist; with them the catalog still discovers SQL, the mapping, and schemas).
+
+**SQL peek** (flag `sql_peek`): when on, the lineage view offers a SQL control on each model node; choosing it shows that relation's producer SQL under the graph without leaving lineage. Off by default.
 
 ## Upstream lineage
 
