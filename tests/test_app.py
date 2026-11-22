@@ -65,13 +65,16 @@ async def test_app_page_lists_models_and_sources(user: User):
     _register(FIXTURE)
     await user.open("/")
 
-    await user.should_see("Tables")
+    await user.should_see(marker="home-tables")
+    await user.should_see(marker="home-sources")
     await user.should_see("Tests")
     await user.should_see("In pipelines")
     await user.should_see(marker="table-medicaid_members")
     await user.should_see(marker=f"table-{ALICE}")
     await user.should_see(marker="table-members")
     await user.should_not_see("Boundaries")
+    assert _count_within(user, "table-members", within="home-sources") == 1
+    assert _count_within(user, f"table-{ALICE}", within="home-tables") == 1
 
 
 async def test_home_sources_are_not_workbench_links(user: User):

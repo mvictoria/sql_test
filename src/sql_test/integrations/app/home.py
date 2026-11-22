@@ -6,7 +6,7 @@ from nicegui import ui
 from sql_test.engine import Catalog
 from sql_test.integrations.config import RepositoryConfig
 from sql_test.integrations.discover import Discovery, discover
-from sql_test.testing import CaseSummary, coverage_report, pipeline_cases
+from sql_test.testing import CaseSummary, CoverageRow, coverage_report, pipeline_cases
 
 
 def home_page(repository: Path, pipelines: str | None = None) -> None:
@@ -18,15 +18,26 @@ def home_page(repository: Path, pipelines: str | None = None) -> None:
     with ui.row().classes("items-baseline gap-4"):
         ui.label("sql-test").classes("text-h5")
         ui.link("Settings", "/settings").mark("settings-link")
-    _tables(result, catalog)
-
-
-def _tables(result: Discovery, catalog: Catalog) -> None:
-    tables = (*result.models, *result.sources)
-    report = coverage_report(tables, result.cases, catalog)
-    models = set(result.models)
     cases_by_target = _cases_by_target(result)
-    ui.label("Tables").classes("text-subtitle1")
+    model_report = coverage_report(result.models, result.cases, catalog)
+    source_report = coverage_report(result.sources, result.cases, catalog)
+    with ui.column().classes("gap-2").mark("home-tables"):
+        ui.label("Tables").classes("text-subtitle1")
+        _coverage_grid(
+            model_report, cases_by_target, link_targets=True, pipelines_gloss=True
+        )
+    with ui.column().classes("gap-2").mark("home-sources"):
+        ui.label("Sources").classes("text-subtitle1")
+        _coverage_grid(source_report, cases_by_target, link_targets=False)
+
+
+def _coverage_grid(
+    report: list[CoverageRow],
+    cases_by_target: dict[str, tuple[CaseSummary, ...]],
+    *,
+    link_targets: bool,
+    pipelines_gloss: bool = False,
+) -> None:
     if not report:
         ui.label("None").classes("text-grey-7")
         return
@@ -35,21 +46,18 @@ def _tables(result: Discovery, catalog: Catalog) -> None:
     ):
         for heading in ("Table", "Tests", "In pipelines", "Cases"):
             label = ui.label(heading).classes("text-caption text-weight-bold")
-            if heading == "In pipelines":
+            if heading == "In pipelines" and pipelines_gloss:
                 with label:
                     ui.tooltip(
                         "Cases that execute this table without targeting it."
                     ).mark("pipelines-gloss")
         for row in report:
-            with ui.row().classes("items-baseline gap-2"):
-                if row.table in models:
-                    ui.link(
-                        row.table, f"/workbench?target={quote(row.table, safe='')}"
-                    ).mark(f"table-{row.table}")
-                    ui.label("model").classes("text-caption text-grey-7")
-                else:
-                    ui.label(row.table).mark(f"table-{row.table}")
-                    ui.label("source").classes("text-caption text-grey-7")
+            if link_targets:
+                ui.link(
+                    row.table, f"/workbench?target={quote(row.table, safe='')}"
+                ).mark(f"table-{row.table}")
+            else:
+                ui.label(row.table).mark(f"table-{row.table}")
             ui.label(str(row.tests)).mark(f"tests-{row.table}")
             if row.pipelines:
                 ui.link(
