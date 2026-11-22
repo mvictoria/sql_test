@@ -83,6 +83,35 @@ jobs:
 
 The workflow installs `sql-test` from the same git commit as that pin and runs pytest in the calling repository.
 
+## Authoring app
+
+Local workbench. Server binds to localhost only — open the printed URL in a browser:
+
+```bash
+uv run sql-test app tests/fixtures/repos/lakehouse-data-customer
+uv run sql-test app . --port 9000
+```
+
+- Browse models, sources, and cases (tests and in-pipeline counts; untested first)
+- Open a target or an existing case in the workbench
+- Lineage graph with mock / will-execute / source states (pruned nodes hidden)
+- Click a node to mock or unmock; mocks keep a frontier
+- Schema-aware mock grids (add/delete rows, Tab between cells, paste from a spreadsheet)
+- Run types the mocks and shows output with row counts; expected and actual side by side
+- Accept actual as expected: a whole result, one row, or one cell, including "expect no rows"
+- Load and save case mocks and expected rows
+- Picks up SQL files added, edited, or deleted while the app is open
+
+![Home — tables, sources, cases](docs/screenshots/APP-26/home-cases-under-table.png)
+
+![Lineage — mock frontier](docs/screenshots/app-16/workbench-mocked.png)
+
+![Mock grid](docs/screenshots/APP-34/sheet-grid.png)
+
+![Setup left, outcome right after Run](docs/screenshots/APP-32/setup-outcome-split.png)
+
+![Accept actual into expected](docs/screenshots/app-21/accepted.png)
+
 ## CLI
 
 pytest remains the test runner. The CLI also discovers tables/cases, prints coverage, and starts the authoring app.
@@ -111,27 +140,6 @@ members 0       0
 medicaid_members        1       1
 medicaid_members_named_alice    2       0
 ```
-
-The app server binds to localhost only. Open the printed URL in a browser.
-
-```bash
-uv run sql-test app tests/fixtures/repos/lakehouse-data-customer
-uv run sql-test app tests/fixtures/repos/lineage-demo --port 9000
-```
-
-## Authoring app
-
-Local workbench (`sql-test app`):
-
-- Browse models, sources, and cases (tests and in-pipeline counts; untested first)
-- Open a target or an existing case in the workbench
-- Lineage graph with mock / will-execute / source states (pruned nodes hidden)
-- Click a node to mock or unmock; mocks keep a frontier
-- Schema-aware mock grids (add/delete rows, Tab between cells, paste from a spreadsheet)
-- Run types the mocks and shows output with row counts; expected and actual side by side
-- Accept actual as expected: a whole result, one row, or one cell, including "expect no rows"
-- Load and save case mocks and expected rows
-- Picks up SQL files added, edited, or deleted while the app is open
 
 ## Sample repository
 
