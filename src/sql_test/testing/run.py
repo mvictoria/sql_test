@@ -10,7 +10,7 @@ from sql_test.engine import (
     Row,
     SourceReason,
 )
-from sql_test.testing.cases import UncastableCell, read_case
+from sql_test.testing.cases import UncastableCell, UnknownColumns, read_case
 from sql_test.testing.comparison import Comparison, compare
 
 
@@ -49,7 +49,7 @@ class CaseResult:
 def run_case(folder: Path, engine: Engine) -> CaseResult:
     try:
         case = read_case(folder, engine.catalog)
-    except UncastableCell as error:
+    except (UncastableCell, UnknownColumns) as error:
         return CaseResult(folder=folder, problem=str(error))
     if case.expected is None:
         return CaseResult(folder=folder, problem="the case has no expected.csv")

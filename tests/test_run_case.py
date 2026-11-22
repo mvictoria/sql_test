@@ -184,3 +184,35 @@ def test_a_typo_sqls_path_names_the_missing_sql_file_not_unused_mocks(tmp_path: 
     assert not result.passed
     assert "medicaid_members.sql" in (result.problem or "")
     assert "mocks the run never reads" not in (result.problem or "")
+
+
+def test_unknown_mock_columns_fail_naming_the_relation(tmp_path: Path):
+    folder = _case(
+        tmp_path,
+        {
+            "members.csv": "member_idd,member_name,lob\n1,Ada,30\n",
+            "lob.csv": MOCKS["lob.csv"],
+            "expected.csv": "member_id,member_name\n1,Ada\n",
+        },
+    )
+
+    result = run_case(folder, _engine())
+
+    assert not result.passed
+    assert result.comparison is None
+    assert result.problem == "unknown columns on members: member_idd"
+    assert "missing" not in result.report()
+
+
+def test_unknown_expected_columns_fail_naming_the_relation(tmp_path: Path):
+    folder = _case(
+        tmp_path,
+        MOCKS | {"expected.csv": "member_idd,member_name\n1,Ada\n"},
+    )
+
+    result = run_case(folder, _engine())
+
+    assert not result.passed
+    assert result.comparison is None
+    assert result.problem == "unknown columns on medicaid_members: member_idd"
+    assert "missing" not in result.report()

@@ -8,6 +8,7 @@ from sql_test.engine.relation import Relation
 from sql_test.engine.schema import Column
 from sql_test.testing.cases import (
     UncastableCell,
+    UnknownColumns,
     case_folders,
     case_id,
     read_case,
@@ -71,6 +72,24 @@ def test_a_cell_that_cannot_be_cast_is_named(tmp_path: Path):
     )
 
     with pytest.raises(UncastableCell, match=r"expected\.csv line 3 member_id"):
+        read_case(folder, _catalog())
+
+
+def test_unknown_mock_columns_are_named_against_the_schema(tmp_path: Path):
+    folder = _case_folder(
+        tmp_path, {"members.csv": "member_idd,member_name,lob\n1,Ada,30\n"}
+    )
+
+    with pytest.raises(UnknownColumns, match=r"unknown columns on members: member_idd"):
+        read_case(folder, _catalog())
+
+
+def test_unknown_expected_columns_are_named_against_the_schema(tmp_path: Path):
+    folder = _case_folder(tmp_path, {"expected.csv": "member_idd\n1\n"})
+
+    with pytest.raises(
+        UnknownColumns, match=r"unknown columns on medicaid_members: member_idd"
+    ):
         read_case(folder, _catalog())
 
 

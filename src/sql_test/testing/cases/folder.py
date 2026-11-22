@@ -12,6 +12,10 @@ class UncastableCell(Exception):
     pass
 
 
+class UnknownColumns(Exception):
+    pass
+
+
 @dataclass(frozen=True)
 class CaseTable:
     columns: tuple[str, ...]
@@ -31,11 +35,12 @@ def read_case(folder: Path, catalog: Catalog) -> Case:
     mocks = {}
     for path in sorted(folder.glob("*.csv")):
         if path.name != EXPECTED:
+            relation = Relation.parse(path.stem)
             schema = catalog.schema(catalog.resolve(path.stem)) or ()
-            mocks[Relation.parse(path.stem)] = _read_table(path, schema)
+            mocks[relation] = _read_table(path, schema, relation)
     expected_path = folder / EXPECTED
     expected = (
-        _read_table(expected_path, catalog.schema(target) or ())
+        _read_table(expected_path, catalog.schema(target) or (), target)
         if expected_path.is_file()
         else None
     )
@@ -50,11 +55,16 @@ def write_case(folder: Path, case: Case) -> None:
         _write_table(folder / EXPECTED, case.expected)
 
 
-def _read_table(path: Path, schema: Schema) -> CaseTable:
+def _read_table(path: Path, schema: Schema, relation: Relation) -> CaseTable:
     columns = {column.name: column for column in schema}
     with path.open(newline="") as file:
         reader = csv.reader(file, quoting=csv.QUOTE_NOTNULL)
         header = tuple(next(reader))
+        if columns:
+            unknown = tuple(name for name in header if name not in columns)
+            if unknown:
+                names = ", ".join(unknown)
+                raise UnknownColumns(f"unknown columns on {relation}: {names}")
         rows = [
             {
                 name: _cast(columns.get(name), cell, path, line, name)
