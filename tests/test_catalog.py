@@ -68,7 +68,9 @@ def test_a_mapped_sql_file_that_is_missing_is_a_problem_not_an_operation(tmp_pat
     assert [operation.sql_file.name for operation in catalog.operations] == ["kept.sql"]
     assert Relation(name="gone") not in catalog.relations()
     assert catalog.problems == (
-        MappingProblem(file=mapping, reason="gone.sql does not exist"),
+        MappingProblem(
+            file=mapping, reason="gone.sql does not exist", writes=Relation(name="gone")
+        ),
     )
 
 

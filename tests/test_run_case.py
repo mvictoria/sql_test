@@ -120,3 +120,67 @@ def test_a_mock_the_run_never_reads_fails_the_case_naming_it(tmp_path: Path):
 
     assert not result.passed
     assert result.problem == "mocks the run never reads: unrelated"
+
+
+def test_a_missing_sql_ref_names_the_missing_file_not_unused_mocks(tmp_path: Path):
+    folder = _case(tmp_path, MOCKS | {"expected.csv": "member_id,member_name\n1,Ada\n"})
+    mapping = tmp_path / "mapping.csv"
+    mapping.write_text("table_ref,sql_ref\nmedicaid_members,MISSING.sql\n")
+    engine = Engine(
+        catalog=mapped_sql_folder(
+            sqls=REPOSITORY / "admin" / "sqls",
+            mapping=mapping,
+        ),
+        executor=DuckDBExecutor(),
+    )
+
+    result = run_case(folder, engine)
+
+    assert not result.passed
+    assert "MISSING.sql" in (result.problem or "")
+    assert "mocks the run never reads" not in (result.problem or "")
+
+
+def test_a_missing_target_schema_names_the_relation_not_unused_mocks(tmp_path: Path):
+    folder = _case(tmp_path, MOCKS | {"expected.csv": "member_id,member_name\n1,Ada\n"})
+    schemas = tmp_path / "schemas"
+    schemas.mkdir()
+    (schemas / "sources.sql").write_text(
+        "create table members (member_id integer, member_name varchar, lob integer);\n"
+        "create table lob (lob integer, lob_name varchar);\n"
+    )
+    engine = Engine(
+        catalog=mapped_sql_folder(
+            sqls=REPOSITORY / "admin" / "sqls",
+            mapping=REPOSITORY / "admin" / "config" / "lookup_sql_table_mapping.csv",
+            schemas=schemas,
+        ),
+        executor=DuckDBExecutor(),
+    )
+
+    result = run_case(folder, engine)
+
+    assert not result.passed
+    assert "medicaid_members" in (result.problem or "")
+    assert "schema" in (result.problem or "")
+    assert "mocks the run never reads" not in (result.problem or "")
+
+
+def test_a_typo_sqls_path_names_the_missing_sql_file_not_unused_mocks(tmp_path: Path):
+    folder = _case(tmp_path, MOCKS | {"expected.csv": "member_id,member_name\n1,Ada\n"})
+    sqls = tmp_path / "typo_sqls"
+    sqls.mkdir()
+    engine = Engine(
+        catalog=mapped_sql_folder(
+            sqls=sqls,
+            mapping=REPOSITORY / "admin" / "config" / "lookup_sql_table_mapping.csv",
+            schemas=REPOSITORY / "admin" / "sqls",
+        ),
+        executor=DuckDBExecutor(),
+    )
+
+    result = run_case(folder, engine)
+
+    assert not result.passed
+    assert "medicaid_members.sql" in (result.problem or "")
+    assert "mocks the run never reads" not in (result.problem or "")
