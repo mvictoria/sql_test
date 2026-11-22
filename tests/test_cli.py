@@ -112,6 +112,26 @@ def test_init_writes_a_consumer_skeleton_that_discovers_and_passes_pytest(
     assert result.returncode == 0, result.stdout + result.stderr
 
 
+def test_init_writes_a_data_tests_workflow_pinned_to_v0(tmp_path: Path):
+    """UAT-2: init scaffolds the reusable workflow caller @v0."""
+    root = tmp_path / "demo"
+    assert main(["init", str(root)]) == 0
+    workflow = root / ".github/workflows/data-tests.yml"
+    assert workflow.is_file()
+    text = workflow.read_text()
+    assert "mvictoria/sql_test/.github/workflows/data-tests.yml@v0" in text
+    assert "workflow_call" not in text  # caller, not the reusable definition
+
+
+def test_init_does_not_overwrite_an_existing_data_tests_workflow(tmp_path: Path):
+    root = tmp_path / "demo"
+    workflow = root / ".github/workflows/data-tests.yml"
+    workflow.parent.mkdir(parents=True)
+    workflow.write_text("name: keep-me\n")
+    assert main(["init", str(root)]) == 0
+    assert workflow.read_text() == "name: keep-me\n"
+
+
 def test_init_adds_sql_test_section_to_an_existing_pyproject(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ):

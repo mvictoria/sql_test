@@ -83,7 +83,7 @@ def test_case(case, engine):
     assert result.passed, result.report()
 ```
 
-**CI** — pin the reusable workflow to the floating major tag, never `main`:
+**CI** — `sql-test init` writes `.github/workflows/data-tests.yml` pinned to the floating major tag (`@v0`), never `main`. For a hand-built repo, copy [examples/minimal-consumer/.github/workflows/data-tests.yml](examples/minimal-consumer/.github/workflows/data-tests.yml) (same pin):
 
 ```yaml
 jobs:
@@ -91,7 +91,7 @@ jobs:
     uses: mvictoria/sql_test/.github/workflows/data-tests.yml@v0
 ```
 
-Copy [examples/minimal-consumer/.github/workflows/data-tests.yml](examples/minimal-consumer/.github/workflows/data-tests.yml). The workflow installs `sql-test` from the same git commit as that pin and runs pytest in the calling repository.
+The workflow installs `sql-test` from the same git commit as that pin and runs pytest in the calling repository.
 
 **Releases** — the git tag is the version (`dynamic` via hatchling / `uv-dynamic-versioning`).
 
@@ -112,7 +112,7 @@ sql-test coverage [repository]
 sql-test app [repository] [--port 8765]
 ```
 
-- `init` — write a minimal consuming-repository skeleton; adds `[tool.sql-test]` to an existing `pyproject.toml`, refuses if that table is already present
+- `init` — write a minimal consuming-repository skeleton (SQL, mapping, one case, pytest wiring, and a `@v0` data-tests workflow); adds `[tool.sql-test]` to an existing `pyproject.toml`, refuses if that table is already present
 - `repository` / `directory` — path (default `.`)
 - `--port` — localhost port for `app` (default `8765`)
 
