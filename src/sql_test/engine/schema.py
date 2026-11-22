@@ -66,3 +66,12 @@ class SchemaProblem:
 class DiscoveredSchemas:
     schemas: dict[Relation, Schema] = field(default_factory=dict)
     problems: list[SchemaProblem] = field(default_factory=list)
+
+    def add_problem(self, file: Path, reason: str) -> None:
+        self.problems.append(SchemaProblem(file, reason))
+
+    def add(self, relation: Relation, schema: Schema, *, file: Path) -> None:
+        if relation in self.schemas:
+            self.add_problem(file, f"{relation} is already defined")
+            return
+        self.schemas[relation] = schema

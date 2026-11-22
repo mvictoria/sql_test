@@ -2,9 +2,25 @@ from pathlib import Path
 
 from sql_test.engine.catalog.ddl import read_ddl_schemas
 from sql_test.engine.relation import Relation
-from sql_test.engine.schema import Column
+from sql_test.engine.schema import Column, DiscoveredSchemas
 
 REPOSITORY = Path(__file__).parent / "fixtures" / "repos" / "lakehouse-data-customer"
+
+
+def test_discovered_schemas_keeps_the_first_definition(tmp_path):
+    """Duplicate policy lives on DiscoveredSchemas, not in the DDL reader."""
+    first = (Column(name="id", type="INT"),)
+    second = (Column(name="id", type="VARCHAR(10)"),)
+    discovered = DiscoveredSchemas()
+    file_a = tmp_path / "a.sql"
+    file_b = tmp_path / "b.sql"
+
+    discovered.add(Relation(name="t"), first, file=file_a)
+    discovered.add(Relation(name="t"), second, file=file_b)
+
+    assert discovered.schemas == {Relation(name="t"): first}
+    assert [problem.file for problem in discovered.problems] == [file_b]
+    assert "t is already defined" in discovered.problems[0].reason
 
 
 def test_reads_every_table_defined_in_the_sql_folder():

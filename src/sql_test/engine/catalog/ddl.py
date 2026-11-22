@@ -9,7 +9,7 @@ from sqlglot.errors import SqlglotError
 from sqlglot.tokens import TokenType
 
 from sql_test.engine.relation import Relation
-from sql_test.engine.schema import Column, DiscoveredSchemas, Schema, SchemaProblem
+from sql_test.engine.schema import Column, DiscoveredSchemas, Schema
 
 
 def read_ddl_schemas(folder: Path, dialect: str | None = None) -> DiscoveredSchemas:
@@ -17,15 +17,10 @@ def read_ddl_schemas(folder: Path, dialect: str | None = None) -> DiscoveredSche
     for path in sorted(folder.rglob("*.sql")):
         for definition in _definitions(path.read_text(), dialect):
             if isinstance(definition, str):
-                discovered.problems.append(SchemaProblem(path, definition))
+                discovered.add_problem(path, definition)
                 continue
             relation, schema = definition
-            if relation in discovered.schemas:
-                discovered.problems.append(
-                    SchemaProblem(path, f"{relation} is already defined")
-                )
-                continue
-            discovered.schemas[relation] = schema
+            discovered.add(relation, schema, file=path)
     return discovered
 
 
