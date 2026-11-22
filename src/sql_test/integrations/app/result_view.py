@@ -20,6 +20,27 @@ _DIFFERING = "background:#fff3cd;font-weight:600"
 type OnAccept = Callable[[ExpectedRows], None]
 
 
+def _accept_all(schema: Schema, rows: list[Row], on_accept: OnAccept) -> None:
+    """Accept actual as expected; empty actual needs an explicit confirm (UAT-8)."""
+    if rows:
+        on_accept(accept_all(schema, rows))
+        return
+    with ui.dialog() as dialog, ui.card().classes("gap-2"):
+        ui.label(
+            "Actual has no rows. Set expected to no rows? "
+            "A filter or mock mistake can empty the result."
+        ).mark("accept-empty-prompt")
+        with ui.row().classes("gap-2"):
+            ui.button("Cancel", on_click=dialog.close).props("flat").mark(
+                "accept-empty-cancel"
+            )
+            ui.button(
+                "Expect no rows",
+                on_click=lambda: (on_accept(accept_all(schema, [])), dialog.close()),
+            ).props("unelevated color=positive").mark("accept-empty-confirm")
+    dialog.open()
+
+
 def result_view(
     state: WorkbenchState, on_switch: Callable[[str], None], on_accept: OnAccept
 ) -> None:
@@ -38,8 +59,8 @@ def result_view(
                 button.props("unelevated" if name == view else "outline")
             if schema is not None and not panel.passed:
                 ui.button(
-                    "Accept all actual",
-                    on_click=lambda: on_accept(accept_all(schema, result.rows)),
+                    "Expect no rows" if not result.rows else "Accept all actual",
+                    on_click=lambda: _accept_all(schema, result.rows, on_accept),
                 ).props("outline color=positive").mark("accept-all")
         if view == "output":
             _output(result)
