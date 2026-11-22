@@ -42,12 +42,14 @@ def _tables(result: Discovery, catalog: Catalog) -> None:
                     ).mark("pipelines-gloss")
         for row in report:
             with ui.row().classes("items-baseline gap-2"):
-                ui.link(
-                    row.table, f"/workbench?target={quote(row.table, safe='')}"
-                ).mark(f"table-{row.table}")
-                ui.label("model" if row.table in models else "source").classes(
-                    "text-caption text-grey-7"
-                )
+                if row.table in models:
+                    ui.link(
+                        row.table, f"/workbench?target={quote(row.table, safe='')}"
+                    ).mark(f"table-{row.table}")
+                    ui.label("model").classes("text-caption text-grey-7")
+                else:
+                    ui.label(row.table).mark(f"table-{row.table}")
+                    ui.label("source").classes("text-caption text-grey-7")
             ui.label(str(row.tests)).mark(f"tests-{row.table}")
             if row.pipelines:
                 ui.link(
