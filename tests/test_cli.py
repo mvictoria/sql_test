@@ -128,6 +128,37 @@ def test_init_adds_sql_test_section_to_an_existing_pyproject(
     assert "example" in capsys.readouterr().out
 
 
+def test_init_adds_sql_test_and_pytest_deps_to_an_existing_pyproject(
+    tmp_path: Path,
+):
+    """UAT-1: empty deps get sql-test @v0 and pytest so uv sync can work."""
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "orders-data"\nversion = "1.0.0"\ndependencies = []\n'
+    )
+    assert main(["init", str(tmp_path)]) == 0
+    text = (tmp_path / "pyproject.toml").read_text()
+    assert "sql-test @ git+https://github.com/mvictoria/sql_test.git@v0" in text
+    assert "pytest>=9" in text
+    assert 'name = "orders-data"' in text
+
+
+def test_init_does_not_duplicate_existing_sql_test_or_pytest_deps(tmp_path: Path):
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\n"
+        'name = "orders-data"\n'
+        "dependencies = [\n"
+        '    "sql-test @ git+https://github.com/mvictoria/sql_test.git@v0",\n'
+        '    "pytest>=9",\n'
+        '    "httpx>=0.27",\n'
+        "]\n"
+    )
+    assert main(["init", str(tmp_path)]) == 0
+    text = (tmp_path / "pyproject.toml").read_text()
+    assert text.count("sql-test @") == 1
+    assert text.count("pytest") == 1
+    assert "httpx>=0.27" in text
+
+
 def test_init_refuses_when_sql_test_is_already_configured(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ):
