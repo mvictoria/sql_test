@@ -14,7 +14,7 @@ Requires Python 3.13+.
 
 ## Adopt in a consuming repository
 
-Requires Python 3.13+. Prefer `sql-test init` for a new repo. To hand-build, copy [examples/minimal-consumer/](examples/minimal-consumer/) or paste the files below — that example is a standalone consumer that installs `sql-test` itself. `lakehouse-data-customer/` is **monorepo-only** — it has no `[project]` table and is meant to run from this repository's venv, not as a template for a new data repo.
+Requires Python 3.13+. Prefer `sql-test init` for a new repo. To hand-build, copy [examples/minimal-consumer/](examples/minimal-consumer/) or paste the files below — that example is a standalone consumer that installs `sql-test` itself.
 
 Scaffold:
 
@@ -133,7 +133,7 @@ medicaid_members_named_alice    2       0
 The app server binds to localhost only. Open the printed URL in a browser.
 
 ```bash
-uv run sql-test app lakehouse-data-customer
+uv run sql-test app tests/fixtures/repos/lakehouse-data-customer
 uv run sql-test app tests/fixtures/repos/lineage-demo --port 9000
 ```
 
@@ -157,9 +157,7 @@ Details in HELPER and the product ROADMAP.
 
 `examples/minimal-consumer/` is the copy-paste adopt sample (standalone `pyproject.toml`, one case, pytest wiring, workflow caller).
 
-`lakehouse-data-customer/` is a temporary **monorepo-only** sample for richer chained-SQL demos inside this repository. Do not copy its `pyproject.toml` into a new data repo — it is only `[tool.sql-test]` and expects this monorepo's venv. The tool must not assume it is present; package tests use copies under `tests/fixtures/repos/`.
-
-Its `tests/` show both ways a repository uses the library: `test_sql.py` calls the engine with rows written in Python, and `test_case_folders.py` runs one parametrized test per case folder under `tests/cases/`. Run them with `uv run pytest lakehouse-data-customer/tests`.
+For a richer chained-SQL fixture (mocks across several tables, both `test_sql.py` and case folders), use `tests/fixtures/repos/lakehouse-data-customer/`. Run its tests with `uv run pytest tests/fixtures/repos/lakehouse-data-customer/tests`.
 
 ## Tests
 

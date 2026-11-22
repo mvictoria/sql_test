@@ -303,7 +303,7 @@ A relation is **given** when the caller supplies its rows; the test layer gives 
 
 The application is initially launched against a single local repository. The repository is always passed in, for example `sql-test app <path>`. The tool never assumes where a consuming repository lives or that it is inside the tool's own directory.
 
-`lakehouse-data-customer/` is a sample consuming repository kept in this directory for now. Nothing in the tool or its own tests may depend on it being there.
+`examples/minimal-consumer/` is the copy-paste adopt sample. Richer chained-SQL demos and package tests use `tests/fixtures/repos/`. Nothing in the tool assumes a consuming repository lives inside this directory.
 
 It discovers:
 

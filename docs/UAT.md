@@ -26,11 +26,11 @@ Ordered roughly by how much they block a new adopter.
 1. **Documented install does not work.**
    `uv add "sql-test @ git+https://github.com/mvictoria/sql_test.git@v0"` fails: there is no `v0` tag and no GitHub releases. `@main` works as a workaround the README never mentions.
 
-2. **README `uv add` assumes a `[project]` table the sample does not have.**
-   Sample `lakehouse-data-customer/pyproject.toml` is only `[tool.sql-test]`. Literal copy → `Project is missing a [project] table`. A consumer also needs something like `[tool.uv] package = false` (or hatch packaging config); none of that is in the adopt section.
+2. **README `uv add` assumes a `[project]` table the sample does not have.** *(addressed: adopt path is `examples/minimal-consumer/` / `sql-test init`; root monorepo twin removed)*
+   The old root `lakehouse-data-customer/pyproject.toml` was only `[tool.sql-test]`. Literal copy → `Project is missing a [project] table`.
 
-3. **Sample consumer is not a standalone project.**
-   It runs from the monorepo venv. As a template for “my data repo,” it has no installable deps or own environment story.
+3. **Sample consumer is not a standalone project.** *(addressed: same as 2)*
+   The root twin ran from the monorepo venv. As a template for “my data repo,” it had no installable deps or own environment story.
 
 4. **No scaffold.**
    No `sql-test init`. Adopters must invent mapping CSV shape, DDL layout, case folder layout, and `conftest.py` + `test_case_folders.py`. README shows snippets; there is no one-command bootstrap.
@@ -102,7 +102,7 @@ Ordered roughly by how much they block a new adopter.
 Themes (work tracked in [issues](https://github.com/mvictoria/sql_test/issues), not as story lists here):
 
 1. Floating adopt tag and pins — done (`@v0` + CD).
-2. Copy-pasteable consumer `pyproject` / standalone sample.
+2. Copy-pasteable consumer `pyproject` / standalone sample — done (`examples/minimal-consumer/`; root lakehouse twin removed).
 3. `sql-test init` — done.
 4. Path / DDL / mapping / INSERT diagnoses.
 5. First-run authoring polish and accept-actual in the workbench.

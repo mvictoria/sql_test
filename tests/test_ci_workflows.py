@@ -5,7 +5,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"
 SAMPLE_CALLER = (
-    ROOT / "lakehouse-data-customer" / ".github" / "workflows" / "data-tests.yml"
+    ROOT / "examples" / "minimal-consumer" / ".github" / "workflows" / "data-tests.yml"
 )
 
 
@@ -54,7 +54,10 @@ def test_tool_ci_calls_reusable_workflow_for_sample():
     ci = _load(WORKFLOWS / "ci.yml")
     job = ci["jobs"]["sample-data-tests"]
     assert job["uses"] == "./.github/workflows/data-tests.yml"
-    assert job["with"]["working-directory"] == "lakehouse-data-customer"
+    assert (
+        job["with"]["working-directory"]
+        == "tests/fixtures/repos/lakehouse-data-customer"
+    )
 
 
 def test_tool_ci_runs_on_pull_requests_only():
