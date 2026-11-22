@@ -36,6 +36,13 @@ _CLEAR_NULL_JS = """
     emit({key: e.key});
 }
 """
+_SET_NULL_JS = """
+(e) => {
+    if (!(e.ctrlKey || e.metaKey) || e.key !== ';') return;
+    e.preventDefault();
+    emit({});
+}
+"""
 
 
 @dataclass(frozen=True)
@@ -166,7 +173,7 @@ def _cell(
                     _edit(row, key, event.value, column, invalid, error_label, actions)
                 ),
             )
-            .props("dense outlined debounce=300")
+            .props("dense outlined")
             .tooltip(_NULL_HINT)
             .mark(markers)
         )
@@ -201,9 +208,20 @@ def _cell(
                 reverse=True,
             ),
         )
+        set_null = lambda _, row=row, key=key, field=field, table=table, index=index: (
+            _set_null(row, key, actions, field=field, table=table, index=index)
+        )
+        # Chord for User tests; JS emit so real browsers see Ctrl/Cmd+;.
+        field.on("keydown.ctrl.exact.;.prevent", set_null)
+        field.on("keydown.meta.exact.;.prevent", set_null)
         field.on(
-            "keydown.ctrl.exact.;.prevent",
-            lambda _, row=row, key=key: _set_null(row, key, actions),
+            "keydown",
+            lambda event, row=row, key=key, field=field, table=table, index=index: (
+                _set_null(row, key, actions, field=field, table=table, index=index)
+                if _is_set_null_event(event)
+                else None
+            ),
+            js_handler=_SET_NULL_JS,
         )
         field.on(
             "paste",
@@ -300,6 +318,9 @@ def _edit(
     error_label: ui.label,
     actions: EditorActions,
 ) -> None:
+    # Ignore empty on_change while NULL (e.g. clearing the input for display).
+    if (value or "") == "" and column in row and row[column] is None:
+        return
     row[column] = value or ""
     message = cell_error(schema_column, row[column])
     error_label.set_text(message or "")
@@ -311,11 +332,23 @@ def _set_null(
     row: dict[str, Cell],
     column: str,
     actions: EditorActions,
+    *,
+    field: ui.input,
+    table: str,
+    index: int,
 ) -> None:
     """Ctrl+; only sets NULL; leave NULL by typing (empty string stays "")."""
     if column in row and row[column] is None:
         return
     row[column] = None
+    # Clear the visible text and show the NULL placeholder on this input before
+    # rebuild. set_value fires on_change; _edit must keep None (see guard above).
+    # Without this paint, a mid-handler grid clear often leaves the browser
+    # looking empty until a later full refresh (Run).
+    field.set_value("")
+    field.props("readonly placeholder=NULL")
+    field.mark(f"cell-{table}.{index}.{column} null-{table}.{index}.{column}")
+    field.update()
     actions.on_rebuild()
 
 
@@ -339,6 +372,18 @@ def _keydown_character(args: object) -> str | None:
     if not isinstance(key, str) or len(key) != 1:
         return None
     return key
+
+
+def _is_set_null_event(event: object) -> bool:
+    """Chord handlers and JS emit({}) set NULL; ignore other keydowns."""
+    args = getattr(event, "args", None)
+    if args is None or args == {} or args is True:
+        return True
+    if not isinstance(args, dict):
+        return False
+    if args.get("key") != ";":
+        return False
+    return bool(args.get("ctrlKey") or args.get("metaKey") or args.get("ctrl"))
 
 
 def _case_name(state: WorkbenchState) -> None:
