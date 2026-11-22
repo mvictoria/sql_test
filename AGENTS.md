@@ -5,14 +5,15 @@ A library for testing SQL transformations: mock upstream tables, run the real SQ
 ## Docs
 
 - **Design decisions** (case format, lineage, mocking, coverage, architecture): [docs/HELPER.md](docs/HELPER.md). Read it before changing engine behaviour or the case format.
-- **Work items**: [docs/ROADMAP.md](docs/ROADMAP.md). Each story has an ID such as `ENG-2`, a done-when, and its dependencies. Find the story before starting work, and update the roadmap when scope changes.
-- **Adoption UAT**: [docs/UAT.md](docs/UAT.md). Pre-release adoption stories come from this pass; prefer those over opening Spark/incremental early.
+- **Work items (source of truth):** [GitHub issues](https://github.com/mvictoria/sql_test/issues) titled `ID: …`, with area labels (`engine`, `user-interface`, `ci-cd`, …). Find the open issue before starting work; close it when the PR lands. Scope changes go on the issue.
+- **Product roadmap:** [docs/ROADMAP.md](docs/ROADMAP.md) — shipped capabilities and planned *features* by theme/version, not task breakdown.
+- **Adoption UAT:** [docs/UAT.md](docs/UAT.md). Prefer adoption/UX polish over opening Spark or incremental early.
 
 ## Way of working
 
 - **TDD.** Each story starts with a failing test for its done-when. Write the code that makes it pass, then refactor, one behaviour per red/green cycle.
 - **DDD.** Code uses the domain's words: table under test, case, mock, source, producer, lineage, plan, execution boundary. Name modules, types, and functions after them. A new term is defined in [docs/HELPER.md](docs/HELPER.md) before it appears in code. Source means source→target QA language, not a separate "boundary" relation type.
-- **Ship on a PR.** Push the branch and open (or update) a pull request; do not leave finished work only local. The PR body is for humans: succinct — what changed, why, and which roadmap story it serves. Authoring-app (APP-*) PRs embed UI: screenshot the changed screen from the worktree app, commit it under `docs/screenshots/<story-id>/`, and show it in the PR body.
+- **Ship on a PR.** Push the branch and open (or update) a pull request; do not leave finished work only local. The PR body is for humans: succinct — what changed, why, and which issue/story ID it serves (`Fixes #N` when applicable). Authoring-app (APP-*) PRs embed UI: screenshot the changed screen from the worktree app, commit it under `docs/screenshots/<story-id>/`, and show it in the PR body.
 - **Keep the PR mergeable.** Before pushing, fetch and rebase the branch onto `origin/main` locally, resolve any conflicts commit by commit, and rerun prek and pytest. History stays linear: no merge commits on the branch. Push a rebased branch with `git push --force-with-lease`. Check that the PR shows as mergeable after pushing.
 - **Release via the PR title.** To cut a package release when the PR lands, start the PR title with `(major)`, `(minor)`, or `(patch)` as the first word (case-insensitive; for example `(patch) CI-2: versioned releases`). After merge onto `main`, [`.github/workflows/cd.yml`](.github/workflows/cd.yml) tags **that new `main` tip** (not the pre-rebase branch SHAs), then builds and publishes from the tag. Omit the token if the PR should not release. Details: [README.md](README.md) (Releases) and [docs/HELPER.md](docs/HELPER.md) (Versioning).
 
