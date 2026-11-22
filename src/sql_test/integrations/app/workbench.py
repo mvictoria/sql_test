@@ -330,6 +330,7 @@ class Workbench:
                 state.catalog,
             )
             state.case_name = name
+            state.highlight_case_name = False
             state.message = Message(
                 f"Saved case {state.target}/{name}",
                 ok=True,
@@ -337,7 +338,14 @@ class Workbench:
                 detail=str(folder),
             )
         except SaveError as error:
-            state.message = Message(f"Could not save: {error}", ok=False)
+            missing_name = not name or "/" in name or name in {".", ".."}
+            state.highlight_case_name = missing_name
+            detail = "Enter a Case name above, then Save again." if missing_name else ""
+            state.message = Message(
+                f"Could not save: {error}",
+                ok=False,
+                detail=detail,
+            )
         except Exception as error:  # noqa: BLE001 — show failures in the page
             state.message = Message(f"Could not save: {error}", ok=False)
         self.refresh()

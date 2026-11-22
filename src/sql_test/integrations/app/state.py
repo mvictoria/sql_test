@@ -27,6 +27,7 @@ class WorkbenchState:
     target: str
     case_name: str | None = None
     case_draft: str = ""
+    highlight_case_name: bool = False
     target_cases: tuple[str, ...] = ()
     mocks: tuple[str, ...] = ()
     grid_rows: dict[str, list[dict[str, str | None]]] = field(default_factory=dict)

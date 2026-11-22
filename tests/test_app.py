@@ -1178,3 +1178,20 @@ async def test_saving_without_a_case_name_is_refused(user: User, tmp_path: Path)
 
     await user.should_see("Could not save")
     assert "case name is required" in _text(user, "status-error")
+
+
+async def test_saving_without_a_case_name_points_at_the_case_name_field(
+    user: User, tmp_path: Path
+):
+    """UAT-17: nameless Save must focus/highlight Case name, not only status text."""
+    repo = _copy_fixture(tmp_path)
+    _register(repo)
+    await user.open("/workbench?target=medicaid_members&mock=members&mock=lob")
+
+    user.find(marker="save").click()
+
+    await user.should_see(marker="case-name-needed")
+    (field,) = user.find(kind=ui.input, marker="case-name-needed").elements
+    assert "case-name-needed" in field.classes
+    await user.should_see(marker="status-detail")
+    assert "Case name" in _text(user, "status-detail")
