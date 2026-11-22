@@ -353,7 +353,7 @@ Minimum functionality:
 - add rows
 - delete rows
 - duplicate rows
-- represent NULL
+- represent NULL (Ctrl+; toggles NULL on the focused cell; a NULL cell stays readonly with a NULL placeholder until Ctrl+; clears it to an empty string or a typed character starts editing; clearing all text leaves an empty string, not NULL)
 - basic type validation
 - paste tabular data from spreadsheet applications
 - Tab / Shift+Tab move between cells only (not row-action buttons); Tab on the last cell of a row adds a new row
