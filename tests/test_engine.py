@@ -5,6 +5,7 @@ import pytest
 
 from sql_test.engine import Engine
 from sql_test.engine.catalog.adapters import mapped_sql_folder
+from sql_test.engine.operation import UnsupportedProducer
 from sql_test.engine.relation import AmbiguousRelation
 from sql_test.executors.duckdb import DuckDBExecutor
 
@@ -125,6 +126,46 @@ def test_reports_a_cycle(tmp_path):
             catalog=mapped_sql_folder(sqls=tmp_path, mapping=mapping),
             executor=DuckDBExecutor(),
         ).run("a", rows={})
+
+
+def test_rejects_an_insert_producer_clearly(tmp_path):
+    (tmp_path / "ddl.sql").write_text(
+        "create table source (id int);\ncreate table target (id int);\n"
+    )
+    (tmp_path / "target.sql").write_text("insert into target select id from source")
+    mapping = tmp_path / "mapping.csv"
+    mapping.write_text("table_ref,sql_ref\ntarget,target.sql\n")
+
+    with pytest.raises(
+        UnsupportedProducer,
+        match=r"INSERT producer is not supported yet \(target\.sql\)",
+    ):
+        Engine(
+            catalog=mapped_sql_folder(sqls=tmp_path, mapping=mapping),
+            executor=DuckDBExecutor(),
+        ).run("target", rows={"source": [{"id": 1}]})
+
+
+def test_rejects_a_merge_producer_clearly(tmp_path):
+    (tmp_path / "ddl.sql").write_text(
+        "create table source (id int);\ncreate table target (id int);\n"
+    )
+    (tmp_path / "target.sql").write_text(
+        "merge into target using source on target.id = source.id "
+        "when matched then update set id = source.id "
+        "when not matched then insert (id) values (source.id)"
+    )
+    mapping = tmp_path / "mapping.csv"
+    mapping.write_text("table_ref,sql_ref\ntarget,target.sql\n")
+
+    with pytest.raises(
+        UnsupportedProducer,
+        match=r"MERGE producer is not supported yet \(target\.sql\)",
+    ):
+        Engine(
+            catalog=mapped_sql_folder(sqls=tmp_path, mapping=mapping),
+            executor=DuckDBExecutor(),
+        ).run("target", rows={"source": [{"id": 1}]})
 
 
 def test_reports_an_ambiguous_table():

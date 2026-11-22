@@ -9,6 +9,10 @@ class Kind(StrEnum):
     FULL_LOAD = "full_load"
 
 
+class UnsupportedProducer(Exception):
+    """A producer whose SQL kind is not supported yet (not a SELECT full load)."""
+
+
 @dataclass(frozen=True)
 class Operation:
     sql_file: Path
