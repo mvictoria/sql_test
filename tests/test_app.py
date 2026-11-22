@@ -483,16 +483,48 @@ async def test_duplicate_row_copies_the_row(user: User):
     assert _value(user, "cell-members.1.lob") == "30"
 
 
+def _set_null(user: User, marker: str) -> None:
+    """APP-28: Ctrl+; toggles NULL on the focused cell (no per-cell NULL button)."""
+    user.find(marker=marker).trigger("keydown.ctrl.exact.;.prevent")
+
+
+async def test_members_grid_has_no_per_cell_null_button(user: User):
+    """APP-28: values read as a table; NULL chrome is not beside every input."""
+    _register(FIXTURE)
+    await user.open("/workbench?target=members&view=lineage&mock=members")
+    await user.should_see(marker="cell-members.0.member_id")
+    await user.should_not_see(marker="null-toggle-members.0.member_id")
+    await user.should_not_see(marker="null-toggle-members.0.member_name")
+    assert _count(user, "null-toggle-members.0.member_id") == 0
+
+
 async def test_null_is_distinct_from_an_empty_string(user: User):
     _register(FIXTURE)
     await user.open("/workbench?target=members&view=lineage&mock=members")
     user.find(marker="cell-members.0.member_name").type("Ada")
 
-    user.find(marker="null-toggle-members.0.member_name").click()
+    _set_null(user, "cell-members.0.member_name")
     await user.should_see(marker="null-members.0.member_name")
     assert _value(user, "cell-members.0.member_name") == ""
 
-    user.find(marker="null-toggle-members.0.member_name").click()
+    _set_null(user, "cell-members.0.member_name")
+    await user.should_not_see(marker="null-members.0.member_name")
+    assert _value(user, "cell-members.0.member_name") == ""
+
+
+async def test_typing_clears_null_without_making_empty_string_null(user: User):
+    """NULL → type leaves NULL; clear all text stays empty string; only Ctrl+; sets NULL."""
+    _register(FIXTURE)
+    await user.open("/workbench?target=members&view=lineage&mock=members")
+    user.find(marker="cell-members.0.member_name").type("Ada")
+    _set_null(user, "cell-members.0.member_name")
+    await user.should_see(marker="null-members.0.member_name")
+
+    user.find(marker="cell-members.0.member_name").trigger("keydown", args={"key": "B"})
+    await user.should_not_see(marker="null-members.0.member_name")
+    assert _value(user, "cell-members.0.member_name") == "B"
+
+    user.find(marker="cell-members.0.member_name").clear()
     await user.should_not_see(marker="null-members.0.member_name")
     assert _value(user, "cell-members.0.member_name") == ""
 

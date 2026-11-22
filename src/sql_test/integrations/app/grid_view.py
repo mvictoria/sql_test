@@ -27,6 +27,14 @@ _PASTE_JS = """
     }
 }
 """
+_CLEAR_NULL_JS = """
+(e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (typeof e.key !== 'string' || e.key.length !== 1) return;
+    e.preventDefault();
+    emit({key: e.key});
+}
+"""
 
 
 @dataclass(frozen=True)
@@ -147,72 +155,70 @@ def _cell(
         error_label = ui.label(error or "").classes("text-caption text-negative")
         if error:
             error_label.mark(invalid)
-        with ui.row().classes("items-center no-wrap gap-1"):
-            field = (
-                ui.input(
-                    value="" if value is None else value,
-                    placeholder="NULL" if is_null else "",
-                    on_change=lambda event, row=row, key=key, column=column, invalid=invalid, error_label=error_label: (
-                        _edit(
-                            row, key, event.value, column, invalid, error_label, actions
-                        )
-                    ),
-                )
-                .props("dense outlined debounce=300")
-                .mark(markers)
-            )
-            fields[(index, key)] = field
-            if state.grid_focus == (table, index, key):
-                field.classes(add="grid-focus")
-                field.run_method("focus")
-                state.grid_focus = None
-            field.on(
-                "keydown.exact.tab.prevent",
-                lambda _, index=index, key=key: _move_grid_focus(
-                    table,
-                    state,
-                    actions,
-                    columns,
-                    fields,
-                    index,
-                    key,
-                    reverse=False,
+        field = (
+            ui.input(
+                value="" if value is None else value,
+                placeholder="NULL" if is_null else "",
+                on_change=lambda event, row=row, key=key, column=column, invalid=invalid, error_label=error_label: (
+                    _edit(row, key, event.value, column, invalid, error_label, actions)
                 ),
             )
+            .props("dense outlined debounce=300")
+            .mark(markers)
+        )
+        fields[(index, key)] = field
+        if state.grid_focus == (table, index, key):
+            field.classes(add="grid-focus")
+            field.run_method("focus")
+            state.grid_focus = None
+        field.on(
+            "keydown.exact.tab.prevent",
+            lambda _, index=index, key=key: _move_grid_focus(
+                table,
+                state,
+                actions,
+                columns,
+                fields,
+                index,
+                key,
+                reverse=False,
+            ),
+        )
+        field.on(
+            "keydown.shift.tab.prevent",
+            lambda _, index=index, key=key: _move_grid_focus(
+                table,
+                state,
+                actions,
+                columns,
+                fields,
+                index,
+                key,
+                reverse=True,
+            ),
+        )
+        field.on(
+            "keydown.ctrl.exact.;.prevent",
+            lambda _, row=row, key=key, is_null=is_null: _toggle_null(
+                row, key, is_null, actions
+            ),
+        )
+        field.on(
+            "paste",
+            lambda event, index=index, key=key: _paste(
+                table, state, actions, columns, index, key, event.args
+            ),
+            js_handler=_PASTE_JS,
+        )
+        if is_null:
+            field.props("readonly")
             field.on(
-                "keydown.shift.tab.prevent",
-                lambda _, index=index, key=key: _move_grid_focus(
-                    table,
-                    state,
-                    actions,
-                    columns,
-                    fields,
-                    index,
-                    key,
-                    reverse=True,
+                "keydown",
+                lambda event, row=row, key=key: _clear_null_on_type(
+                    event.args, row, key, actions
                 ),
+                js_handler=_CLEAR_NULL_JS,
             )
-            field.on(
-                "paste",
-                lambda event, index=index, key=key: _paste(
-                    table, state, actions, columns, index, key, event.args
-                ),
-                js_handler=_PASTE_JS,
-            )
-            if is_null:
-                field.props("readonly")
-            toggle = (
-                ui.button(
-                    "NULL",
-                    on_click=lambda _, row=row, key=key, is_null=is_null: _toggle_null(
-                        row, key, is_null, actions
-                    ),
-                )
-                .props("flat dense tabindex=-1")
-                .mark(f"null-toggle-{table}.{index}.{key}")
-            )
-            if is_null:
-                toggle.props("unelevated")
 
 
 def _move_grid_focus(
@@ -307,6 +313,28 @@ def _toggle_null(
 ) -> None:
     row[column] = "" if currently_null else None
     actions.on_rebuild()
+
+
+def _clear_null_on_type(
+    args: object,
+    row: dict[str, Cell],
+    column: str,
+    actions: EditorActions,
+) -> None:
+    key = _keydown_character(args)
+    if key is None:
+        return
+    row[column] = key
+    actions.on_rebuild()
+
+
+def _keydown_character(args: object) -> str | None:
+    if not isinstance(args, dict):
+        return None
+    key = args.get("key")
+    if not isinstance(key, str) or len(key) != 1:
+        return None
+    return key
 
 
 def _case_name(state: WorkbenchState) -> None:
