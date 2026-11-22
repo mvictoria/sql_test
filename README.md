@@ -140,4 +140,4 @@ medicaid_members_named_alice    2       0
 uv run pytest examples/lakehouse-data-customer/tests
 ```
 
-Developing this package: [CONTRIBUTING.md](CONTRIBUTING.md). Design and vocabulary live in [docs/HELPER.md](docs/HELPER.md). Product direction is in [docs/ROADMAP.md](docs/ROADMAP.md); work items are [GitHub issues](https://github.com/mvictoria/sql_test/issues).
+Developing this package: [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md). Design and vocabulary live in [docs/HELPER.md](docs/HELPER.md). Product direction is in [docs/ROADMAP.md](docs/ROADMAP.md); work items are [GitHub issues](https://github.com/mvictoria/sql_test/issues).

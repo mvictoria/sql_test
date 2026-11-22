@@ -30,4 +30,4 @@ The git tag is the version (`dynamic` via hatchling / `uv-dynamic-versioning`).
 
 Manual tag push (`git tag vX.Y.Z && git push origin vX.Y.Z`) still runs the release job.
 
-Way of working for agents and humans shipping changes: [AGENTS.md](AGENTS.md).
+Way of working for agents and humans shipping changes: [AGENTS.md](../AGENTS.md).
