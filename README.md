@@ -88,7 +88,7 @@ The workflow installs `sql-test` from the same git commit as that pin and runs p
 Local workbench. Server binds to localhost only — open the printed URL in a browser:
 
 ```bash
-uv run sql-test app tests/fixtures/repos/lakehouse-data-customer
+uv run sql-test app examples/lakehouse-data-customer
 uv run sql-test app . --port 9000
 ```
 
@@ -130,7 +130,7 @@ sql-test app [repository] [--port 8765]
 `coverage` prints tests and in-pipeline counts per table, untested first (same `coverage_report` the app home uses). **In pipelines** means cases that execute the table without targeting it (its SQL runs as part of another case's pipeline).
 
 ```bash
-uv run sql-test coverage tests/fixtures/repos/lakehouse-data-customer
+uv run sql-test coverage examples/lakehouse-data-customer
 ```
 
 ```text
@@ -141,10 +141,13 @@ medicaid_members        1       1
 medicaid_members_named_alice    2       0
 ```
 
-## Sample repository
+## Sample repositories
 
-`examples/minimal-consumer/` is the copy-paste adopt sample (standalone `pyproject.toml`, one case, pytest wiring, workflow caller).
+- [`examples/minimal-consumer/`](examples/minimal-consumer/) — smallest adopt sample (one model, one case, workflow caller).
+- [`examples/lakehouse-data-customer/`](examples/lakehouse-data-customer/) — chained models, mocks across tables, both `test_sql.py` and case folders.
 
-For a richer chained-SQL fixture (mocks across several tables, both `test_sql.py` and case folders), use `tests/fixtures/repos/lakehouse-data-customer/`. Run its tests with `uv run pytest tests/fixtures/repos/lakehouse-data-customer/tests`.
+```bash
+uv run pytest examples/lakehouse-data-customer/tests
+```
 
 Developing this package: [CONTRIBUTING.md](CONTRIBUTING.md). Design and vocabulary live in [docs/HELPER.md](docs/HELPER.md). Product direction is in [docs/ROADMAP.md](docs/ROADMAP.md); work items are [GitHub issues](https://github.com/mvictoria/sql_test/issues).

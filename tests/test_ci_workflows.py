@@ -4,8 +4,14 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"
-SAMPLE_CALLER = (
-    ROOT / "examples" / "minimal-consumer" / ".github" / "workflows" / "data-tests.yml"
+SAMPLE_CALLERS = (
+    ROOT / "examples" / "minimal-consumer" / ".github" / "workflows" / "data-tests.yml",
+    ROOT
+    / "examples"
+    / "lakehouse-data-customer"
+    / ".github"
+    / "workflows"
+    / "data-tests.yml",
 )
 
 
@@ -41,13 +47,14 @@ def test_data_tests_is_reusable_and_installs_from_git_workflow_sha():
     assert pytest_step.get("working-directory") == "${{ inputs.working-directory }}"
 
 
-def test_sample_repository_calls_reusable_workflow():
-    caller = _load(SAMPLE_CALLER)
-    job = caller["jobs"]["data-tests"]
-    assert (
-        job["uses"].endswith("/.github/workflows/data-tests.yml@v0")
-        or job["uses"] == "mvictoria/sql_test/.github/workflows/data-tests.yml@v0"
-    )
+def test_sample_repositories_call_reusable_workflow():
+    for path in SAMPLE_CALLERS:
+        caller = _load(path)
+        job = caller["jobs"]["data-tests"]
+        assert (
+            job["uses"].endswith("/.github/workflows/data-tests.yml@v0")
+            or job["uses"] == "mvictoria/sql_test/.github/workflows/data-tests.yml@v0"
+        ), path
 
 
 def test_tool_ci_calls_reusable_workflow_for_sample():
