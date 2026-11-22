@@ -115,16 +115,50 @@ def test_init_writes_a_consumer_skeleton_that_discovers_and_passes_pytest(
 def test_init_adds_sql_test_section_to_an_existing_pyproject(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ):
-    (tmp_path / "pyproject.toml").write_text(
-        '[project]\nname = "orders-data"\nversion = "1.0.0"\n'
+    before = (
+        "# keep me\n"
+        "[project]\n"
+        'name = "orders-data"\n'
+        'version = "1.0.0"\n'
+        'requires-python = ">=3.13"\n'
+        "\n"
+        "[tool.uv]\n"
+        "package = false\n"
+        "\n"
+        "[tool.ruff]\n"
+        "line-length = 88\n"
+        "\n"
+        "# trailing\n"
     )
+    (tmp_path / "pyproject.toml").write_text(before)
     assert main(["init", str(tmp_path)]) == 0
-    text = (tmp_path / "pyproject.toml").read_text()
-    assert 'name = "orders-data"' in text
-    assert "[tool.sql-test]" in text
-    assert 'sqls = "admin/sqls"' in text
+    after = (tmp_path / "pyproject.toml").read_text()
+    assert "# keep me" in after
+    assert "# trailing" in after
+    assert 'name = "orders-data"' in after
+    assert "[tool.sql-test]" in after
+    assert 'sqls = "admin/sqls"' in after
+    # Existing tables and keys keep their relative order; sql-test is appended.
+    assert (
+        after.index("[project]") < after.index("[tool.uv]") < after.index("[tool.ruff]")
+    )
+    assert after.index("[tool.ruff]") < after.index("[tool.sql-test]")
+    assert after.index('name = "orders-data"') < after.index('version = "1.0.0"')
+    assert after.index('version = "1.0.0"') < after.index("requires-python")
     assert (tmp_path / "admin/sqls/example.sql").is_file()
     assert main(["discover", str(tmp_path)]) == 0
+    assert "example" in capsys.readouterr().out
+
+
+def test_init_defaults_to_cwd(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+):
+    monkeypatch.chdir(tmp_path)
+    assert main(["init"]) == 0
+    assert "Initialized" in capsys.readouterr().out
+    assert (tmp_path / "pyproject.toml").is_file()
+    assert (tmp_path / "admin/sqls/example.sql").is_file()
+    assert main(["discover"]) == 0
     assert "example" in capsys.readouterr().out
 
 
