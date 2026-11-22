@@ -88,7 +88,7 @@ class Workbench:
         self.state = state
         self.actions = EditorActions(
             on_edit=self.refresh_lineage,
-            on_rebuild=self.refresh_editor,
+            on_rebuild=self.refresh_grids,
             on_add_row=self.add_row,
             on_delete_row=self.delete_row,
             on_duplicate_row=self.duplicate_row,
@@ -193,6 +193,11 @@ class Workbench:
         self.editor.clear()
         with self.editor:
             editor_view(self.state, self.actions)
+
+    def refresh_grids(self) -> None:
+        """Rebuild mock and Expected grids after NULL / paste / row shape changes."""
+        self.refresh_editor()
+        self.refresh_run_focus()
 
     def reload_catalog(self) -> None:
         """Replace the catalog with one built from the checkout as it is now."""
