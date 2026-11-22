@@ -1121,11 +1121,55 @@ async def test_saving_a_loaded_case_writes_identical_files(user: User, tmp_path:
         "/workbench?case=" + quote("medicaid_members/only_medicaid_members", safe="")
     )
     user.find(marker="save").click()
+    await user.should_see(marker="save-overwrite-confirm")
+    user.find(marker="save-overwrite-confirm").click()
 
     await user.should_see("Saved case")
     await user.should_see(marker="status-detail", content=str(case_dir))
     after = {path.name: path.read_text() for path in sorted(case_dir.glob("*.csv"))}
     assert after == before
+
+
+async def test_saving_over_an_existing_case_asks_before_replacing_mocks(
+    user: User, tmp_path: Path
+):
+    """UAT-9: overwrite must confirm; cancel keeps prior mock CSVs."""
+    repo = _copy_fixture(tmp_path)
+    case_dir = repo / "tests" / "cases" / "medicaid_members" / "only_medicaid_members"
+    before = {path.name: path.read_text() for path in sorted(case_dir.glob("*.csv"))}
+
+    _register(repo)
+    await user.open("/workbench?target=medicaid_members&view=lineage&mock=members")
+    _fill(
+        user,
+        "members",
+        [{"member_id": "9", "member_name": "Zed", "lob": "30"}],
+    )
+    _fill(user, "expected", [{"member_id": "9", "member_name": "Zed"}])
+    user.find(marker="case-name").type("only_medicaid_members")
+
+    user.find(marker="save").click()
+
+    await user.should_see(marker="save-overwrite-confirm")
+    assert before == {
+        path.name: path.read_text() for path in sorted(case_dir.glob("*.csv"))
+    }
+
+    user.find(marker="save-overwrite-cancel").click()
+
+    assert before == {
+        path.name: path.read_text() for path in sorted(case_dir.glob("*.csv"))
+    }
+    await user.should_not_see(marker="saved")
+
+    user.find(marker="save").click()
+    user.find(marker="save-overwrite-confirm").click()
+
+    await user.should_see("Saved case")
+    after = {path.name for path in case_dir.glob("*.csv")}
+    assert "members.csv" in after
+    assert "lob.csv" not in after
+    assert (case_dir / "members.csv").read_text().startswith("member_id")
 
 
 async def test_case_saved_from_the_page_passes_without_the_app(
