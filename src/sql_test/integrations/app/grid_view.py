@@ -18,6 +18,8 @@ _SYNTHETIC_REMINDER = (
     "Fixtures must be synthetic and must not contain real member data."
 )
 _NULL_HINT = "Ctrl+; sets NULL on the focused cell. Type to replace a NULL."
+# Shown inside the input so NULL is visible even when Quasar drops placeholders.
+_NULL_DISPLAY = "NULL"
 _PASTE_JS = """
 (e) => {
     const data = e.clipboardData;
@@ -38,11 +40,8 @@ _CELL_KEYDOWN_JS = """
     if (isNullChord) {
         e.preventDefault();
         emit({op: 'null'});
-        // Best-effort DOM paint; Python also sets a NULL caption (Quasar may
-        // overwrite input.value from v-model before props land).
         if (input) {
-            input.value = '';
-            input.placeholder = 'NULL';
+            input.value = 'NULL';
             input.readOnly = true;
         }
         return;
@@ -179,8 +178,7 @@ def _cell(
             error_label.mark(invalid)
         field = (
             ui.input(
-                value="" if value is None else value,
-                placeholder="NULL" if is_null else "",
+                value=_NULL_DISPLAY if is_null else ("" if value is None else value),
                 on_change=lambda event, row=row, key=key, column=column, invalid=invalid, error_label=error_label: (
                     _edit(row, key, event.value, column, invalid, error_label, actions)
                 ),
@@ -189,11 +187,9 @@ def _cell(
             .tooltip(_NULL_HINT)
             .mark(markers)
         )
-        null_caption = (
-            ui.label("NULL" if is_null else "")
-            .classes("text-caption text-grey-8 h-4")
-            .mark(f"null-caption-{table}.{index}.{key}")
-        )
+        if is_null:
+            field.classes(add="text-grey-8")
+            field.props("readonly")
         fields[(index, key)] = field
         if state.grid_focus == (table, index, key):
             field.classes(add="grid-focus")
@@ -226,15 +222,7 @@ def _cell(
             ),
         )
         set_null = lambda _, row=row, key=key, field=field, table=table, index=index: (
-            _set_null(
-                row,
-                key,
-                actions,
-                field=field,
-                table=table,
-                index=index,
-                null_caption=null_caption,
-            )
+            _set_null(row, key, actions, field=field, table=table, index=index)
         )
         # Chord for User tests; one JS keydown for browser Ctrl/Cmd+; and type-to-leave.
         field.on("keydown.ctrl.exact.;.prevent", set_null)
@@ -243,14 +231,7 @@ def _cell(
             "keydown",
             lambda event, row=row, key=key, field=field, table=table, index=index: (
                 _cell_keydown(
-                    event,
-                    row,
-                    key,
-                    actions,
-                    field=field,
-                    table=table,
-                    index=index,
-                    null_caption=null_caption,
+                    event, row, key, actions, field=field, table=table, index=index
                 )
             ),
             js_handler=_CELL_KEYDOWN_JS,
@@ -262,8 +243,6 @@ def _cell(
             ),
             js_handler=_PASTE_JS,
         )
-        if is_null:
-            field.props("readonly")
 
 
 def _move_grid_focus(
@@ -343,8 +322,8 @@ def _edit(
     error_label: ui.label,
     actions: EditorActions,
 ) -> None:
-    # Ignore empty on_change while NULL (e.g. clearing the input for display).
-    if (value or "") == "" and column in row and row[column] is None:
+    # Ignore display echoes while the model is NULL ("" or the NULL label).
+    if column in row and row[column] is None and (value or "") in ("", _NULL_DISPLAY):
         return
     row[column] = value or ""
     message = cell_error(schema_column, row[column])
@@ -361,22 +340,18 @@ def _set_null(
     field: ui.input,
     table: str,
     index: int,
-    null_caption: ui.label,
 ) -> None:
     """Ctrl+; only sets NULL; leave NULL by typing (empty string stays "")."""
     if column in row and row[column] is None:
         return
     row[column] = None
-    # Update in place — do not rebuild the grid here. clear()+recreate mid-keydown
-    # destroys the focused Quasar input and the browser stays blank until Run.
-    # Caption is the reliable paint; Quasar placeholder alone is easy to miss / wipe.
-    # set_value fires on_change; _edit must keep None (see guard above).
-    null_caption.set_text("NULL")
-    field.props("readonly placeholder=NULL")
-    field.set_value("")
+    # Show the word NULL inside the input (model stays None). In-place only —
+    # rebuilding mid-keydown leaves the browser blank until Run.
+    field.props("readonly")
+    field.classes(add="text-grey-8")
+    field.set_value(_NULL_DISPLAY)
     field.mark(f"cell-{table}.{index}.{column} null-{table}.{index}.{column}")
     field.update()
-    null_caption.update()
 
 
 def _cell_keydown(
@@ -388,19 +363,10 @@ def _cell_keydown(
     field: ui.input,
     table: str,
     index: int,
-    null_caption: ui.label,
 ) -> None:
     args = getattr(event, "args", None)
     if isinstance(args, dict) and args.get("op") == "null":
-        _set_null(
-            row,
-            column,
-            actions,
-            field=field,
-            table=table,
-            index=index,
-            null_caption=null_caption,
-        )
+        _set_null(row, column, actions, field=field, table=table, index=index)
         return
     if isinstance(args, dict) and args.get("op") == "type":
         _clear_null_on_type({"key": args.get("key")}, row, column, actions)

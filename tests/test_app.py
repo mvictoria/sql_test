@@ -516,7 +516,7 @@ async def test_null_is_distinct_from_an_empty_string(user: User):
 
     _set_null(user, "cell-members.0.member_name")
     await user.should_see(marker="null-members.0.member_name")
-    assert _value(user, "cell-members.0.member_name") == ""
+    assert _value(user, "cell-members.0.member_name") == "NULL"
 
     _set_null(user, "cell-members.0.member_name")
     await user.should_see(marker="null-members.0.member_name")
@@ -540,7 +540,7 @@ async def test_ctrl_semicolon_shows_null_immediately_on_expected(user: User):
 
 
 async def test_ctrl_semicolon_paints_null_placeholder_after_typing(user: User):
-    """APP-31: after data entry, Ctrl+; must show NULL on the same cell without Run."""
+    """APP-31: after data entry, Ctrl+; must show NULL in the cell without Run."""
     _register(FIXTURE)
     await user.open("/workbench?target=members&view=lineage&mock=members")
     user.find(marker="cell-members.0.member_name").type("Ada")
@@ -548,12 +548,9 @@ async def test_ctrl_semicolon_paints_null_placeholder_after_typing(user: User):
     _set_null(user, "cell-members.0.member_name")
 
     await user.should_see(marker="null-members.0.member_name")
-    await user.should_see(marker="null-caption-members.0.member_name")
-    assert _text(user, "null-caption-members.0.member_name") == "NULL"
     (cell,) = user.find(kind=ui.input, marker="null-members.0.member_name").elements
-    assert cell.props.get("placeholder") == "NULL"
     assert "readonly" in cell.props
-    assert _value(user, "null-members.0.member_name") == ""
+    assert _value(user, "null-members.0.member_name") == "NULL"
 
 
 async def test_typing_clears_null_without_making_empty_string_null(user: User):
