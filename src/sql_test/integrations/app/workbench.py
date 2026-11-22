@@ -9,7 +9,7 @@ from sql_test.integrations.app.compare_view import compare_section
 from sql_test.integrations.app.engine_access import catalog
 from sql_test.integrations.app.engine_access import run as run_case
 from sql_test.integrations.app.grid import apply_grid_action, type_grid_rows
-from sql_test.integrations.app.grid_view import EditorActions, editor_view
+from sql_test.integrations.app.grid_view import EditorActions, editor_view, sheet_css
 from sql_test.integrations.app.lineage_view import lineage_css, lineage_view
 from sql_test.integrations.app.mocks import frontier_mocks, toggled_mocks
 from sql_test.integrations.app.result_view import result_view
@@ -96,6 +96,7 @@ class Workbench:
 
     def build(self) -> None:
         ui.add_css(lineage_css())
+        ui.add_css(sheet_css())
         ui.link("← sql-test", "/").mark("home-link")
         ui.label("Workbench").classes("text-h5")
         self.summary = ui.column().classes("gap-0")
