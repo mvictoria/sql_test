@@ -137,21 +137,11 @@ uv run sql-test app tests/fixtures/repos/lakehouse-data-customer
 uv run sql-test app tests/fixtures/repos/lineage-demo --port 9000
 ```
 
-## Authoring app (so far)
+## Authoring app
 
-Built with [NiceGUI](https://nicegui.io); its tests use NiceGUI's `User` fixture (`tests/test_app.py`).
+Local [NiceGUI](https://nicegui.io) workbench (`sql-test app`): home lists models and sources (cases under their table; sources are not tables under test). Open a target or case → lineage, mock grids, run, compare, accept actual, save/rename. Setup and outcome sit side by side; grids default collapsed. Optional SQL peek on lineage (`[tool.sql-test.flags] sql_peek`); Settings can Apply flags for this window or Save them for the repo. Catalog refreshes when SQL changes.
 
-- Browse models, sources, and cases (tests and in-pipeline counts; untested first)
-- Open a target or an existing case in the workbench
-- Lineage graph with mock / will-execute / source states (pruned nodes hidden)
-- Click a node to mock or unmock; mocks keep a frontier
-- Schema-aware mock grids (add/delete rows, Tab between cells, paste from a spreadsheet)
-- Run types the mocks and shows output with row counts; expected and actual side by side
-- Accept actual as expected: a whole result, one row, or one cell, including "expect no rows"
-- Load and save case mocks and expected rows
-- Picks up SQL files added, edited, or deleted while the app is open
-
-Details in HELPER and the product ROADMAP.
+Details in [HELPER](docs/HELPER.md) and [ROADMAP](docs/ROADMAP.md).
 
 ## Sample repository
 
