@@ -102,15 +102,15 @@ uv run sql-test app . --port 9000
 - Load and save case mocks and expected rows
 - Picks up SQL files added, edited, or deleted while the app is open
 
-![Home — tables, sources, cases](docs/screenshots/APP-26/home-cases-under-table.png)
+![Home — tables, sources, cases](docs/screenshots/readme/home.png)
 
-![Lineage — mock frontier](docs/screenshots/app-16/workbench-mocked.png)
+![Lineage — mocked frontier](docs/screenshots/readme/lineage-mocked.png)
 
-![Mock grid](docs/screenshots/APP-34/sheet-grid.png)
+![Mock grid](docs/screenshots/readme/mock-grid.png)
 
-![Setup left, outcome right after Run](docs/screenshots/APP-32/setup-outcome-split.png)
+![Setup left, outcome right after Run](docs/screenshots/readme/run-split.png)
 
-![Accept actual into expected](docs/screenshots/app-21/accepted.png)
+![Accept actual into expected](docs/screenshots/readme/accept.png)
 
 ## CLI
 
