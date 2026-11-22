@@ -497,7 +497,8 @@ async def test_members_grid_has_no_per_cell_null_button(user: User):
     await user.should_not_see(marker="null-toggle-members.0.member_name")
     assert _count(user, "null-toggle-members.0.member_id") == 0
     await user.should_see(marker="null-hint")
-    await user.should_see("Ctrl+; sets NULL")
+    await user.should_see(marker="set-null")
+    await user.should_see("Set NULL")
 
 
 async def test_null_hint_shows_while_editing_expected(user: User):
@@ -506,7 +507,8 @@ async def test_null_hint_shows_while_editing_expected(user: User):
     await user.open(f"/workbench?target={ALICE}&view=lineage&mock=members")
     await user.should_see(marker="grid-expected")
     await user.should_see(marker="null-hint")
-    await user.should_see("Ctrl+; sets NULL")
+    await user.should_see(marker="set-null")
+    await user.should_see("Set NULL")
 
 
 async def test_null_is_distinct_from_an_empty_string(user: User):
@@ -550,6 +552,20 @@ async def test_ctrl_semicolon_paints_null_placeholder_after_typing(user: User):
     await user.should_see(marker="null-members.0.member_name")
     (cell,) = user.find(kind=ui.input, marker="null-members.0.member_name").elements
     assert "readonly" in cell.props
+    assert _value(user, "null-members.0.member_name") == "NULL"
+
+
+async def test_set_null_button_paints_null_on_focused_cell(user: User):
+    """APP-31: Set NULL button works without relying on Ctrl+; in the browser."""
+    _register(FIXTURE)
+    await user.open("/workbench?target=members&view=lineage&mock=members")
+    user.find(marker="cell-members.0.member_name").type("Ada")
+    # Focus records focused_cell for the button.
+    user.find(marker="cell-members.0.member_name").trigger("focus")
+
+    user.find(marker="set-null").click()
+
+    await user.should_see(marker="null-members.0.member_name")
     assert _value(user, "null-members.0.member_name") == "NULL"
 
 

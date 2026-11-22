@@ -17,7 +17,7 @@ from sql_test.integrations.app.state import WorkbenchState
 _SYNTHETIC_REMINDER = (
     "Fixtures must be synthetic and must not contain real member data."
 )
-_NULL_HINT = "Ctrl+; sets NULL on the focused cell. Type to replace a NULL."
+_NULL_HINT = "Set NULL on the focused cell (button or Ctrl+;). Type to replace a NULL."
 # Shown inside the input so NULL is visible even when Quasar drops placeholders.
 _NULL_DISPLAY = "NULL"
 _PASTE_JS = """
@@ -39,11 +39,8 @@ _CELL_KEYDOWN_JS = """
         && (e.key === ';' || e.code === 'Semicolon');
     if (isNullChord) {
         e.preventDefault();
+        // Emit only — mutating input.value here races Quasar's v-model.
         emit({op: 'null'});
-        if (input) {
-            input.value = 'NULL';
-            input.readOnly = true;
-        }
         return;
     }
     if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -80,7 +77,7 @@ def editor_view(state: WorkbenchState, actions: EditorActions) -> None:
     ui.label(_SYNTHETIC_REMINDER).classes("text-caption text-grey-8").mark(
         "synthetic-data-reminder"
     )
-    ui.label(_NULL_HINT).classes("text-caption text-grey-8").mark("null-hint")
+    _null_hint_row(state, actions)
     for name in state.mocks:
         schema = repo_catalog.schema(repo_catalog.resolve(name))
         if schema is None:
@@ -100,7 +97,7 @@ def run_focus_view(state: WorkbenchState, actions: EditorActions) -> None:
     if not state.mocks and expected_schema is None:
         return
     ui.label("Expected").classes("text-subtitle1").mark("grid-expected")
-    ui.label(_NULL_HINT).classes("text-caption text-grey-8").mark("null-hint")
+    _null_hint_row(state, actions)
     if expected_schema is None:
         ui.label("No schema for the table under test").classes("text-grey-7")
     else:
@@ -116,6 +113,29 @@ def run_focus_view(state: WorkbenchState, actions: EditorActions) -> None:
         ui.button("Save case", on_click=actions.on_save).mark("save")
 
 
+def _null_hint_row(state: WorkbenchState, actions: EditorActions) -> None:
+    with ui.row().classes("items-center gap-2"):
+        ui.label(_NULL_HINT).classes("text-caption text-grey-8").mark("null-hint")
+        ui.button(
+            "Set NULL",
+            on_click=lambda: _set_null_on_focused(state, actions),
+        ).props("flat dense").mark("set-null")
+
+
+def _set_null_on_focused(state: WorkbenchState, actions: EditorActions) -> None:
+    cell = state.focused_cell
+    if cell is None:
+        ui.notify("Focus a grid cell first", type="warning")
+        return
+    table, index, key = cell
+    field = state.cell_fields.get(cell)
+    rows = state.grid_rows.get(table) or []
+    if field is None or index >= len(rows) or not isinstance(field, ui.input):
+        ui.notify("Focus a grid cell first", type="warning")
+        return
+    _set_null(rows[index], key, actions, field=field, table=table, index=index)
+
+
 def grid_view(
     name: str, schema: Schema, state: WorkbenchState, actions: EditorActions
 ) -> None:
@@ -124,6 +144,8 @@ def grid_view(
     columns = [column.name for column in schema]
     by_name = {column.name: column for column in schema}
     fields: dict[tuple[int, str], ui.input] = {}
+    for key in [k for k in state.cell_fields if k[0] == name]:
+        del state.cell_fields[key]
     with ui.grid(columns=f"repeat({len(columns)}, 11rem) auto auto").classes(
         "items-start"
     ):
@@ -188,13 +210,21 @@ def _cell(
             .mark(markers)
         )
         if is_null:
-            field.classes(add="text-grey-8")
             field.props("readonly")
+            field.classes(add="text-italic")
         fields[(index, key)] = field
+        state.cell_fields[(table, index, key)] = field
+        field.on(
+            "focus",
+            lambda _, table=table, index=index, key=key: setattr(
+                state, "focused_cell", (table, index, key)
+            ),
+        )
         if state.grid_focus == (table, index, key):
             field.classes(add="grid-focus")
             field.run_method("focus")
             state.grid_focus = None
+            state.focused_cell = (table, index, key)
         field.on(
             "keydown.exact.tab.prevent",
             lambda _, index=index, key=key: _move_grid_focus(
@@ -348,10 +378,11 @@ def _set_null(
     # Show the word NULL inside the input (model stays None). In-place only —
     # rebuilding mid-keydown leaves the browser blank until Run.
     field.props("readonly")
-    field.classes(add="text-grey-8")
+    field.classes(add="text-italic")
     field.set_value(_NULL_DISPLAY)
     field.mark(f"cell-{table}.{index}.{column} null-{table}.{index}.{column}")
     field.update()
+    ui.notify("NULL", type="info", position="top")
 
 
 def _cell_keydown(
