@@ -139,7 +139,7 @@ uv run sql-test app tests/fixtures/repos/lineage-demo --port 9000
 
 ## Authoring app
 
-Local [NiceGUI](https://nicegui.io) workbench (`sql-test app`): home lists models and sources (cases under their table; sources are not tables under test). Open a target or case → lineage, mock grids, run, compare, accept actual, save/rename. Setup and outcome sit side by side; grids default collapsed. Optional SQL peek on lineage (`[tool.sql-test.flags] sql_peek`); Settings can Apply flags for this window or Save them for the repo. Catalog refreshes when SQL changes.
+Local workbench (`sql-test app`): home lists models and sources (cases under their table; sources are not tables under test). Open a target or case → lineage, mock grids, run, compare, accept actual, save/rename. Setup and outcome sit side by side; grids default collapsed. Optional SQL peek on lineage (`[tool.sql-test.flags] sql_peek`); Settings can Apply flags for this window or Save them for the repo. Catalog refreshes when SQL changes.
 
 Details in [HELPER](docs/HELPER.md) and [ROADMAP](docs/ROADMAP.md).
 
