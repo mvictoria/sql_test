@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from sql_test.engine.catalog import Catalog
-from sql_test.engine.lineage.references import UnparseableSql, tables_read
+from sql_test.engine.lineage.references import UnparseableSql, producer_reads
 from sql_test.engine.operation import Operation
 from sql_test.engine.relation import Relation
 
@@ -61,7 +61,7 @@ def upstream_lineage(
             current_reads = {
                 operation: {
                     catalog.resolve(reference)
-                    for reference in tables_read(operation.sql)
+                    for reference in producer_reads(operation.sql, operation.sql_file)
                 }
                 for operation in producers
             }

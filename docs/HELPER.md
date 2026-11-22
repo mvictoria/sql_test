@@ -241,7 +241,7 @@ The DDL reader reads every `CREATE TABLE` with a column list, in any file under 
 
 ## Operations and producers
 
-An **operation** is a SQL statement that writes one relation. It records its SQL file, the relation it writes, and its kind. The relations it reads come from parsing its SQL. A bare `SELECT` is a full load: its result becomes the relation. `CREATE TABLE AS`, `INSERT`, `INSERT OVERWRITE`, and `MERGE` come later.
+An **operation** is a SQL statement that writes one relation. It records its SQL file, the relation it writes, and its kind. The relations it reads come from parsing its SQL. A bare `SELECT` is a full load: its result becomes the relation. `CREATE TABLE AS`, `INSERT`, `INSERT OVERWRITE`, and `MERGE` come later. Until those kinds exist, a producer that is not a bare `SELECT` fails with an explicit unsupported-producer error that names the kind and the SQL file — not a planner cycle or traceback.
 
 SQL has a relation, not the other way round. A relation exists without any SQL; a source has none. The operations that write a relation are its **producers**, and a relation may have several.
 

@@ -1,10 +1,14 @@
 from dataclasses import dataclass
 from functools import lru_cache
+from pathlib import Path
 
 import sqlglot
 from sqlglot import exp
 
+from sql_test.engine.operation import UnsupportedProducer
 from sql_test.engine.relation import Relation
+
+_FULL_LOAD_ROOTS = frozenset({"select", "union", "except", "intersect"})
 
 
 class UnparseableSql(Exception):
@@ -19,10 +23,22 @@ def ends_in_order_by(sql: str, dialect: str = "duckdb") -> bool:
     return _reads(sql, dialect).ordered
 
 
+def producer_reads(sql: str, sql_file: Path, dialect: str = "duckdb") -> set[Relation]:
+    """Tables a full-load producer reads; UnsupportedProducer / UnparseableSql otherwise."""
+    reads = _reads(sql, dialect)
+    if reads.root not in _FULL_LOAD_ROOTS:
+        raise UnsupportedProducer(
+            f"{reads.root.upper()} producer is not supported yet ({sql_file.name}); "
+            f"only SELECT full loads are supported"
+        )
+    return set(reads.tables)
+
+
 @dataclass(frozen=True)
 class _Reads:
     tables: frozenset[Relation]
     ordered: bool
+    root: str
 
 
 def _reads(sql: str, dialect: str) -> _Reads:
@@ -47,4 +63,5 @@ def _parsed(sql: str, dialect: str) -> _Reads | str:
             if table.db or table.catalog or table.name not in ctes
         ),
         ordered=tree.args.get("order") is not None,
+        root=tree.key,
     )
