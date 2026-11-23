@@ -1488,3 +1488,25 @@ async def test_saving_an_incremental_case_writes_history_and_delta(
     assert (case_dir / "events.csv").read_text() == "id,source\n10,seed\n"
     assert (case_dir / "delta" / "events.csv").read_text() == "id,source\n20,batch\n"
     assert (case_dir / "expected.csv").read_text() == "id,source\n10,seed\n20,batch\n"
+
+
+async def test_running_a_cdc_case_shows_passed(user: User):
+    _register(FIXTURE)
+    await user.open("/workbench?case=" + quote("seen/absorb_new_events", safe=""))
+
+    user.find(marker="run").click()
+
+    await user.should_see(marker="verdict-passed")
+    assert _text(user, "verdict-passed") == "Passed"
+
+
+async def test_running_a_cdc_case_with_wrong_expected_shows_failed(user: User):
+    _register(FIXTURE)
+    await user.open("/workbench?case=" + quote("seen/absorb_new_events", safe=""))
+
+    user.find(marker="cell-expected.2.source").clear().type("wrong")
+    user.find(marker="run").click()
+
+    await user.should_see(marker="verdict-failed")
+    assert _text(user, "verdict-failed") == "Failed"
+    await user.should_see(marker="result-view-diff")
