@@ -53,6 +53,7 @@ Multi-producer drill-down, ordered sequential writes, structural coverage from p
 - Switch repository in one app process (no second `sql-test app`); multi-repository lineage still later.
 - Multiple `sqls` / `mapping` / `schemas` roots in one repository config (not multiple `cases` roots until a consumer asks).
 - Multiple CDC batches in one case (`delta/1` … `delta/N`); see INC-5.
+- Infer missing upstream schemas and let authors edit them; see APP-36.
 - CDC / change-propagation views.
 - Optional YAML/JSON config readers alongside `pyproject.toml`.
 - Extra CLI commands (`run`, `validate`, static case checks) if a hook or other consumer needs them.
