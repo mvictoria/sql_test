@@ -1090,6 +1090,15 @@ wheels = [
 ]
 
 [[package]]
+name = "py4j"
+version = "0.10.9.9"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/38/31/0b210511177070c8d5d3059556194352e5753602fa64b85b7ab81ec1a009/py4j-0.10.9.9.tar.gz", hash = "sha256:f694cad19efa5bd1dee4f3e5270eb406613c974394035e5bfc4ec1aba870b879", size = 761089, upload-time = "2025-01-15T03:53:18.624Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bd/db/ea0203e495be491c85af87b66e37acfd3bf756fd985f87e46fc5e3bf022c/py4j-0.10.9.9-py2.py3-none-any.whl", hash = "sha256:c7c26e4158defb37b0bb124933163641a2ff6e3a3913f7811b0ddbe07ed61533", size = 203008, upload-time = "2025-01-15T03:53:15.648Z" },
+]
+
+[[package]]
 name = "pydantic"
 version = "2.14.4"
 source = { registry = "https://pypi.org/simple" }
@@ -1222,6 +1231,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/c4/fe/c6fabbcebd7a53f354a9e0b534fbdfa611e1ea378ddd2ae2e822f3bb25f8/pyrefly-1.5.0-py3-none-win_amd64.whl", hash = "sha256:7ab1c62a16af96b26ec7e9d36a63dd379d685db75c083a68017ec659128a53d7", size = 16475783, upload-time = "2026-11-19T01:21:10.593Z" },
     { url = "https://files.pythonhosted.org/packages/0f/4b/359f73e352d205c4665f334614ba4206c003af99b4aa9e0f1cfbe5ad4443/pyrefly-1.5.0-py3-none-win_arm64.whl", hash = "sha256:03981ed2d19ab1be8976bee8f0a492538d8df42c26d154384c3391b54500c4eb", size = 15936966, upload-time = "2026-11-19T01:21:13.713Z" },
 ]
+
+[[package]]
+name = "pyspark"
+version = "4.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "py4j" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/46/b2/4e28aaffe28db4745ac5df3ee9115719c1b5da5cce4106bee99c82d1eb2c/pyspark-4.3.0.tar.gz", hash = "sha256:e8c517948eff7088a7aa07449aa8eafa4a15a8d50319de2525a6fd26622476c6", size = 455910862, upload-time = "2026-10-30T15:30:57.079Z" }
 
 [[package]]
 name = "pytest"
@@ -1479,6 +1497,11 @@ dependencies = [
     { name = "tomlkit" },
 ]
 
+[package.optional-dependencies]
+spark = [
+    { name = "pyspark" },
+]
+
 [package.dev-dependencies]
 dev = [
     { name = "hypothesis" },
@@ -1494,9 +1517,11 @@ dev = [
 requires-dist = [
     { name = "duckdb", specifier = ">=2.0.1" },
     { name = "nicegui", specifier = ">=4.0.0" },
+    { name = "pyspark", marker = "extra == 'spark'", specifier = ">=3.5" },
     { name = "sqlglot", specifier = ">=30.33.0" },
     { name = "tomlkit", specifier = ">=0.15.2" },
 ]
+provides-extras = ["spark"]
 
 [package.metadata.requires-dev]
 dev = [

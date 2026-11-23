@@ -24,8 +24,14 @@ jobs:
           enable-cache: true
           python-version: ${{ matrix.python-version }}
 
+      - name: Set up Java
+        uses: actions/setup-java@f2beeb24e141e01a676f977032f5a29d81c9e27e # v5.1.0
+        with:
+          distribution: temurin
+          java-version: "21"
+
       - name: Install the project
-        run: uv sync --locked
+        run: uv sync --locked --extra spark
 
       - name: Checks
         if: matrix.python-version == '3.15'
