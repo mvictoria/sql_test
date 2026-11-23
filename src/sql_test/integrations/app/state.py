@@ -31,6 +31,7 @@ class WorkbenchState:
     highlight_case_name: bool = False
     target_cases: tuple[str, ...] = ()
     mocks: tuple[str, ...] = ()
+    deltas: tuple[str, ...] = ()
     grid_rows: dict[str, list[dict[str, str | None]]] = field(default_factory=dict)
     engine_types: dict[str, dict[str, str]] = field(default_factory=dict)
     grid_focus: tuple[str, int, str] | None = None

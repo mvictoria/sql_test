@@ -22,7 +22,7 @@ A library for testing SQL transformations: mock upstream tables, run the real SQ
 - Layers import in one direction, as laid out in [docs/HELPER.md](docs/HELPER.md): `engine` (catalog, lineage, planner) imports no other layer; `executors` import only the engine's executor interface; `testing` imports the engine; `integrations` wire them together. `tests/test_layers.py` enforces this.
 - The engine is handed an executor and never imports one. Executors know SQL and rows, not lineage or case folders.
 - SQL-engine-specific behaviour stays inside an executor. DuckDB is the tentative executor; Spark replaces it later behind the same interface.
-- The engine is always given a repository path. Adopt samples: `examples/minimal-consumer/`, `examples/lakehouse-data-customer/`. Package tests still use fixtures under `tests/fixtures/repos/`.
+- The engine is always given a repository path. Adopt samples: `examples/minimal-consumer/`, `examples/cdc-example/`. Package tests still use fixtures under `tests/fixtures/repos/`.
 
 ## Gotchas
 

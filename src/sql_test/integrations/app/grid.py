@@ -115,8 +115,9 @@ def apply_grid_action(
     action: str,
     mocks: tuple[str, ...],
     rows: GridRows,
+    deltas: tuple[str, ...] = (),
 ) -> GridRows:
-    editable = frozenset(mocks) | {"expected"}
+    editable = frozenset(mocks) | {f"delta/{name}" for name in deltas} | {"expected"}
     updated: GridRows = {
         name: [dict(row) for row in table_rows] for name, table_rows in rows.items()
     }

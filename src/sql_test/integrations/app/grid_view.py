@@ -126,21 +126,34 @@ def sheet_css() -> str:
 
 
 def editor_view(state: WorkbenchState, actions: EditorActions) -> None:
-    """Setup pane: case name, collapsible mocks and Expected, sticky Run/Save."""
+    """Setup pane: case name, history mocks, deltas, Expected; sticky Run/Save."""
     expected_schema = target_schema(state.catalog, state.target)
-    if not state.mocks and expected_schema is None:
+    if not state.mocks and not state.deltas and expected_schema is None:
         return
     _case_name(state)
+    repo_catalog = state.catalog
     if state.mocks:
-        ui.label("Mock editor").classes("text-subtitle1")
+        title = "History" if state.deltas else "Mock editor"
+        ui.label(title).classes("text-subtitle1")
         ui.label(_NULL_HINT).classes("text-caption text-grey-8").mark("null-hint")
-        repo_catalog = state.catalog
         for name in state.mocks:
             schema = repo_catalog.schema(repo_catalog.resolve(name))
             if schema is None:
                 ui.label(f"{name}: no schema").classes("text-grey-7")
                 continue
-            _collapsible_grid(name, name, schema, state, actions)
+            label = f"{name} (before)" if state.deltas else name
+            _collapsible_grid(name, label, schema, state, actions)
+    if state.deltas:
+        ui.label("Delta").classes("text-subtitle1").mark("delta-editor")
+        ui.label(_NULL_HINT).classes("text-caption text-grey-8").mark("null-hint")
+        for name in state.deltas:
+            schema = repo_catalog.schema(repo_catalog.resolve(name))
+            if schema is None:
+                ui.label(f"delta/{name}: no schema").classes("text-grey-7")
+                continue
+            _collapsible_grid(
+                f"delta/{name}", f"{name} (delta)", schema, state, actions
+            )
     ui.label(_NULL_HINT).classes("text-caption text-grey-8").mark("null-hint")
     if expected_schema is None:
         ui.label("Expected").classes("text-subtitle1").mark("grid-expected")
@@ -150,7 +163,10 @@ def editor_view(state: WorkbenchState, actions: EditorActions) -> None:
             ui.label("Expects no rows").classes("text-caption text-grey-8").mark(
                 "expected-no-rows"
             )
-        _collapsible_grid("expected", "Expected", expected_schema, state, actions)
+        expected_label = (
+            f"Expected {state.target} (after)" if state.deltas else "Expected"
+        )
+        _collapsible_grid("expected", expected_label, expected_schema, state, actions)
     with ui.row().classes(
         "sticky bottom-0 z-10 w-full bg-white py-2 gap-2 items-center border-t"
     ):

@@ -1439,3 +1439,52 @@ async def test_saving_without_a_case_name_points_at_the_case_name_field(
     assert "case-name-needed" in field.classes
     await user.should_see(marker="status-detail")
     assert "Case name" in _text(user, "status-detail")
+
+
+async def test_incremental_target_shows_history_and_delta_editors(user: User):
+    """Mocking a source for a merge target opens both before and CDC grids."""
+    _register(FIXTURE)
+    await user.open("/workbench?target=seen&view=lineage&mock=events")
+
+    await user.should_see("History")
+    await user.should_see(marker="grid-events")
+    await user.should_see(marker="delta-editor")
+    await user.should_see(marker="grid-delta/events")
+    await user.should_see(marker="grid-expected")
+
+
+async def test_opening_a_cdc_case_loads_history_and_delta(user: User):
+    _register(FIXTURE)
+    await user.open("/workbench?case=" + quote("seen/absorb_new_events", safe=""))
+
+    await user.should_see(marker="case-label", content="absorb_new_events")
+    await user.should_see(marker="delta-editor")
+    assert _value(user, "cell-events.0.id") == "1"
+    assert _value(user, "cell-events.0.source") == "seed"
+    assert _value(user, "cell-delta/events.0.id") == "2"
+    assert _value(user, "cell-delta/events.0.source") == "batch"
+    assert _value(user, "cell-delta/events.1.id") == "3"
+
+
+async def test_saving_an_incremental_case_writes_history_and_delta(
+    user: User, tmp_path: Path
+):
+    repo = _copy_fixture(tmp_path)
+    _register(repo)
+    await user.open("/workbench?target=seen&view=lineage&mock=events")
+
+    user.find(marker="case-name").type("from_editor")
+    _fill(user, "events", [{"id": "10", "source": "seed"}])
+    _fill(user, "delta/events", [{"id": "20", "source": "batch"}])
+    _fill(
+        user,
+        "expected",
+        [{"id": "10", "source": "seed"}, {"id": "20", "source": "batch"}],
+    )
+    user.find(marker="save").click()
+
+    await user.should_see("Saved case")
+    case_dir = repo / "tests" / "cases" / "seen" / "from_editor"
+    assert (case_dir / "events.csv").read_text() == "id,source\n10,seed\n"
+    assert (case_dir / "delta" / "events.csv").read_text() == "id,source\n20,batch\n"
+    assert (case_dir / "expected.csv").read_text() == "id,source\n10,seed\n20,batch\n"

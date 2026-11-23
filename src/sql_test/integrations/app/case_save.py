@@ -36,6 +36,7 @@ def save_case(
     grid_rows: dict[str, list[dict[str, str | None]]],
     repo_catalog: Catalog,
     *,
+    deltas: tuple[str, ...] = (),
     previous_name: str | None = None,
 ) -> Path:
     folder = case_folder(repository, target, name, repo_catalog)
@@ -47,6 +48,15 @@ def save_case(
         if schema is None:
             raise SaveError(f"no schema for mock {mock_name}")
         mock_tables[relation] = _table_from_grid(schema, grid_rows.get(mock_name, []))
+    delta_tables: dict[Relation, CaseTable] = {}
+    for delta_name in deltas:
+        relation = repo_catalog.resolve(delta_name)
+        schema = repo_catalog.schema(relation)
+        if schema is None:
+            raise SaveError(f"no schema for delta {delta_name}")
+        delta_tables[relation] = _table_from_grid(
+            schema, grid_rows.get(f"delta/{delta_name}", [])
+        )
     expected_schema = repo_catalog.schema(target_relation)
     expected = None
     if expected_schema is not None:
@@ -58,6 +68,9 @@ def save_case(
     folder.mkdir(parents=True, exist_ok=True)
     for path in folder.glob("*.csv"):
         path.unlink()
+    delta_folder = folder / "delta"
+    if delta_folder.is_dir():
+        shutil.rmtree(delta_folder)
     write_case(
         folder,
         Case(
@@ -65,6 +78,7 @@ def save_case(
             name=name,
             mocks=mock_tables,
             expected=expected,
+            deltas=delta_tables,
         ),
     )
     if previous_name and previous_name != name:
