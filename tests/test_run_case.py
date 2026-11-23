@@ -22,17 +22,22 @@ def _engine() -> Engine:
 
 
 class _CountingEngine(Engine):
-    """Counts plan calls so run_case cannot hide a second plan inside run."""
+    """Counts plan/execute calls so run_case cannot hide a second plan or phase."""
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.plan_calls = 0
+        self.execute_calls = 0
 
     def plan(
         self, table: str, rows: dict[str, list[Row]], *, with_pruned: bool = False
     ) -> Plan:
         self.plan_calls += 1
         return super().plan(table, rows, with_pruned=with_pruned)
+
+    def execute(self, plan: Plan, rows: dict[str, list[Row]]):
+        self.execute_calls += 1
+        return super().execute(plan, rows)
 
 
 def _case(root: Path, files: dict[str, str]) -> Path:
@@ -41,6 +46,30 @@ def _case(root: Path, files: dict[str, str]) -> Path:
     for name, text in files.items():
         (folder / name).write_text(text)
     return folder
+
+
+def _cdc_case(
+    root: Path,
+    *,
+    history: dict[str, str],
+    deltas: dict[str, str],
+    expected: str,
+) -> Path:
+    folder = root / "cases" / "seen" / "batch"
+    folder.mkdir(parents=True)
+    for name, text in history.items():
+        (folder / name).write_text(text)
+    delta_folder = folder / "delta"
+    delta_folder.mkdir()
+    for name, text in deltas.items():
+        (delta_folder / name).write_text(text)
+    (folder / "expected.csv").write_text(expected)
+    return folder
+
+
+CDC_HISTORY = {"events.csv": "id,source\n1,seed\n"}
+CDC_DELTAS = {"events.csv": "id,source\n2,batch\n3,batch\n"}
+CDC_EXPECTED = "id,source\n1,seed\n2,batch\n3,batch\n"
 
 
 MOCKS = {
@@ -216,3 +245,56 @@ def test_unknown_expected_columns_fail_naming_the_relation(tmp_path: Path):
     assert result.comparison is None
     assert result.problem == "unknown columns on medicaid_members: member_idd"
     assert "missing" not in result.report()
+
+
+def test_a_passing_cdc_case(tmp_path: Path):
+    folder = _cdc_case(
+        tmp_path, history=CDC_HISTORY, deltas=CDC_DELTAS, expected=CDC_EXPECTED
+    )
+
+    result = run_case(folder, _engine())
+
+    assert result.passed
+    assert sorted(result.actual, key=lambda row: row["id"]) == [
+        {"id": 1, "source": "seed"},
+        {"id": 2, "source": "batch"},
+        {"id": 3, "source": "batch"},
+    ]
+
+
+def test_a_failing_cdc_case(tmp_path: Path):
+    """Wrong expected fails the CDC case with a comparison, not a problem."""
+    folder = _cdc_case(
+        tmp_path,
+        history=CDC_HISTORY,
+        deltas=CDC_DELTAS,
+        expected="id,source\n1,seed\n2,batch\n",
+    )
+
+    result = run_case(folder, _engine())
+
+    assert not result.passed
+    assert result.problem is None
+    assert result.comparison is not None
+    assert result.comparison.unexpected == [{"id": 3, "source": "batch"}]
+    assert "unexpected" in result.report()
+
+
+def test_a_cdc_case_runs_historic_then_merge(tmp_path: Path):
+    """Two-phase CDC: one plan, historic execute then merge execute."""
+    folder = _cdc_case(
+        tmp_path, history=CDC_HISTORY, deltas=CDC_DELTAS, expected=CDC_EXPECTED
+    )
+    engine = _CountingEngine(
+        catalog=mapped_sql_folder(
+            sqls=REPOSITORY / "admin" / "sqls",
+            mapping=REPOSITORY / "admin" / "config" / "lookup_sql_table_mapping.csv",
+        ),
+        executor=DuckDBExecutor(),
+    )
+
+    result = run_case(folder, engine)
+
+    assert result.passed
+    assert engine.plan_calls == 1
+    assert engine.execute_calls == 2
