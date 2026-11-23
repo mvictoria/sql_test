@@ -18,3 +18,13 @@ create table medicaid_members_named_alice (
     member_id integer,
     member_name varchar(30)
 );
+
+create table events (
+    id integer,
+    source varchar(30)
+);
+
+create table seen (
+    id integer,
+    source varchar(30)
+);

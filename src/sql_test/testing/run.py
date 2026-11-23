@@ -1,16 +1,8 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
-from sql_test.engine import (
-    Catalog,
-    Engine,
-    MappingProblem,
-    MissingRows,
-    Plan,
-    Row,
-    SourceReason,
-)
-from sql_test.testing.cases import UncastableCell, UnknownColumns, read_case
+from sql_test.engine import Engine, Kind, MissingRows, Row
+from sql_test.testing.cases import Case, UncastableCell, UnknownColumns, read_case
 from sql_test.testing.comparison import Comparison, compare
 
 
@@ -51,11 +43,22 @@ def run_case(folder: Path, engine: Engine) -> CaseResult:
         case = read_case(folder, engine.catalog)
     except (UncastableCell, UnknownColumns) as error:
         return CaseResult(folder=folder, problem=str(error))
+    return run_loaded_case(folder, engine, case)
+
+
+def run_loaded_case(folder: Path, engine: Engine, case: Case) -> CaseResult:
     if case.expected is None:
         return CaseResult(folder=folder, problem="the case has no expected.csv")
+    if case.incremental:
+        return _run_cdc_case(folder, engine, case)
+    return _run_full_load_case(folder, engine, case)
+
+
+def _run_full_load_case(folder: Path, engine: Engine, case: Case) -> CaseResult:
+    assert case.expected is not None
     rows = {str(relation): table.rows for relation, table in case.mocks.items()}
     plan = engine.plan(str(case.target), rows)
-    if diagnosis := _diagnose_unrunnable_target(plan, engine.catalog):
+    if diagnosis := plan.blocker(engine.catalog):
         return CaseResult(folder=folder, problem=diagnosis)
     if plan.unused:
         names = ", ".join(sorted(map(str, plan.unused)))
@@ -71,17 +74,50 @@ def run_case(folder: Path, engine: Engine) -> CaseResult:
     )
 
 
-def _diagnose_unrunnable_target(plan: Plan, catalog: Catalog) -> str | None:
-    """Name the missing SQL or schema when the target cannot run as a model."""
-    reason = plan.source_reasons.get(plan.target)
-    if reason is SourceReason.NO_SCHEMA:
-        return f"{plan.target} has no schema"
-    if reason is SourceReason.NOT_PRODUCED:
-        missing = sorted(
-            problem.reason
-            for problem in catalog.problems
-            if isinstance(problem, MappingProblem) and problem.writes == plan.target
+def _run_cdc_case(folder: Path, engine: Engine, case: Case) -> CaseResult:
+    """History → historical producers → apply deltas → incremental producers."""
+    history = {str(relation): table.rows for relation, table in case.mocks.items()}
+    plan = engine.plan(str(case.target), history)
+    if diagnosis := plan.blocker(engine.catalog):
+        return CaseResult(folder=folder, problem=diagnosis)
+    historic = replace(
+        plan,
+        operations=[op for op in plan.operations if op.kind is Kind.FULL_LOAD],
+        incremental=set(),
+    )
+    try:
+        before_result = engine.execute(historic, history)
+    except MissingRows as error:
+        return CaseResult(folder=folder, problem=str(error))
+    tables = dict(before_result.tables or {})
+    for relation, table in case.mocks.items():
+        resolved = engine.catalog.resolve(str(relation))
+        tables.setdefault(resolved, list(table.rows))
+    for relation, table in case.deltas.items():
+        resolved = engine.catalog.resolve(str(relation))
+        tables[resolved] = [*tables.get(resolved, []), *table.rows]
+    cdc_rows = {str(relation): rows for relation, rows in tables.items()}
+    cdc = replace(
+        plan,
+        operations=[op for op in plan.operations if op.kind is not Kind.FULL_LOAD],
+        incremental={
+            op.writes for op in plan.operations if op.kind is not Kind.FULL_LOAD
+        },
+        needs_rows=set(),
+        unused=set(),
+    )
+    if not cdc.operations:
+        return CaseResult(
+            folder=folder,
+            problem=f"{case.target} has no incremental producer for the CDC run",
         )
-        if missing:
-            return "; ".join(missing)
-    return None
+    try:
+        result = engine.execute(cdc, cdc_rows)
+    except MissingRows as error:
+        return CaseResult(folder=folder, problem=str(error))
+    assert case.expected is not None
+    return CaseResult(
+        folder=folder,
+        actual=result.rows,
+        comparison=compare(case.expected, result.rows, ordered=result.ordered),
+    )

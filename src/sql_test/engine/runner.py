@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from sql_test.engine.catalog import Catalog
 from sql_test.engine.executor import Executor, Given, Row
 from sql_test.engine.lineage.references import ends_in_order_by
+from sql_test.engine.operation import Kind
 from sql_test.engine.planner.plan import MissingRows, Plan, plan_run
 from sql_test.engine.relation import Relation
 from sql_test.engine.schema import Column, Schema
@@ -13,6 +14,7 @@ class RunResult:
     rows: list[Row]
     counts: dict[Relation, int]
     ordered: bool
+    tables: dict[Relation, list[Row]] | None = None
 
 
 class Engine:
@@ -48,6 +50,20 @@ class Engine:
             relation = self._catalog.resolve(name)
             schema = self._catalog.schema(relation) or _schema_from_rows(table_rows)
             given[relation] = Given(schema=schema, rows=table_rows)
+        for relation in plan.incremental:
+            if relation in given:
+                continue
+            # Seed an empty before only for merge ops in this plan; a full-load will
+            # create the table itself (create or replace).
+            if not any(
+                operation.writes == relation and operation.kind is not Kind.FULL_LOAD
+                for operation in plan.operations
+            ):
+                continue
+            schema = self._catalog.schema(relation)
+            if schema is None:
+                raise MissingRows(f"These relations still need rows: {relation}")
+            given[relation] = Given(schema=schema, rows=[])
         written = self._executor.run(given, plan.operations)
         target = plan.target
         return RunResult(
@@ -60,6 +76,7 @@ class Engine:
                 for operation in plan.operations
                 if operation.writes == target
             ),
+            tables=written,
         )
 
     def run(self, table: str, rows: dict[str, list[Row]]) -> RunResult:

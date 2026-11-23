@@ -80,10 +80,21 @@ def _create(
 
 
 def _execute(connection: duckdb.DuckDBPyConnection, operation: Operation) -> None:
-    if operation.kind is not Kind.FULL_LOAD:
-        raise NotImplementedError(operation.kind)
     _ensure_namespace(connection, operation.writes)
-    connection.execute(f"create table {operation.writes} as {operation.sql}")
+    if operation.kind is Kind.FULL_LOAD:
+        # OR REPLACE: given may already hold a before table for an incremental model
+        # that also has a historic producer in the same run.
+        connection.execute(
+            f"create or replace table {operation.writes} as {operation.sql}"
+        )
+        return
+    if operation.kind is Kind.MERGE:
+        # Target before is already loaded as `given`; replace with the merge SQL result.
+        connection.execute(
+            f"create or replace table {operation.writes} as {operation.sql}"
+        )
+        return
+    raise NotImplementedError(operation.kind)
 
 
 def _read(connection: duckdb.DuckDBPyConnection, relation: Relation) -> list[Row]:
