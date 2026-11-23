@@ -90,22 +90,23 @@ For an incremental model:
 ```text
 Test Case
 ├── table under test
-├── target before → rows
-├── mocked tables
+├── mocked tables: the history
 │   ├── table A → rows
 │   └── table B → rows
+├── deltas: this batch's changes
+│   └── table A → rows
 └── expected target after → rows
 ```
 
-Incremental self-reference should conceptually be represented as:
+Nobody writes a before state by hand. A historical run builds every table's before from the history, and a CDC run applies the deltas. Incremental self-reference is conceptually:
 
 ```text
 target(before) ──┐
                  ├── incremental SQL ──→ target(after)
-mock inputs ─────┘
+inputs' deltas ──┘
 ```
 
-rather than exposing the self-reference as a cycle to QA.
+rather than a cycle shown to QA.
 
 ## Saved format
 
@@ -115,7 +116,9 @@ A test case is a folder of CSVs:
 cases/
 └── <table under test>/
     └── <case name>/
-        ├── <mocked table>.csv    one per mocked table
+        ├── <mocked table>.csv    history (and full-load mocks)
+        ├── delta/
+        │   └── <table>.csv       incremental cases: this batch's change
         └── expected.csv
 ```
 
@@ -136,7 +139,13 @@ A **case table** is the columns and typed rows of one CSV in a case — a mock f
 
 A repository's own pytest test runs its case folders, one parametrized test per case, so a saved case needs no new Python. The repository passes the folder that holds its cases; the library assumes no location.
 
-How target-before state is stored for incremental models is decided with incremental support.
+### Case format, version 2
+
+Version 2 adds an optional `delta/` folder. `delta` and `expected.csv` are reserved names: neither is a mock.
+
+- A case with a `delta/` folder is an **incremental case**. Its mock files are the **history**: each mocked table's rows before the batch. Each file in `delta/` is a **delta**: one table's change in this batch, typed by that table's schema.
+- `expected.csv` is the table under test after the batch (history included).
+- **Two phases:** (1) historical run — history is given; full-load producers build each executed table's **before**. (2) CDC run — each delta is appended to its table's before; then merge (incremental) producers run against those befores. The target after is compared to `expected.csv`.
 
 ---
 
@@ -241,7 +250,7 @@ The DDL reader reads every `CREATE TABLE` with a column list, in any file under 
 
 ## Operations and producers
 
-An **operation** is a SQL statement that writes one relation. It records its SQL file, the relation it writes, and its kind. The relations it reads come from parsing its SQL. A bare `SELECT` is a full load: its result becomes the relation. `CREATE TABLE AS`, `INSERT`, `INSERT OVERWRITE`, and `MERGE` come later. Until those kinds exist, a producer that is not a bare `SELECT` fails with an explicit unsupported-producer error that names the kind and the SQL file — not a planner cycle or traceback.
+An **operation** is a SQL statement that writes one relation. It records its SQL file, the relation it writes, and its kind. The relations it reads come from parsing its SQL. Its kind comes from the mapping's `load_type`: `merge` (any case, trimmed) is a **merge** operation; anything else, such as `historic`, or no `load_type`, is a **full load**, where a bare `SELECT`'s result becomes the relation. A merge model is **incremental**: its **target before** is built by the historical run (or starts empty), never mocked by hand; the operation produces the **target after**. A read of its own relation is of the before state and is not a lineage edge, so the model is not a cycle. Upstream history and deltas are what you push; the target is only expected vs actual. `CREATE TABLE AS`, `INSERT`, `INSERT OVERWRITE`, and `MERGE` statements in the SQL itself come later. Until those statement shapes exist, a producer that is not a bare `SELECT` fails with an explicit unsupported-producer error that names the kind and the SQL file — not a planner cycle or traceback.
 
 SQL has a relation, not the other way round. A relation exists without any SQL; a source has none. The operations that write a relation are its **producers**, and a relation may have several.
 
@@ -305,11 +314,11 @@ The **upstream lineage** of a target is the graph relation → operation → rel
 
 ## Plan
 
-A relation is **given** when the caller supplies its rows; the test layer gives a case's mocks. A **plan** is what a run will do, worked out without executing anything. It marks each relation in the target's lineage as given, executed, pruned, or source, and lists the executed operations in the order they run. Given is the engine's word for what the UI shows as mocked. A relation upstream of a given relation is pruned unless another executed path still needs it. A plan's walk stops at given relations, so it never visits what lies past them and lists only given, executed, and source relations. Its cost depends on what the run executes, not on how deep the target sits. The app's lineage view asks for the full walk (`with_pruned`), which also marks pruned relations. A plan is everything a caller needs about a run without the lineage behind it: the target, each relation's state, what each relation is built from, why each source is a source, what still needs rows, and which given relations are unused. A given relation is **unused** when the run never reads it: every path from it to the target passes through another given relation, or it is not in the target's lineage at all. The app's lineage view draws the plan. `Engine.execute(plan, rows)` runs that plan; `Engine.run` is plan then execute. Callers that already have a plan (the test layer, the app) execute it instead of planning again.
+A relation is **given** when the caller supplies its rows; the test layer gives a case's mocks. A **plan** is what a run will do, worked out without executing anything. It marks each relation in the target's lineage as given, executed, pruned, or source, and lists the executed operations in the order they run. Given is the engine's word for what the UI shows as mocked. A relation upstream of a given relation is pruned unless another executed path still needs it. A plan's walk stops at given relations, so it never visits what lies past them and lists only given, executed, and source relations. Its cost depends on what the run executes, not on how deep the target sits. The app's lineage view asks for the full walk (`with_pruned`), which also marks pruned relations. A plan is everything a caller needs about a run without the lineage behind it: the target, each relation's state, what each relation is built from, why each source is a source, what still needs rows, which given relations are unused, and which executed models are incremental. A given relation is **unused** when the run never reads it: every path from it to the target passes through another given relation, or it is not in the target's lineage at all. The app's lineage view draws the plan. `Engine.execute(plan, rows)` runs that plan; `Engine.run` is plan then execute. Callers that already have a plan (the test layer, the app) execute it instead of planning again.
 
 The application is initially launched against a single local repository. The repository is always passed in, for example `sql-test app <path>`. The tool never assumes where a consuming repository lives or that it is inside the tool's own directory.
 
-`examples/minimal-consumer/` is the copy-paste adopt sample; `examples/lakehouse-data-customer/` is the richer chained-SQL sample. Package tests use fixtures under `tests/fixtures/repos/`. Nothing in the tool assumes a consuming repository lives inside this directory.
+`examples/minimal-consumer/` is the copy-paste adopt sample; `examples/cdc-example/` is the richer chained-SQL / CDC sample. Package tests use fixtures under `tests/fixtures/repos/`. Nothing in the tool assumes a consuming repository lives inside this directory.
 
 It discovers:
 
@@ -577,7 +586,7 @@ customer-data/
 └── .github/workflows/data-tests.yml     calls the reusable workflow @v0
 ```
 
-This layout is illustrative. Where SQL, schemas, and cases live, and how SQL files map to tables, can differ per repository. The sample repository keeps SQL in `admin/sqls/` and maps each table to its SQL file in `admin/config/lookup_sql_table_mapping.csv`, with columns `table_ref` and `sql_ref`. Extra columns such as `load_type` are ignored. Headers that omit either required column are an error naming `table_ref` and `sql_ref`. A **mapping problem** is a mapping row whose SQL file does not exist. The catalog records it (including which relation the row writes) alongside schema problems and leaves out that row's operation, so deleting a mapped SQL file removes its model even before the mapping row is removed.
+This layout is illustrative. Where SQL, schemas, and cases live, and how SQL files map to tables, can differ per repository. The sample repository keeps SQL in `admin/sqls/` and maps each table to its SQL file in `admin/config/lookup_sql_table_mapping.csv`, with columns `table_ref` and `sql_ref`. An optional `load_type` sets the operation's kind (`merge` today; other values and a missing column are full load). Headers that omit either required column are an error naming `table_ref` and `sql_ref`. A **mapping problem** is a mapping row whose SQL file does not exist. The catalog records it (including which relation the row writes) alongside schema problems and leaves out that row's operation, so deleting a mapped SQL file removes its model even before the mapping row is removed.
 
 ## Versioning
 
