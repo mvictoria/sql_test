@@ -4,8 +4,9 @@ from enum import StrEnum
 from graphlib import TopologicalSorter
 
 from sql_test.engine.catalog import Catalog
+from sql_test.engine.catalog.mapping import MappingProblem
 from sql_test.engine.lineage.graph import SourceReason, upstream_lineage
-from sql_test.engine.operation import Operation
+from sql_test.engine.operation import Kind, Operation
 from sql_test.engine.relation import Relation
 
 
@@ -28,7 +29,31 @@ class Plan:
     source_reasons: dict[Relation, SourceReason]
     needs_rows: set[Relation]
     unused: set[Relation]
+    incremental: set[Relation]
     operations: list[Operation]
+
+    @property
+    def executed(self) -> frozenset[Relation]:
+        return frozenset(
+            relation
+            for relation, state in self.states.items()
+            if state is State.EXECUTED
+        )
+
+    def blocker(self, catalog: Catalog) -> str | None:
+        """Why `target` cannot run as a model, if it cannot."""
+        reason = self.source_reasons.get(self.target)
+        if reason is SourceReason.NO_SCHEMA:
+            return f"{self.target} has no schema"
+        if reason is SourceReason.NOT_PRODUCED:
+            missing = sorted(
+                problem.reason
+                for problem in catalog.problems
+                if isinstance(problem, MappingProblem) and problem.writes == self.target
+            )
+            if missing:
+                return "; ".join(missing)
+        return None
 
 
 def plan_run(
@@ -41,8 +66,11 @@ def plan_run(
     """Plan building `target`; `given` maps each given relation to its row count.
 
     The walk stops at given relations unless `with_pruned` asks for what lies past them.
+    Given rows for an incremental model are its target before: the model still executes.
     """
-    lineage = upstream_lineage(target, catalog, () if with_pruned else given.keys())
+    incremental_models = _incremental_models(catalog)
+    boundaries = () if with_pruned else set(given) - incremental_models
+    lineage = upstream_lineage(target, catalog, boundaries)
     projection = lineage.projection()
     states: dict[Relation, State] = {}
     built_from: dict[Relation, set[Relation]] = {}
@@ -51,7 +79,7 @@ def plan_run(
         relation = pending.pop()
         if relation in states:
             continue
-        if relation in given:
+        if relation in given and relation not in incremental_models:
             states[relation] = State.GIVEN
         elif relation in lineage.models:
             states[relation] = State.EXECUTED
@@ -67,6 +95,11 @@ def plan_run(
         if relation in built_from
         for operation in lineage.producers[relation]
     ]
+    incremental = {
+        relation
+        for relation in lineage.incremental
+        if states.get(relation) is State.EXECUTED
+    }
     needs_rows = {
         relation
         for relation, state in states.items()
@@ -80,6 +113,17 @@ def plan_run(
         operations=operations,
         needs_rows=needs_rows,
         unused={
-            relation for relation in given if states.get(relation) is not State.GIVEN
+            relation
+            for relation in given
+            if states.get(relation) is not State.GIVEN and relation not in incremental
         },
+        incremental=incremental,
     )
+
+
+def _incremental_models(catalog: Catalog) -> set[Relation]:
+    return {
+        operation.writes
+        for operation in catalog.operations
+        if operation.kind is not Kind.FULL_LOAD
+    }

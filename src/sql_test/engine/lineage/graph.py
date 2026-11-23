@@ -4,7 +4,7 @@ from enum import StrEnum
 
 from sql_test.engine.catalog import Catalog
 from sql_test.engine.lineage.references import UnparseableSql, producer_reads
-from sql_test.engine.operation import Operation
+from sql_test.engine.operation import Kind, Operation
 from sql_test.engine.relation import Relation
 
 
@@ -29,12 +29,21 @@ class Lineage:
     def sources(self) -> set[Relation]:
         return set(self.source_reasons)
 
+    @property
+    def incremental(self) -> set[Relation]:
+        """Models whose mapping load_type is merge (incremental kinds grow later)."""
+        return {
+            operation.writes
+            for operation, _reads in self.reads.items()
+            if operation.kind is not Kind.FULL_LOAD
+        }
+
     def projection(self) -> dict[Relation, set[Relation]]:
         built_from: dict[Relation, set[Relation]] = {
             relation: set() for relation in self.models | self.sources
         }
         for operation, reads in self.reads.items():
-            built_from[operation.writes] |= reads
+            built_from[operation.writes] |= reads - {operation.writes}
         return built_from
 
 
