@@ -15,6 +15,8 @@ def test_reads_every_table_defined_in_the_sql_folder():
         Relation(name="lob"),
         Relation(name="medicaid_members"),
         Relation(name="medicaid_members_named_alice"),
+        Relation(name="events"),
+        Relation(name="seen"),
     }
     assert discovered.schemas[Relation(name="members")] == (
         Column(name="member_id", type="INT"),

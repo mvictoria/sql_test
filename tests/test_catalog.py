@@ -36,7 +36,9 @@ def test_mapped_sql_files_are_full_load_operations():
         sqls=sqls,
     )
 
-    assert sorted(operations, key=lambda operation: operation.writes.name) == [
+    assert sorted(
+        operations, key=lambda operation: (operation.writes.name, operation.kind.value)
+    ) == [
         Operation(
             sql_file=sqls / "medicaid_members.sql",
             writes=Relation(name="medicaid_members"),
@@ -47,7 +49,46 @@ def test_mapped_sql_files_are_full_load_operations():
             writes=Relation(name="medicaid_members_named_alice"),
             kind=Kind.FULL_LOAD,
         ),
+        Operation(
+            sql_file=sqls / "seen_historic.sql",
+            writes=Relation(name="seen"),
+            kind=Kind.FULL_LOAD,
+        ),
+        Operation(
+            sql_file=sqls / "seen.sql",
+            writes=Relation(name="seen"),
+            kind=Kind.MERGE,
+        ),
     ]
+
+
+def test_load_type_merge_is_a_merge_operation(tmp_path):
+    mapping = tmp_path / "mapping.csv"
+    mapping.write_text(
+        "load_type,table_ref,sql_ref\n"
+        "merge,a,a.sql\n"
+        " Merge ,b,b.sql\n"
+        "historic,c,c.sql\n"
+        ",d,d.sql\n"
+    )
+
+    operations = read_operations(mapping=mapping, sqls=tmp_path)
+
+    assert [operation.kind for operation in operations] == [
+        Kind.MERGE,
+        Kind.MERGE,
+        Kind.FULL_LOAD,
+        Kind.FULL_LOAD,
+    ]
+
+
+def test_a_mapping_without_load_type_is_all_full_loads(tmp_path):
+    mapping = tmp_path / "mapping.csv"
+    mapping.write_text("table_ref,sql_ref\na,a.sql\n")
+
+    [operation] = read_operations(mapping=mapping, sqls=tmp_path)
+
+    assert operation.kind is Kind.FULL_LOAD
 
 
 def test_a_relation_mapped_to_two_files_has_two_operations(tmp_path):
@@ -100,6 +141,8 @@ def test_every_relation_in_the_sample_repository_is_declared():
         Relation(name="lob"),
         Relation(name="medicaid_members"),
         Relation(name="medicaid_members_named_alice"),
+        Relation(name="events"),
+        Relation(name="seen"),
     }
 
 

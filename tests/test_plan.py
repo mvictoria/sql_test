@@ -238,3 +238,77 @@ def test_a_plan_says_what_each_relation_is_built_from_and_why_sources_are_source
         members: SourceReason.NOT_PRODUCED,
         lob: SourceReason.NOT_PRODUCED,
     }
+    assert plan.incremental == set()
+
+
+def _merge_seen(folder: Path):
+    (folder / "ddl.sql").write_text(
+        "create table events (id int);\ncreate table seen (id int);\n"
+    )
+    (folder / "seen.sql").write_text(
+        "select id from seen union select id from events"
+        " where id not in (select id from seen)"
+    )
+    mapping = folder / "mapping.csv"
+    mapping.write_text("load_type,table_ref,sql_ref\nmerge,seen,seen.sql\n")
+    return mapped_sql_folder(sqls=folder, mapping=mapping)
+
+
+def test_a_merge_that_reads_itself_is_incremental_not_a_cycle(tmp_path):
+    seen, events = Relation(name="seen"), Relation(name="events")
+
+    plan = plan_run(seen, _merge_seen(tmp_path), given={events: 1})
+
+    assert plan.incremental == {seen}
+    assert plan.built_from[seen] == {events}
+    assert plan.states == {seen: State.EXECUTED, events: State.GIVEN}
+    assert [operation.sql_file.name for operation in plan.operations] == ["seen.sql"]
+
+
+def test_a_merge_without_a_self_read_is_still_incremental(tmp_path):
+    (tmp_path / "ddl.sql").write_text(
+        "create table events (id int);\ncreate table log (id int);\n"
+    )
+    (tmp_path / "log.sql").write_text("select id from events")
+    mapping = tmp_path / "mapping.csv"
+    mapping.write_text("load_type,table_ref,sql_ref\nmerge,log,log.sql\n")
+    catalog = mapped_sql_folder(sqls=tmp_path, mapping=mapping)
+    log, events = Relation(name="log"), Relation(name="events")
+
+    plan = plan_run(log, catalog, given={events: 1})
+
+    assert plan.incremental == {log}
+    assert plan.built_from[log] == {events}
+
+
+def test_running_a_merge_loads_target_before_then_applies_sql(tmp_path):
+    engine = Engine(_merge_seen(tmp_path), DuckDBExecutor())
+
+    result = engine.run(
+        "seen",
+        {"events": [{"id": 2}], "seen": [{"id": 1}]},
+    )
+
+    assert sorted(result.rows, key=lambda row: row["id"]) == [
+        {"id": 1},
+        {"id": 2},
+    ]
+
+
+def test_a_mocked_merge_target_is_before_state_and_still_runs(tmp_path):
+    seen, events = Relation(name="seen"), Relation(name="events")
+
+    plan = plan_run(seen, _merge_seen(tmp_path), given={events: 1, seen: 1})
+
+    assert plan.states[seen] is State.EXECUTED
+    assert plan.incremental == {seen}
+    assert plan.unused == set()
+    assert plan.needs_rows == set()
+
+
+def test_a_merge_without_target_before_starts_from_an_empty_table(tmp_path):
+    engine = Engine(_merge_seen(tmp_path), DuckDBExecutor())
+
+    result = engine.run("seen", {"events": [{"id": 2}]})
+
+    assert result.rows == [{"id": 2}]
