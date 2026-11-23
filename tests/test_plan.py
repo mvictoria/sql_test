@@ -6,8 +6,9 @@ from sql_test.engine import Engine
 from sql_test.engine.catalog.adapters import mapped_sql_folder
 from sql_test.engine.lineage.graph import SourceReason
 from sql_test.engine.operation import Operation
-from sql_test.engine.planner.plan import MissingRows, State, plan_run
+from sql_test.engine.planner.plan import State, plan_run
 from sql_test.engine.relation import Relation
+from sql_test.engine.runner import MissingRows
 from sql_test.executors.duckdb import DuckDBExecutor
 
 REPOSITORY = Path(__file__).parent / "fixtures" / "repos" / "lakehouse-data-customer"

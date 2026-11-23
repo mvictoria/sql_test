@@ -4,6 +4,7 @@ from enum import StrEnum
 from graphlib import TopologicalSorter
 
 from sql_test.engine.catalog import Catalog
+from sql_test.engine.catalog.mapping import MappingProblem
 from sql_test.engine.lineage.graph import SourceReason, upstream_lineage
 from sql_test.engine.operation import Operation
 from sql_test.engine.relation import Relation
@@ -16,10 +17,6 @@ class State(StrEnum):
     SOURCE = "source"
 
 
-class MissingRows(Exception):
-    pass
-
-
 @dataclass(frozen=True)
 class Plan:
     target: Relation
@@ -29,6 +26,29 @@ class Plan:
     needs_rows: set[Relation]
     unused: set[Relation]
     operations: list[Operation]
+
+    @property
+    def executed(self) -> frozenset[Relation]:
+        return frozenset(
+            relation
+            for relation, state in self.states.items()
+            if state is State.EXECUTED
+        )
+
+    def blocker(self, catalog: Catalog) -> str | None:
+        """Why `target` cannot run as a model, if it cannot."""
+        reason = self.source_reasons.get(self.target)
+        if reason is SourceReason.NO_SCHEMA:
+            return f"{self.target} has no schema"
+        if reason is SourceReason.NOT_PRODUCED:
+            missing = sorted(
+                problem.reason
+                for problem in catalog.problems
+                if isinstance(problem, MappingProblem) and problem.writes == self.target
+            )
+            if missing:
+                return "; ".join(missing)
+        return None
 
 
 def plan_run(

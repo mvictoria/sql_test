@@ -1,6 +1,6 @@
 """Engine-only scale: 1000 models × 100 cases each — no DuckDB.
 
-Stresses catalog build, case_counts, and pipeline_counts (plan_run per case).
+Stresses catalog build, case_counts, and pipeline_counts (Engine.plan per case).
 Cases are in-memory CaseSummaries so we do not write 100k folders.
 """
 

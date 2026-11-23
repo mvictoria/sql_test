@@ -1,7 +1,7 @@
 from collections.abc import Iterable
 from dataclasses import dataclass
 
-from sql_test.engine import Catalog, State, plan_run
+from sql_test.engine import Catalog, Engine
 from sql_test.testing.cases import CaseSummary
 
 
@@ -27,13 +27,10 @@ def pipeline_counts(
 ) -> dict[str, int]:
     """How many other cases execute each table's SQL (lineage + mocks; no run)."""
     counts = {name: 0 for name in tables}
+    engine = Engine(catalog)
     for case in cases:
-        target = catalog.resolve(case.target)
-        given = {catalog.resolve(name): 1 for name in case.mocks}
-        plan = plan_run(target, catalog, given)
-        for relation, state in plan.states.items():
-            if state is not State.EXECUTED:
-                continue
+        plan = engine.plan(case.target, {name: [{}] for name in case.mocks})
+        for relation in plan.executed:
             name = str(relation)
             if name == case.target or name not in counts:
                 continue
@@ -63,14 +60,13 @@ def pipeline_cases(
     catalog: Catalog,
 ) -> list[CaseSummary]:
     """Cases that execute `table`'s SQL without targeting it."""
+    engine = Engine(catalog)
     relation = catalog.resolve(table)
     found: list[CaseSummary] = []
     for case in cases:
         if case.target == str(relation) or case.target == table:
             continue
-        target = catalog.resolve(case.target)
-        given = {catalog.resolve(name): 1 for name in case.mocks}
-        plan = plan_run(target, catalog, given)
-        if plan.states.get(relation) is State.EXECUTED:
+        plan = engine.plan(case.target, {name: [{}] for name in case.mocks})
+        if relation in plan.executed:
             found.append(case)
     return found

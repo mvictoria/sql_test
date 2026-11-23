@@ -3,9 +3,13 @@ from dataclasses import dataclass
 from sql_test.engine.catalog import Catalog
 from sql_test.engine.executor import Executor, Given, Row
 from sql_test.engine.lineage.references import ends_in_order_by
-from sql_test.engine.planner.plan import MissingRows, Plan, plan_run
+from sql_test.engine.planner.plan import Plan, plan_run
 from sql_test.engine.relation import Relation
 from sql_test.engine.schema import Column, Schema
+
+
+class MissingRows(Exception):
+    pass
 
 
 @dataclass(frozen=True)
@@ -16,7 +20,7 @@ class RunResult:
 
 
 class Engine:
-    def __init__(self, catalog: Catalog, executor: Executor) -> None:
+    def __init__(self, catalog: Catalog, executor: Executor | None = None) -> None:
         self._catalog = catalog
         self._executor = executor
 
@@ -40,6 +44,8 @@ class Engine:
         )
 
     def execute(self, plan: Plan, rows: dict[str, list[Row]]) -> RunResult:
+        if self._executor is None:
+            raise RuntimeError("engine has no executor")
         if plan.needs_rows:
             names = ", ".join(sorted(map(str, plan.needs_rows)))
             raise MissingRows(f"These relations still need rows: {names}")
