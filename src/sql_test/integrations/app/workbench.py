@@ -3,16 +3,25 @@ from urllib.parse import quote
 
 from nicegui import ui
 
-from sql_test.integrations.app.case_load import case_grid_rows, load_case
+from sql_test.engine import Relation, RunResult
+from sql_test.integrations.app.case_load import (
+    case_delta_rows,
+    case_grid_rows,
+    load_case,
+)
 from sql_test.integrations.app.case_save import SaveError, case_exists, save_case
 from sql_test.integrations.app.compare_view import compare_section
-from sql_test.integrations.app.engine_access import catalog
-from sql_test.integrations.app.engine_access import run as run_case
+from sql_test.integrations.app.engine_access import _engine, catalog, filled_rows
+from sql_test.integrations.app.engine_access import run as run_full_load
 from sql_test.integrations.app.flags_session import effective_flags
 from sql_test.integrations.app.grid import apply_grid_action, type_grid_rows
 from sql_test.integrations.app.grid_view import EditorActions, editor_view, sheet_css
 from sql_test.integrations.app.lineage_view import lineage_css, lineage_view
-from sql_test.integrations.app.mocks import frontier_mocks, toggled_mocks
+from sql_test.integrations.app.mocks import (
+    delta_editors,
+    frontier_mocks,
+    toggled_mocks,
+)
 from sql_test.integrations.app.result_view import result_view
 from sql_test.integrations.app.sql_view import sql_view
 from sql_test.integrations.app.state import (
@@ -25,6 +34,7 @@ from sql_test.integrations.app.state import (
 )
 from sql_test.integrations.config import AppFlags
 from sql_test.integrations.discover import Discovery, discover
+from sql_test.testing import Case, CaseTable, run_loaded_case
 
 
 def open_workbench(
@@ -61,11 +71,14 @@ def open_workbench(
     mock_params = tuple(sorted({name for name in query.get("mock", []) if name}))
     if saved is not None:
         grid_rows = case_grid_rows(saved)
+        for name, rows in case_delta_rows(saved).items():
+            grid_rows[f"delta/{name}"] = rows
     if saved is not None and not mock_params:
         requested = tuple(sorted(str(relation) for relation in saved.mocks))
     else:
         requested = mock_params
     mocks = frontier_mocks(repo_catalog, target, requested)
+    deltas = delta_editors(repo_catalog, target, mocks)
     target_cases = tuple(case.name for case in result.cases if case.target == target)
     return WorkbenchState(
         repository=repository,
@@ -74,7 +87,8 @@ def open_workbench(
         case_name=case_name,
         target_cases=target_cases,
         mocks=mocks,
-        grid_rows=apply_grid_action("", mocks, grid_rows),
+        deltas=deltas,
+        grid_rows=apply_grid_action("", mocks, grid_rows, deltas),
         flags=flags,
         view=view if view in VIEWS else DEFAULT_VIEW,
     )
@@ -243,7 +257,10 @@ class Workbench:
             )
             return
         state.mocks = frontier_mocks(state.catalog, state.target, state.mocks)
-        state.grid_rows = apply_grid_action("", state.mocks, state.grid_rows)
+        state.deltas = delta_editors(state.catalog, state.target, state.mocks)
+        state.grid_rows = apply_grid_action(
+            "", state.mocks, state.grid_rows, state.deltas
+        )
 
     def show_view(self, name: str) -> None:
         self.reload_catalog()
@@ -275,7 +292,10 @@ class Workbench:
         before = set(state.mocks)
         requested = toggled_mocks(state.mocks, name)
         state.mocks = frontier_mocks(state.catalog, state.target, requested)
-        state.grid_rows = apply_grid_action("", state.mocks, state.grid_rows)
+        state.deltas = delta_editors(state.catalog, state.target, state.mocks)
+        state.grid_rows = apply_grid_action(
+            "", state.mocks, state.grid_rows, state.deltas
+        )
         self._reset_results()
         self.refresh()
         added = set(state.mocks) - before
@@ -310,7 +330,9 @@ class Workbench:
 
     def _grid_action(self, action: str) -> None:
         state = self.state
-        state.grid_rows = apply_grid_action(action, state.mocks, state.grid_rows)
+        state.grid_rows = apply_grid_action(
+            action, state.mocks, state.grid_rows, state.deltas
+        )
         self._reset_results()
         self.refresh()
 
@@ -327,7 +349,12 @@ class Workbench:
         try:
             typed, state.engine_types = type_grid_rows(state.catalog, mocked)
             state.grid_rows.update(typed)
-            result = run_case(state.catalog, state.target, state.mocks, state.grid_rows)
+            if state.deltas:
+                result = self._run_cdc()
+            else:
+                result = run_full_load(
+                    state.catalog, state.target, state.mocks, state.grid_rows
+                )
             panel = compare_section(
                 state.catalog,
                 state.target,
@@ -344,6 +371,59 @@ class Workbench:
         except Exception as error:  # noqa: BLE001 — show failures in the page
             state.message = Message(f"Could not run: {error}", ok=False)
         self.refresh()
+
+    def _run_cdc(self) -> RunResult:
+        state = self.state
+        history = filled_rows(state.mocks, state.grid_rows)
+        delta_names = state.deltas
+        delta_grids = {
+            name: state.grid_rows.get(f"delta/{name}", []) for name in delta_names
+        }
+        typed_deltas, delta_types = type_grid_rows(state.catalog, delta_grids)
+        state.engine_types.update(delta_types)
+        deltas = filled_rows(delta_names, typed_deltas)
+        expected_grid = [
+            row
+            for row in state.grid_rows.get("expected", [])
+            if any(value not in (None, "") for value in row.values())
+        ]
+        target = state.catalog.resolve(state.target)
+        schema = state.catalog.schema(target) or ()
+        columns = tuple(column.name for column in schema)
+
+        def _table(name: str, rows: list) -> CaseTable:
+            relation = state.catalog.resolve(name)
+            table_schema = state.catalog.schema(relation) or ()
+            table_columns = tuple(column.name for column in table_schema) or (
+                tuple(rows[0]) if rows else ()
+            )
+            return CaseTable(columns=table_columns, rows=rows)
+
+        case = Case(
+            target=target,
+            name=state.case_name or "draft",
+            mocks={
+                Relation.parse(name): _table(name, rows)
+                for name, rows in history.items()
+            },
+            deltas={
+                Relation.parse(name): _table(name, rows)
+                for name, rows in deltas.items()
+            },
+            expected=CaseTable(
+                columns=columns or tuple(expected_grid[0]), rows=expected_grid
+            )
+            if expected_grid or columns
+            else None,
+        )
+        loaded = run_loaded_case(Path("."), _engine(state.catalog), case)
+        if loaded.problem:
+            raise RuntimeError(loaded.problem)
+        return RunResult(
+            rows=loaded.actual,
+            counts={target: len(loaded.actual)},
+            ordered=False,
+        )
 
     def accept_expected(self, rows: list[dict[str, str | None]]) -> None:
         state = self.state
@@ -380,6 +460,7 @@ class Workbench:
                 state.mocks,
                 state.grid_rows,
                 state.catalog,
+                deltas=state.deltas,
                 previous_name=previous,
             )
             state.case_name = name

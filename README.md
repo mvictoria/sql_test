@@ -57,7 +57,7 @@ uv add "sql-test @ git+https://github.com/mvictoria/sql_test.git@v0"
 
 Use `@main` only as a bleeding-edge fallback while developing against unreleased commits — do not pin consumer CI to `main`.
 
-**Mapping CSV** — header row must be `table_ref,sql_ref` (table the SQL writes, then the SQL file under `sqls`). Extra columns such as `load_type` are ignored:
+**Mapping CSV** — header row must include `table_ref,sql_ref` (table the SQL writes, then the SQL file under `sqls`). Optional `load_type`: `merge` marks an incremental merge model; other values (and a missing column) are full load:
 
 ```csv
 table_ref,sql_ref
@@ -88,7 +88,7 @@ The workflow installs `sql-test` from the same git commit as that pin and runs p
 Local workbench. Server binds to localhost only — open the printed URL in a browser:
 
 ```bash
-uv run sql-test app examples/lakehouse-data-customer
+uv run sql-test app examples/cdc-example
 uv run sql-test app . --port 9000
 ```
 
@@ -120,7 +120,7 @@ sql-test app [repository] [--port 8765]
 `coverage` prints tests and in-pipeline counts per table, untested first (same `coverage_report` the app home uses). **In pipelines** means cases that execute the table without targeting it (its SQL runs as part of another case's pipeline).
 
 ```bash
-uv run sql-test coverage examples/lakehouse-data-customer
+uv run sql-test coverage examples/cdc-example
 ```
 
 ```text
@@ -134,10 +134,10 @@ medicaid_members_named_alice    2       0
 ## Sample repositories
 
 - [`examples/minimal-consumer/`](examples/minimal-consumer/) — smallest adopt sample (one model, one case, workflow caller).
-- [`examples/lakehouse-data-customer/`](examples/lakehouse-data-customer/) — chained models, mocks across tables, both `test_sql.py` and case folders.
+- [`examples/cdc-example/`](examples/cdc-example/) — chained models, CDC merge case (`seen`), both `test_sql.py` and case folders.
 
 ```bash
-uv run pytest examples/lakehouse-data-customer/tests
+uv run pytest examples/cdc-example/tests
 ```
 
 Developing this package: [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md). Design and vocabulary live in [docs/HELPER.md](docs/HELPER.md). Product direction is in [docs/ROADMAP.md](docs/ROADMAP.md); work items are [GitHub issues](https://github.com/mvictoria/sql_test/issues).

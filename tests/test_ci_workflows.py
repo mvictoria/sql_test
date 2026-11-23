@@ -6,12 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"
 SAMPLE_CALLERS = (
     ROOT / "examples" / "minimal-consumer" / ".github" / "workflows" / "data-tests.yml",
-    ROOT
-    / "examples"
-    / "lakehouse-data-customer"
-    / ".github"
-    / "workflows"
-    / "data-tests.yml",
+    ROOT / "examples" / "cdc-example" / ".github" / "workflows" / "data-tests.yml",
 )
 
 

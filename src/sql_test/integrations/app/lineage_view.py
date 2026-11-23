@@ -19,6 +19,12 @@ _STATE_MARKER = {
     State.PRUNED: "pruned",
 }
 
+
+def _can_mock(plan: Plan, relation: Relation) -> bool:
+    """The table under test is never mocked — incremental befores are push-built."""
+    return relation != plan.target
+
+
 _CSS = """
 .lineage-panel {
   --ink: #1a2332;
@@ -205,7 +211,11 @@ def lineage_columns(plan: Plan) -> dict[int, list[Relation]]:
 
 
 def _clicked(node_id: str, plan: Plan, on_toggle: Callable[[str], None]) -> None:
-    if node_id == str(plan.target):
+    relation = next(
+        (item for item in plan.states if str(item) == node_id),
+        None,
+    )
+    if relation is None or not _can_mock(plan, relation):
         return
     on_toggle(node_id)
 
@@ -226,10 +236,10 @@ def _hit_target(
     if needs:
         markers.append("needs-rows")
     button = ui.button(name).mark(" ".join(markers))
-    if is_target:
-        button.props("disable")
-    else:
+    if _can_mock(plan, relation):
         button.on_click(lambda _, name=name: on_toggle(name))
+    else:
+        button.props("disable")
     if counts is not None and relation in counts:
         ui.label(f"{counts[relation]} rows").mark(f"rows-{name}")
     upstreams = sorted(
@@ -337,6 +347,10 @@ def _node_label(
     name = str(relation)
     if counts is not None and relation in counts:
         return f"{name}<br/>{counts[relation]} rows"
+    if relation in plan.incremental:
+        if relation == plan.target:
+            return f"{name}<br/>merge · push"
+        return f"{name}<br/>merge"
     if relation == plan.target:
         return f"{name}<br/>table under test"
     if relation in plan.needs_rows:

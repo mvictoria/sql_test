@@ -16,11 +16,22 @@ def case_grid_rows(case: Case) -> dict[str, list[dict[str, str | None]]]:
         rows[str(relation)] = [
             display_row(row, table.columns) for row in table.rows
         ] or [{}]
+    for relation, table in case.deltas.items():
+        rows[f"delta/{relation}"] = [
+            display_row(row, table.columns) for row in table.rows
+        ] or [{}]
     if case.expected is not None:
         rows["expected"] = [
             display_row(row, case.expected.columns) for row in case.expected.rows
         ]
     return rows
+
+
+def case_delta_rows(case: Case) -> dict[str, list[dict[str, str | None]]]:
+    return {
+        str(relation): [display_row(row, table.columns) for row in table.rows] or [{}]
+        for relation, table in case.deltas.items()
+    }
 
 
 def display_row(row: Row, columns: tuple[str, ...]) -> dict[str, str | None]:
