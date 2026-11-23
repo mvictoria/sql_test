@@ -318,7 +318,7 @@ A relation is **given** when the caller supplies its rows; the test layer gives 
 
 The application is initially launched against a single local repository. The repository is always passed in, for example `sql-test app <path>`. The tool never assumes where a consuming repository lives or that it is inside the tool's own directory.
 
-`examples/minimal-consumer/` is the copy-paste adopt sample; `examples/cdc-example/` is the richer chained-SQL / CDC sample. Package tests use fixtures under `tests/fixtures/repos/`. Nothing in the tool assumes a consuming repository lives inside this directory.
+`examples/minimal-consumer/` is the copy-paste adopt sample; `examples/cdc-example/` is the richer chained-SQL / CDC sample; `examples/spark-example/` is the same footprint as minimal-consumer with `SparkExecutor`. Package tests use fixtures under `tests/fixtures/repos/`. Nothing in the tool assumes a consuming repository lives inside this directory.
 
 It discovers:
 

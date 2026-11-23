@@ -43,7 +43,16 @@ jobs:
       - name: Fixture repository tests
         run: uv run pytest -p no:cacheprovider tests/fixtures/repos/lakehouse-data-customer/tests
 
+      - name: Spark example tests
+        run: uv run pytest examples/spark-example/tests
+
   sample-data-tests:
     uses: ./.github/workflows/data-tests.yml
     with:
       working-directory: tests/fixtures/repos/lakehouse-data-customer
+
+  spark-example-tests:
+    uses: ./.github/workflows/data-tests.yml
+    with:
+      working-directory: examples/spark-example
+      extras: spark

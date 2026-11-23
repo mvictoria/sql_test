@@ -1,0 +1,15 @@
+name: Data tests
+
+"on":
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  data-tests:
+    uses: mvictoria/sql_test/.github/workflows/data-tests.yml@v0
+    with:
+      extras: spark
