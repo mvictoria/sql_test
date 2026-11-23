@@ -16,7 +16,7 @@ from sql_test.testing.coverage import (
     pipeline_cases,
     pipeline_counts,
 )
-from sql_test.testing.run import run_case
+from sql_test.testing.run import run_case, run_loaded_case
 
 __all__ = [
     "Case",
@@ -34,5 +34,6 @@ __all__ = [
     "pipeline_counts",
     "read_case",
     "run_case",
+    "run_loaded_case",
     "write_case",
 ]
