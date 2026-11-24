@@ -27,10 +27,14 @@ def imported_modules(layer, exclude=()):
                 "sql_test.testing",
                 "sql_test.integrations",
                 "duckdb",
+                "pyspark",
             ],
         ),
         ("executors", ["sql_test.testing", "sql_test.integrations"]),
-        ("testing", ["sql_test.executors", "sql_test.integrations", "duckdb"]),
+        (
+            "testing",
+            ["sql_test.executors", "sql_test.integrations", "duckdb", "pyspark"],
+        ),
     ],
 )
 def test_layer_does_not_import(layer, forbidden):
@@ -49,6 +53,7 @@ def test_executors_import_only_the_executor_interface():
     assert {name for name in imports if name.startswith("sql_test.")} <= {
         "sql_test.engine.executor",
         "sql_test.executors.duckdb",
+        "sql_test.executors.spark",
     }
 
 
@@ -85,6 +90,6 @@ def test_app_modules_do_not_create_an_executor():
                 if isinstance(func, ast.Attribute)
                 else None
             )
-            if name == "DuckDBExecutor":
+            if name in {"DuckDBExecutor", "SparkExecutor"}:
                 created.append(f"{path.relative_to(app)}:{node.lineno}")
     assert created == []

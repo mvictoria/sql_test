@@ -24,8 +24,14 @@ jobs:
           enable-cache: true
           python-version: ${{ matrix.python-version }}
 
+      - name: Set up Java
+        uses: actions/setup-java@f2beeb24e141e01a676f977032f5a29d81c9e27e # v5.1.0
+        with:
+          distribution: temurin
+          java-version: "21"
+
       - name: Install the project
-        run: uv sync --locked
+        run: uv sync --locked --extra spark
 
       - name: Checks
         if: matrix.python-version == '3.15'
@@ -37,7 +43,16 @@ jobs:
       - name: Fixture repository tests
         run: uv run pytest -p no:cacheprovider tests/fixtures/repos/lakehouse-data-customer/tests
 
+      - name: Spark example tests
+        run: uv run pytest examples/spark-example/tests
+
   sample-data-tests:
     uses: ./.github/workflows/data-tests.yml
     with:
       working-directory: tests/fixtures/repos/lakehouse-data-customer
+
+  spark-example-tests:
+    uses: ./.github/workflows/data-tests.yml
+    with:
+      working-directory: examples/spark-example
+      extras: spark

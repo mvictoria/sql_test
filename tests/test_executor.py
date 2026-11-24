@@ -33,8 +33,18 @@ def _medicaid(tmp_path) -> Operation:
     return Operation(sql_file=sql_file, writes=MEDICAID, kind=Kind.FULL_LOAD)
 
 
-def test_loads_given_rows_with_their_schema_types():
-    written = DuckDBExecutor().run({MEMBERS: GIVEN_MEMBERS}, [])
+@pytest.fixture(params=["duckdb", "spark"])
+def executor(request):
+    if request.param == "duckdb":
+        return DuckDBExecutor()
+    pytest.importorskip("pyspark")
+    from sql_test.executors.spark import SparkExecutor
+
+    return SparkExecutor()
+
+
+def test_loads_given_rows_with_their_schema_types(executor):
+    written = executor.run({MEMBERS: GIVEN_MEMBERS}, [])
 
     assert written == {
         MEMBERS: [
@@ -92,23 +102,22 @@ def test_a_mock_of_many_rows_loads_in_one_insert(monkeypatch):
     assert sum(s.lstrip().lower().startswith("insert") for s in statements) == 1
 
 
-def test_executes_operations_and_returns_what_they_write(tmp_path):
-    written = DuckDBExecutor().run({MEMBERS: GIVEN_MEMBERS}, [_medicaid(tmp_path)])
+def test_executes_operations_and_returns_what_they_write(executor, tmp_path):
+    written = executor.run({MEMBERS: GIVEN_MEMBERS}, [_medicaid(tmp_path)])
 
     assert written[MEDICAID] == [{"member_id": 1, "member_name": "Ada"}]
 
 
-def test_two_runs_do_not_share_relations(tmp_path):
-    executor = DuckDBExecutor()
+def test_two_runs_do_not_share_relations(executor, tmp_path):
     executor.run({MEMBERS: GIVEN_MEMBERS}, [])
 
-    with pytest.raises(Exception, match="(?i)members|Catalog Error|does not exist"):
+    with pytest.raises(
+        Exception, match="(?i)members|TABLE_OR_VIEW_NOT_FOUND|does not exist"
+    ):
         executor.run({}, [_medicaid(tmp_path)])
 
 
-def test_concurrent_runs_each_see_only_their_own_rows():
-    executor = DuckDBExecutor()
-
+def test_concurrent_runs_each_see_only_their_own_rows(executor):
     def run(member_id: int) -> list:
         rows = [{"member_id": member_id, "member_name": "x", "lob": "30"}]
         given = {MEMBERS: Given(schema=MEMBERS_SCHEMA, rows=rows)}
@@ -121,8 +130,7 @@ def test_concurrent_runs_each_see_only_their_own_rows():
     assert all(len(rows) == 1 for rows in results)
 
 
-def test_a_failed_run_leaves_nothing_behind(tmp_path):
-    executor = DuckDBExecutor()
+def test_a_failed_run_leaves_nothing_behind(executor, tmp_path):
     broken = tmp_path / "broken.sql"
     broken.write_text("select * from nowhere")
     with pytest.raises(Exception, match="nowhere"):
@@ -131,7 +139,9 @@ def test_a_failed_run_leaves_nothing_behind(tmp_path):
             [Operation(sql_file=broken, writes=MEDICAID, kind=Kind.FULL_LOAD)],
         )
 
-    with pytest.raises(Exception, match="(?i)members|Catalog Error|does not exist"):
+    with pytest.raises(
+        Exception, match="(?i)members|TABLE_OR_VIEW_NOT_FOUND|does not exist"
+    ):
         executor.run({}, [_medicaid(tmp_path)])
 
 
@@ -146,23 +156,21 @@ def _lakehouse_out(tmp_path) -> Operation:
     return Operation(sql_file=sql_file, writes=LAKEHOUSE_OUT, kind=Kind.FULL_LOAD)
 
 
-def test_a_three_level_mock_loads_and_reads_back():
+def test_a_three_level_mock_loads_and_reads_back(executor):
     given = {LAKEHOUSE_MEMBERS: Given(schema=ID_SCHEMA, rows=[{"id": 1}])}
 
-    assert DuckDBExecutor().run(given, []) == {LAKEHOUSE_MEMBERS: [{"id": 1}]}
+    assert executor.run(given, []) == {LAKEHOUSE_MEMBERS: [{"id": 1}]}
 
 
-def test_sql_reads_and_writes_three_level_names(tmp_path):
+def test_sql_reads_and_writes_three_level_names(executor, tmp_path):
     given = {LAKEHOUSE_MEMBERS: Given(schema=ID_SCHEMA, rows=[{"id": 1}, {"id": 2}])}
 
-    written = DuckDBExecutor().run(given, [_lakehouse_out(tmp_path)])
+    written = executor.run(given, [_lakehouse_out(tmp_path)])
 
     assert written[LAKEHOUSE_OUT] == [{"id": 2}]
 
 
-def test_concurrent_three_level_runs_each_see_only_their_own_rows():
-    executor = DuckDBExecutor()
-
+def test_concurrent_three_level_runs_each_see_only_their_own_rows(executor):
     def run(member_id: int) -> list:
         given = {LAKEHOUSE_MEMBERS: Given(schema=ID_SCHEMA, rows=[{"id": member_id}])}
         return executor.run(given, [])[LAKEHOUSE_MEMBERS]

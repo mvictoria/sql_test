@@ -7,6 +7,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 SAMPLE_CALLERS = (
     ROOT / "examples" / "minimal-consumer" / ".github" / "workflows" / "data-tests.yml",
     ROOT / "examples" / "cdc-example" / ".github" / "workflows" / "data-tests.yml",
+    ROOT / "examples" / "spark-example" / ".github" / "workflows" / "data-tests.yml",
 )
 
 
@@ -26,9 +27,13 @@ def test_data_tests_is_reusable_and_installs_from_git_workflow_sha():
     inputs = _on(workflow)["workflow_call"].get("inputs") or {}
     assert "working-directory" in inputs
     assert inputs["working-directory"].get("default") == "."
+    assert "extras" in inputs
+    assert inputs["extras"].get("default") == ""
 
     job = workflow["jobs"]["data-tests"]
     steps = job["steps"]
+    java = next(s for s in steps if s.get("name") == "Set up Java")
+    assert "spark" in java["if"]
     install = next(
         s for s in steps if s.get("name") == "Install sql-test from workflow ref"
     )
@@ -36,9 +41,11 @@ def test_data_tests_is_reusable_and_installs_from_git_workflow_sha():
     assert "github.workflow_sha" in install["run"]
     assert "git+https://github.com/mvictoria/sql_test.git@" in install["run"]
     assert "uv pip install" in install["run"]
+    assert "EXTRAS" in install["run"]
+    assert "sql-test[${EXTRAS}]" in install["run"]
 
     pytest_step = next(s for s in steps if s.get("name") == "Pytest")
-    assert pytest_step["run"].strip() == "uv run pytest"
+    assert pytest_step["run"].strip() == "uv run --no-sync pytest"
     assert pytest_step.get("working-directory") == "${{ inputs.working-directory }}"
 
 
@@ -52,6 +59,13 @@ def test_sample_repositories_call_reusable_workflow():
         ), path
 
 
+def test_spark_example_requests_the_spark_extra():
+    caller = _load(
+        ROOT / "examples" / "spark-example" / ".github" / "workflows" / "data-tests.yml"
+    )
+    assert caller["jobs"]["data-tests"]["with"]["extras"] == "spark"
+
+
 def test_tool_ci_calls_reusable_workflow_for_sample():
     ci = _load(WORKFLOWS / "ci.yml")
     job = ci["jobs"]["sample-data-tests"]
@@ -60,6 +74,10 @@ def test_tool_ci_calls_reusable_workflow_for_sample():
         job["with"]["working-directory"]
         == "tests/fixtures/repos/lakehouse-data-customer"
     )
+    spark = ci["jobs"]["spark-example-tests"]
+    assert spark["uses"] == "./.github/workflows/data-tests.yml"
+    assert spark["with"]["working-directory"] == "examples/spark-example"
+    assert spark["with"]["extras"] == "spark"
 
 
 def test_tool_ci_runs_on_pull_requests_only():

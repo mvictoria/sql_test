@@ -11,6 +11,10 @@ name: Data tests
         description: Directory within the calling repository that holds the pytest tests
         type: string
         default: "."
+      extras:
+        description: Optional pip extras for sql-test (e.g. spark); installs a JVM when spark is listed
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -21,6 +25,13 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      - name: Set up Java
+        if: contains(inputs.extras, 'spark')
+        uses: actions/setup-java@f2beeb24e141e01a676f977032f5a29d81c9e27e # v5.1.0
+        with:
+          distribution: temurin
+          java-version: "21"
+
       - name: Install uv
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
@@ -29,10 +40,17 @@ jobs:
 
       - name: Install sql-test from workflow ref
         working-directory: ${{ inputs.working-directory }}
+        env:
+          EXTRAS: ${{ inputs.extras }}
         run: |
           uv venv
-          uv pip install "sql-test @ git+https://github.com/mvictoria/sql_test.git@${{ github.workflow_sha }}" pytest
+          if [ -n "$EXTRAS" ]; then
+            uv pip install "sql-test[${EXTRAS}] @ git+https://github.com/mvictoria/sql_test.git@${{ github.workflow_sha }}" pytest
+          else
+            uv pip install "sql-test @ git+https://github.com/mvictoria/sql_test.git@${{ github.workflow_sha }}" pytest
+          fi
 
       - name: Pytest
         working-directory: ${{ inputs.working-directory }}
-        run: uv run pytest
+        # Keep the workflow-sha install; do not re-resolve the sample's @v0 pin.
+        run: uv run --no-sync pytest

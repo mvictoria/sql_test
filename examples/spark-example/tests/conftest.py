@@ -1,0 +1,14 @@
+from pathlib import Path
+
+import pytest
+
+from sql_test.engine import Engine
+from sql_test.executors import SparkExecutor
+from sql_test.integrations.config import RepositoryConfig
+
+CONFIG = RepositoryConfig.load(Path(__file__).parent.parent)
+
+
+@pytest.fixture(scope="session")
+def engine():
+    return Engine(catalog=CONFIG.catalog(), executor=SparkExecutor())

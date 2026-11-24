@@ -25,6 +25,11 @@ dev = [
 [project.scripts]
 sql-test = "sql_test.integrations.cli:main"
 
+[project.optional-dependencies]
+spark = [
+    "pyspark>=3.5",
+]
+
 [build-system]
 requires = ["hatchling", "uv-dynamic-versioning"]
 build-backend = "hatchling.build"

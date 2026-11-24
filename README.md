@@ -135,9 +135,11 @@ medicaid_members_named_alice    2       0
 
 - [`examples/minimal-consumer/`](examples/minimal-consumer/) — smallest adopt sample (one model, one case, workflow caller).
 - [`examples/cdc-example/`](examples/cdc-example/) — chained models, CDC merge case (`seen`), both `test_sql.py` and case folders.
+- [`examples/spark-example/`](examples/spark-example/) — same footprint as minimal-consumer on `SparkExecutor` (`sql-test[spark]`, JVM 17+).
 
 ```bash
 uv run pytest examples/cdc-example/tests
+uv sync --extra spark && uv run pytest examples/spark-example/tests
 ```
 
 Developing this package: [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md). Design and vocabulary live in [docs/HELPER.md](docs/HELPER.md). Product direction is in [docs/ROADMAP.md](docs/ROADMAP.md); work items are [GitHub issues](https://github.com/mvictoria/sql_test/issues).

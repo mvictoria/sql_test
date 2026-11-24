@@ -5,8 +5,10 @@
 Requires Python 3.13+.
 
 ```bash
-uv sync
+uv sync --extra spark
 ```
+
+Spark tests need a JVM 17+ (OpenJDK works). Omit `--extra spark` for a DuckDB-only install; Spark-parametrized tests then skip.
 
 ## Tests
 
