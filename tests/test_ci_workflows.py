@@ -45,7 +45,7 @@ def test_data_tests_is_reusable_and_installs_from_git_workflow_sha():
     assert "sql-test[${EXTRAS}]" in install["run"]
 
     pytest_step = next(s for s in steps if s.get("name") == "Pytest")
-    assert pytest_step["run"].strip() == "uv run pytest"
+    assert pytest_step["run"].strip() == "uv run --no-sync pytest"
     assert pytest_step.get("working-directory") == "${{ inputs.working-directory }}"
 
 

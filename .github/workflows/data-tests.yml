@@ -52,4 +52,5 @@ jobs:
 
       - name: Pytest
         working-directory: ${{ inputs.working-directory }}
-        run: uv run pytest
+        # Keep the workflow-sha install; do not re-resolve the sample's @v0 pin.
+        run: uv run --no-sync pytest
